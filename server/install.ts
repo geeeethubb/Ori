@@ -56,7 +56,9 @@ function iconFor(meta: { iconSymbol: string; iconColor: string } | null): AppIco
   return { symbol: isIconSymbol(meta.iconSymbol) ? meta.iconSymbol : 'compass', color: isIconColor(meta.iconColor) ? meta.iconColor : 'blue' };
 }
 
-function themeColor(icon: AppIconSpec): string {
+/** Browser chrome color: the app's own surface when its theme is known, else the icon color. */
+function themeColor(icon: AppIconSpec, theme?: string | null): string {
+  if (theme && THEME_BACKGROUND[theme] && theme !== 'bright') return THEME_BACKGROUND[theme] as string;
   return ICON_GRADIENTS[icon.color][1];
 }
 
@@ -76,7 +78,7 @@ export function appManifest(appId: string, name: string, icon: AppIconSpec, them
     display: 'standalone',
     orientation: 'portrait',
     background_color: THEME_BACKGROUND[theme ?? 'bright'] ?? CANVAS,
-    theme_color: themeColor(icon),
+    theme_color: themeColor(icon, theme),
     icons: [
       { src: `${base}icon-192.png`, sizes: '192x192', type: 'image/png', purpose: 'any' },
       { src: `${base}icon-512.png`, sizes: '512x512', type: 'image/png', purpose: 'any' },
@@ -208,7 +210,7 @@ export function renderIndex(html: string, boot: BootInfo): string {
     `<meta name="apple-mobile-web-app-capable" content="yes">`,
     `<meta name="mobile-web-app-capable" content="yes">`,
     `<meta name="apple-mobile-web-app-status-bar-style" content="default">`,
-    `<meta name="theme-color" content="${themeColor(boot.icon)}">`,
+    `<meta name="theme-color" content="${themeColor(boot.icon, boot.theme)}">`,
     `<script>window.__AAS_BOOT__=${JSON.stringify({ appId: boot.appId, name: boot.name, icon: boot.icon, purpose: boot.purpose ?? null, theme: boot.theme ?? null }).replace(/</g, '\\u003c')}</script>`,
   ].join('\n    ');
   return html

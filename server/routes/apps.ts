@@ -286,6 +286,8 @@ appRoutes.post('/:appId/events', async (c) => {
     return c.json({ error: 'That event is recorded automatically.', code: 'invalid' }, 400);
   }
   if (body.data.type === 'app_opened') repo.touchOpened(c.get('user').id, id.data);
+  // "First action" is a milestone: recorded once per app, however many devices report it.
+  if (body.data.type === 'first_action_completed' && repo.countEvents(id.data, 'first_action_completed') > 0) return c.json({ ok: true, duplicate: true });
   repo.recordEvent(id.data, body.data.type, body.data.meta);
   return c.json({ ok: true });
 });
