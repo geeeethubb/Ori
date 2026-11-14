@@ -7,6 +7,8 @@ import { defineConfig, devices } from '@playwright/test';
  */
 const PORT = Number(process.env.E2E_PORT ?? 8799);
 const BASE = `http://localhost:${PORT}`;
+/** E2E_LIVE=1 runs the suite against the configured live model (spends API credits). */
+const LIVE = process.env.E2E_LIVE === '1';
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -35,8 +37,8 @@ export default defineConfig({
       PORT: String(PORT),
       AAS_SERVE: '1',
       NODE_ENV: 'test',
-      MODEL_PROVIDER: 'sample',
-      DATABASE_PATH: `./data/test-e2e-${PORT}.db`,
+      MODEL_PROVIDER: LIVE ? 'auto' : 'sample',
+      DATABASE_PATH: `./data/test-e2e-${PORT}${LIVE ? '-live' : ''}.db`,
       PUBLIC_ORIGIN: BASE,
       COOKIE_SECURE: 'false',
     },

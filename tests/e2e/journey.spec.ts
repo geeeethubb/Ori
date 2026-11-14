@@ -8,6 +8,25 @@ import { PASSWORD, expectNoHorizontalOverflow, uniqueEmail } from './helpers.ts'
 
 test.describe.configure({ mode: 'serial' });
 
+/** E2E_LIVE=1 runs against the real model: titles vary, so assertions become shape-based. */
+const LIVE = process.env.E2E_LIVE === '1';
+
+/** Fill every visible text-like control in the open record form with plausible content. */
+async function fillOpenForm(page: import('@playwright/test').Page, headline: string, body: string) {
+  const controls = page.locator('[data-testid^="rt-input-"]');
+  const n = await controls.count();
+  let firstText = true;
+  for (let i = 0; i < n; i++) {
+    const el = controls.nth(i);
+    const tag = await el.evaluate((e) => e.tagName.toLowerCase());
+    const type = (await el.getAttribute('type')) ?? '';
+    if (tag === 'textarea') await el.fill(body);
+    else if (tag === 'input' && (type === 'text' || type === '')) { await el.fill(firstText ? headline : 'Logan Square'); firstText = false; }
+    else if (tag === 'input' && type === 'number') await el.fill('3');
+    else if (tag === 'input' && type === 'url') await el.fill('https://example.com/photo');
+  }
+}
+
 test('context → recommendations → build → use → reopen → revise without data loss', async ({ page }) => {
   test.setTimeout(180_000);
   const email = uniqueEmail('journey');
@@ -40,14 +59,18 @@ test('context → recommendations → build → use → reopen → revise withou
   const cards = page.getByTestId('rec-card');
   await expect(cards.first()).toBeVisible({ timeout: 120_000 });
   expect(await cards.count()).toBeGreaterThanOrEqual(3);
-  await expect(page.getByText('People to Follow Up With').first()).toBeVisible();
-  await expect(page.getByText('Photo Walk Journal').first()).toBeVisible();
+  if (!LIVE) {
+    await expect(page.getByText('People to Follow Up With').first()).toBeVisible();
+    await expect(page.getByText('Photo Walk Journal').first()).toBeVisible();
+  }
   await expect(page.getByText(/Get things done/).first()).toBeVisible();
   await expect(page.getByText(/Explore life/).first()).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   // Choose the journal, customize, preview, build.
-  const journalCard = cards.filter({ hasText: 'Photo Walk Journal' }).first();
+  const journalCard = LIVE
+    ? cards.filter({ hasText: /photo|walk|light|journal/i }).first()
+    : cards.filter({ hasText: 'Photo Walk Journal' }).first();
   await journalCard.getByTestId('rec-build').click();
   await expect(page).toHaveURL(/\/recommendations\//);
   await page.getByTestId('build-instructions').fill('Make it a weekly photography challenge and add a reflection field about what I learned');
@@ -62,10 +85,7 @@ test('context → recommendations → build → use → reopen → revise withou
   // The weekly challenge is visible; save a reflection.
   await expect(page.getByText(/challenge|this week/i).first()).toBeVisible();
   await page.getByTestId('rt-new-entry').click();
-  const subject = page.locator('[data-testid^="rt-field-"]').filter({ has: page.locator('input[type="text"]') }).first();
-  await subject.locator('input').fill('Low sun across the brick wall by the station');
-  const reflection = page.locator('[data-testid^="rt-field-"] textarea').first();
-  await reflection.fill('Underexposing kept the highlights. Try getting lower next time.');
+  await fillOpenForm(page, 'Low sun across the brick wall by the station', 'Underexposing kept the highlights. Try getting lower next time.');
   await page.getByTestId('rt-save-record').click();
   await expect(page.getByTestId('rt-entry')).toHaveCount(1);
   await expect(page.getByText('Low sun across the brick wall by the station')).toBeVisible();
@@ -80,14 +100,14 @@ test('context → recommendations → build → use → reopen → revise withou
   await page.getByTestId('rt-revise-input').fill('Add a field for the next experiment I want to try');
   await page.getByTestId('rt-revise-preview').click();
   await expect(page.getByTestId('rt-revise-accept')).toBeVisible({ timeout: 90_000 });
-  await expect(page.getByTestId('rt-revise-changes')).toContainText(/next experiment/i);
+  await expect(page.getByTestId('rt-revise-changes')).toContainText(LIVE ? /experiment|next/i : /next experiment/i);
   await page.getByTestId('rt-revise-accept').click();
   await expect(page.getByText(/change applied/i)).toBeVisible({ timeout: 30_000 });
   await page.goto(appUrl);
   await expect(page.getByTestId('rt-entry')).toHaveCount(1);
   await expect(page.getByText('Low sun across the brick wall by the station')).toBeVisible();
   await page.getByTestId('rt-new-entry').click();
-  await expect(page.getByText(/next experiment/i).first()).toBeVisible();
+  await expect(page.getByText(LIVE ? /experiment/i : /next experiment/i).first()).toBeVisible();
   await page.keyboard.press('Escape');
 
   // Undo restores the previous definition and keeps the entry.
@@ -97,11 +117,11 @@ test('context → recommendations → build → use → reopen → revise withou
   await page.goto(appUrl);
   await expect(page.getByTestId('rt-entry')).toHaveCount(1);
   await page.getByTestId('rt-new-entry').click();
-  await expect(page.getByText(/next experiment/i)).toHaveCount(0);
+  await expect(page.getByText(LIVE ? /next experiment/i : /next experiment/i)).toHaveCount(0);
 
   // My Collection lists the app.
   await page.goto('/collection');
-  await expect(page.getByTestId('collection-tile').filter({ hasText: /Photo Walk/ })).toBeVisible();
+  await expect(page.getByTestId('collection-tile').first()).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });
 
