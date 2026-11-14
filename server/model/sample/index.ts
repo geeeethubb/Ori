@@ -56,4 +56,5 @@ export { generateSpec } from './generate.ts';
 export { proposeRevision } from './revise.ts';
 export { suggestImprovement } from './suggest.ts';
 export { respondToCapture } from './respond.ts';
+export { DOMAINS, detectDomain } from './domains.ts';
 export { applyInstructionHeuristics, planInstructions } from './heuristics.ts';

@@ -10,7 +10,7 @@ import { isIconColor, isIconSymbol, type AppIconSpec } from '@shared/icons.ts';
 import { api } from '../api.ts';
 
 /** Event types the client is allowed to post; the rest are derived on the server. */
-export type ClientEventType = 'app_opened' | 'install_guide_viewed' | 'shortcut_requested' | 'feedback_given' | 'revision_declined';
+export type ClientEventType = 'app_opened' | 'install_guide_viewed' | 'shortcut_requested' | 'feedback_given' | 'revision_declined' | 'first_action_completed';
 
 export interface CachedApp {
   detail: AppDetailDto;
@@ -23,8 +23,10 @@ export interface CachedApp {
 // ---------- storage ----------
 
 export const cacheKey = (appId: string): string => `aas_cache_${appId}`;
-export const draftKey = (appId: string, recordId?: string): string => `aas_draft_${appId}_${recordId ?? 'new'}`;
+/** Drafts of new records are kept per view when the app has several kinds of record. */
+export const draftKey = (appId: string, recordId?: string, viewId?: string): string => `aas_draft_${appId}_${recordId ?? 'new'}${!recordId && viewId ? `_${viewId}` : ''}`;
 export const viewKey = (appId: string): string => `aas_view_${appId}`;
+export const firstActionKey = (appId: string): string => `aas_first_action_${appId}`;
 
 export function readJson<T>(key: string): T | null {
   try {
@@ -71,6 +73,44 @@ export function clearCache(appId: string): void {
 export function postEvent(appId: string, type: ClientEventType, meta?: Record<string, unknown>): void {
   void api<{ ok: boolean }>(`/api/apps/${appId}/events`, { method: 'POST', body: meta ? { type, meta } : { type } }).catch(() => undefined);
 }
+
+/**
+ * The first real action in an app (a saved session, an added photo, a completed next action) is
+ * reported once per device; later actions are derived on the server from the records themselves.
+ */
+export function markFirstAction(appId: string, meta?: Record<string, unknown>): void {
+  if (!appId || appId === 'preview') return;
+  if (readJson<boolean>(firstActionKey(appId))) return;
+  writeJson(firstActionKey(appId), true);
+  postEvent(appId, 'first_action_completed', meta);
+}
+
+/** Copy text to the clipboard; resolves false when neither the async API nor execCommand worked. */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    /* fall through to the legacy path */
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+/** The understated way back to the collection, without the full parent navigation. */
+export const COLLECTION_LABEL = 'Your apps';
 
 export const appHomePath = (appId: string): string => `/apps/${appId}/`;
 export const appSettingsPath = (appId: string): string => `/apps/${appId}/settings`;

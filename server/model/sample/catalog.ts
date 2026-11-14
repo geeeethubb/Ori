@@ -33,8 +33,8 @@ export { PLAYGROUND_CONCEPTS };
 /** Every concept that can be looked up or built. */
 export const ALL_CONCEPTS: Concept[] = [...CONCEPTS, ...PLAYGROUND_CONCEPTS];
 
-/** Shown when the context says too little to match anything. */
-export const DEFAULT_CONCEPT_IDS = ['people-to-follow-up-with', 'photo-walk-journal', 'habit-streaks'] as const;
+/** Shown when the context says too little to match anything: the three reference experiences. */
+export const DEFAULT_CONCEPT_IDS = ['people-queue', 'light-gallery', 'riff-practice'] as const;
 
 const byId = new Map(ALL_CONCEPTS.map((c) => [c.id, c]));
 

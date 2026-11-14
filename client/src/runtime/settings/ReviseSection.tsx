@@ -1,5 +1,5 @@
 /**
- * "Make a change": a plain-language request becomes a readable preview; nothing changes until
+ * "Make this more me": a plain-language request becomes a readable preview; nothing changes until
  * the user accepts. "Suggested improvement": one suggestion from usage, plus a feedback box.
  */
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
@@ -132,8 +132,8 @@ export function ReviseSection({ appId, detail, onDetail }: Props) {
   return (
     <>
       <section className="rt-section card card-pad" data-testid="rt-revise">
-        <h2>Make a change</h2>
-        <p className="muted small">Say what you want in plain words. You will see exactly what would change before anything happens.</p>
+        <h2>Make this more me</h2>
+        <p className="muted small">Say what you want in plain words: a new field, a different look, another view. You will see exactly what would change before anything happens.</p>
         <textarea
           className="textarea"
           data-testid="rt-revise-input"

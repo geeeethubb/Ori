@@ -24,6 +24,8 @@ export type Intent =
   | { kind: 'prompt_rotation'; cadence: 'daily' | 'weekly'; change: string }
   | { kind: 'due_date'; change: string }
   | { kind: 'rename'; name: string; change: string }
+  /** Practice apps: make N minutes the first timer preset ("make sessions 20 minutes", "add a 15-minute preset"). */
+  | { kind: 'practice_preset'; minutes: number; change: string }
   | { kind: 'unsupported'; item: Unsupported };
 
 export interface HeuristicResult { spec: AppSpecInput; changes: string[]; unsupported: Unsupported[] }
@@ -33,6 +35,8 @@ export interface HeuristicResult { spec: AppSpecInput; changes: string[]; unsupp
 const RX = {
   weeklyChallenge: /weekly (?:challenge|prompt|theme|focus)|\bchallenges?\b|rotating prompt|weekly question/i,
   dailyPrompt: /daily (?:prompt|challenge|question|theme)|prompt (?:every|each) day|a prompt a day/i,
+  // "a 15-minute preset", "make the default session 20 minutes", "20-minute sessions"
+  preset: /\b(\d{1,3})\s*(?:-\s*)?(?:min(?:ute)?s?)\b[^.;]*?\b(?:presets?|timer|sessions?|default)\b|\b(?:presets?|timer|sessions?|default)\b[^.;]*?\b(\d{1,3})\s*(?:-\s*)?(?:min(?:ute)?s?)\b/i,
   reflection: /\breflections?\b|what i learned|what did i learn|\blessons?\b|\breflect\b|\btakeaways?\b/i,
   rating: /\bratings?\b|\brate\b|\bscores?\b|how it went|how did it go|\bstars\b|out of (?:5|five|10|ten)/i,
   mood: /\bmoods?\b|\benergy\b|\bfeelings?\b|how i feel|how i felt/i,
@@ -75,11 +79,12 @@ export function planInstructions(spec: SpecLike, text: string, _conceptId?: stri
   };
 
   // Unsupported requests first, so their clauses are not also treated as field requests.
-  if (RX.attachments.test(t)) {
+  // Photo uploads are real in gallery apps (an image field); elsewhere they are declined honestly.
+  if (RX.attachments.test(t) && !fields.some((x) => x.type === 'image' && !x.hidden)) {
     intents.push({ kind: 'unsupported', item: {
       request: clauseFor(t, RX.attachments),
-      reason: 'Attachments and photo uploads are not supported yet.',
-      alternative: 'A link field to the photo is added instead, so you can paste a link from your photo library.',
+      reason: 'Photo uploads are only part of photo-gallery apps for now; other attachments are not supported.',
+      alternative: 'A link field to the photo is added instead. For real photo uploads, make a gallery app like Light.',
     } });
     reuseOrAdd(existing((x) => x.type === 'url'), () => f.url(takeId('photo_link'), 'Link to the photo', { placeholder: 'https://' }), 'added a link field for the photo');
   }
@@ -87,8 +92,8 @@ export function planInstructions(spec: SpecLike, text: string, _conceptId?: stri
     intents.push({ kind: 'unsupported', item: {
       request: clauseFor(t, RX.external),
       reason: 'This app cannot send messages, set reminders or connect to other services yet.',
-      alternative: spec.pattern === 'board'
-        ? 'Items due soon and anything overdue are highlighted on the board when you open it, so you can follow up yourself.'
+      alternative: spec.pattern === 'board' || spec.pattern === 'queue'
+        ? `Items due soon and anything overdue are highlighted on the ${spec.pattern} when you open it, so you can follow up yourself.`
         : 'Add a due date and the app will highlight items due soon whenever you open it.',
     } });
   }
@@ -100,6 +105,14 @@ export function planInstructions(spec: SpecLike, text: string, _conceptId?: stri
   } else if (RX.weeklyChallenge.test(t)) {
     if (!rotation) intents.push({ kind: 'prompt_rotation', cadence: 'weekly', change: 'added a weekly challenge with 8 rotating prompts' });
     else if (rotation.cadence !== 'weekly' && /weekly/i.test(t)) intents.push({ kind: 'prompt_rotation', cadence: 'weekly', change: 'switched the prompts to weekly' });
+  }
+
+  // Practice timer presets (only apps with a timer).
+  const preset = RX.preset.exec(t);
+  const practice = spec.views.find((v) => v.type === 'practice');
+  if (preset && practice && practice.type === 'practice') {
+    const n = Math.max(1, Math.min(180, Number(preset[1] ?? preset[2])));
+    if ((practice.presets ?? [10, 15, 25])[0] !== n) intents.push({ kind: 'practice_preset', minutes: n, change: `set the default session to ${n} minutes` });
   }
 
   // Specific fields.
@@ -288,6 +301,13 @@ export function applyInstructionHeuristics(input: AppSpecInput, instructions: st
         spec.name = intent.name;
         changes.push(intent.change);
         break;
+      case 'practice_preset':
+        for (const v of spec.views) {
+          if (v.type !== 'practice') continue;
+          v.presets = [intent.minutes, ...(v.presets ?? [10, 15, 25]).filter((p) => p !== intent.minutes)].slice(0, 6);
+        }
+        changes.push(intent.change);
+        break;
       case 'unsupported':
         unsupported.push(intent.item);
         break;
@@ -296,12 +316,18 @@ export function applyInstructionHeuristics(input: AppSpecInput, instructions: st
   return { spec, changes, unsupported };
 }
 
-/** Make a newly added field visible in views that enumerate fields explicitly. */
+/**
+ * Make a newly added field visible in views that enumerate fields explicitly. Forms that list their
+ * fields (gallery, practice, links, queue) get it too; when an app holds several kinds of record
+ * (filtered views, e.g. Riff's sessions and sources) only the primary view's form does.
+ */
 function exposeField(spec: AppSpecInput, field: FieldInput): void {
+  const primary = spec.views.find((v) => v.type !== 'summary');
   for (const v of spec.views) {
     if (v.type === 'journal' && v.showFieldIds && !v.showFieldIds.includes(field.id)) v.showFieldIds.push(field.id);
     if (v.type === 'list' && v.columnFieldIds && v.columnFieldIds.length < 8 && field.type !== 'long_text') v.columnFieldIds.push(field.id);
     if (v.type === 'board' && v.cardFieldIds && v.cardFieldIds.length < 6 && (field.type === 'date' || field.type === 'select' || field.type === 'text')) v.cardFieldIds.push(field.id);
+    if (v.formFieldIds && !v.formFieldIds.includes(field.id) && v.formFieldIds.length < 30 && (!v.filter || v === primary)) v.formFieldIds.push(field.id);
   }
 }
 
@@ -366,7 +392,14 @@ export function typeWord(field: FieldInput): string {
 }
 
 export function patternNoun(pattern: Pattern): string {
-  return pattern === 'journal' ? 'journal' : pattern === 'board' ? 'board' : 'tracker';
+  switch (pattern) {
+    case 'journal': return 'journal';
+    case 'board': return 'board';
+    case 'gallery': return 'gallery';
+    case 'practice': return 'practice room';
+    case 'queue': return 'queue';
+    default: return 'tracker';
+  }
 }
 
 export function purposeWord(purpose: Purpose): string {

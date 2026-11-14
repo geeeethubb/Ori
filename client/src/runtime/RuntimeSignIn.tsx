@@ -125,7 +125,7 @@ export function RuntimeSignIn({ appId }: { appId: string }) {
             {mode === 'login' ? 'New here? Create an account' : 'Have an account? Sign in'}
           </button>
           {!standalone && (
-            <p className="small faint rt-center-text">
+            <p className="small muted rt-center-text">
               <Link to="/">Back to {BRAND.name}</Link>
             </p>
           )}

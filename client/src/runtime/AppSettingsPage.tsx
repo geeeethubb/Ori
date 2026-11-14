@@ -1,4 +1,4 @@
-/** Settings for one app: make a change, suggestions, history, home-screen guide, data, collection. */
+/** Settings for one app: make this more me, suggestions, history, home-screen guide, data, collection. */
 import { Link } from 'react-router';
 import type { AppDetailDto } from '@shared/api.ts';
 import { AppIcon } from '../components/AppIcon.tsx';
@@ -8,7 +8,7 @@ import { DataSection } from './settings/DataSection.tsx';
 import { HistorySection } from './settings/HistorySection.tsx';
 import { InstallGuide } from './settings/InstallGuide.tsx';
 import { ReviseSection } from './settings/ReviseSection.tsx';
-import { appHomePath } from './runtimeUtils.ts';
+import { appHomePath, COLLECTION_LABEL } from './runtimeUtils.ts';
 
 interface Props {
   appId: string;
@@ -28,15 +28,15 @@ export function AppSettingsPage({ appId, detail, recordCount, offline, onDetail 
           {Icons.back}
           <span>Back to {spec.name}</span>
         </Link>
-        <Link to="/apps" className="rt-backlink">
-          Back to collection
+        <Link to="/apps" className="rt-backlink rt-backlink-quiet" data-testid="rt-settings-collection">
+          {COLLECTION_LABEL}
         </Link>
       </div>
-      <header className="rt-header rt-header-compact">
-        <AppIcon icon={spec.icon} size={40} title={`${spec.name} icon`} />
-        <div className="rt-header-text">
-          <h1>Settings</h1>
-          <p className="muted small">{spec.name}</p>
+      <header className="rt-identity rt-identity-compact">
+        <AppIcon icon={spec.icon} size={40} title={`${spec.name} icon`} className="rt-identity-icon" />
+        <div className="rt-identity-text">
+          <h1 className="rt-app-name rt-settings-title">Settings</h1>
+          <p className="rt-tagline">{spec.name}</p>
         </div>
       </header>
       {offline ? (

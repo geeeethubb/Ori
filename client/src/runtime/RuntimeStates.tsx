@@ -1,15 +1,15 @@
 /** Loading, not-found, error and offline states for the runtime shell. */
 import { Link } from 'react-router';
-import { EmptyState, ErrorBanner, Skeleton } from '../components/ui.tsx';
-import { formatSavedAt } from './runtimeUtils.ts';
+import { EmptyState, ErrorBanner, Icons, Skeleton } from '../components/ui.tsx';
+import { COLLECTION_LABEL, formatSavedAt } from './runtimeUtils.ts';
 
 export function RuntimeSkeleton() {
   return (
     <div className="rt-root">
       <div className="rt-page" aria-busy="true" aria-label="Loading your app">
-        <div className="rt-header">
-          <Skeleton h={44} w={44} style={{ borderRadius: 12, flex: 'none' }} />
-          <div className="rt-header-text stack" style={{ gap: 8 }}>
+        <div className="rt-identity">
+          <Skeleton h={48} w={48} style={{ borderRadius: 12, flex: 'none' }} />
+          <div className="rt-identity-text stack" style={{ gap: 8 }}>
             <Skeleton h={26} w="60%" />
             <Skeleton h={16} w="40%" />
           </div>
@@ -32,11 +32,11 @@ export function NotFoundScreen({ kind }: { kind: 'invalid' | 'missing' }) {
           body={
             missing
               ? 'It may have been deleted, or it belongs to a different account. Your other apps are safe in your collection.'
-              : 'App links look like /apps/your-app-id/. Open your collection to pick the right one.'
+              : 'App links look like /apps/your-app-id/. Open your apps to pick the right one.'
           }
           action={
             <Link to="/apps" className="btn btn-primary">
-              Go to my collection
+              Go to your apps
             </Link>
           }
         />
@@ -52,7 +52,8 @@ export function LoadErrorScreen({ message, onRetry, busy }: { message: string; o
         <ErrorBanner message={message} onRetry={onRetry} retryLabel={busy ? 'Retrying…' : 'Try again'} />
         <p className="small muted">Nothing you saved is lost. Your entries live in your account and will show as soon as we can reach it.</p>
         <Link to="/apps" className="rt-backlink">
-          Back to collection
+          {Icons.back}
+          <span>{COLLECTION_LABEL}</span>
         </Link>
       </div>
     </div>

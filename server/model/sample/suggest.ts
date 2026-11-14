@@ -115,6 +115,12 @@ function fromIntent(intent: Exclude<Intent, { kind: 'unsupported' }>, said: stri
       return { title: 'Add due dates with a heads-up', why: `${said} Items due within three days are highlighted when you open the app.`, request: 'Add a due date and highlight items due soon' };
     case 'rename':
       return { title: `Rename to ${quote(intent.name)}`, why: said, request: `Rename the app to ${intent.name}` };
+    case 'practice_preset':
+      return {
+        title: `Start the timer at ${intent.minutes} minutes`,
+        why: `${said} The timer offers the minutes you actually have first; the other presets stay.`,
+        request: `Add a ${intent.minutes}-minute preset to the practice timer as the default`,
+      };
   }
 }
 

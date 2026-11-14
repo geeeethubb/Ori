@@ -1,9 +1,10 @@
 /**
- * Create/edit form for one record. Validates with the shared rules before submitting, keeps an
- * unsaved draft on this device, and restores it when the form opens again.
+ * Create/edit form for one record. Shows the fields its view asked for, validates with the shared
+ * rules before submitting, keeps an unsaved draft on this device, and restores it when the form
+ * opens again (unless the form was opened with fresh results, e.g. from the practice timer).
  */
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { visibleFields, type AppSpec } from '@shared/appSpec.ts';
+import { visibleFields, type AppSpec, type FieldSpec } from '@shared/appSpec.ts';
 import { defaultValues, validateValues, type AppRecord, type FieldValue, type RecordValues } from '@shared/records.ts';
 import { FieldInput } from './FieldInput.tsx';
 import { draftKey, readJson, removeKey, sameValues, writeJson } from './runtimeUtils.ts';
@@ -11,6 +12,14 @@ import { draftKey, readJson, removeKey, sameValues, writeJson } from './runtimeU
 interface Props {
   spec: AppSpec;
   appId: string;
+  /** Fields the form shows, in order (the caller resolves them with formFieldsFor). Default: every visible field. */
+  fields?: FieldSpec[];
+  /** Values set before the person types: the view's filter value, timer results, an uploaded photo. */
+  preset?: RecordValues;
+  /** Keep drafts of new records apart per view. */
+  draftScope?: string;
+  /** Restore an unsaved draft from this device (default on; off when `preset` carries fresh results). */
+  restoreDraft?: boolean;
   /** Existing record when editing; omitted for a new one. */
   initial?: AppRecord;
   /** Resolves on success (the draft is then cleared) and rejects on failure. */
@@ -20,23 +29,35 @@ interface Props {
   submitting: boolean;
   /** Field errors returned by the server (422). */
   serverErrors?: Record<string, string>;
+  /** Label of the submit button (default "Save"). */
+  submitLabel?: string;
 }
 
 function isValuesMap(v: unknown): v is RecordValues {
   return Boolean(v) && typeof v === 'object' && !Array.isArray(v);
 }
 
-export function RecordForm({ spec, appId, initial, onSubmit, onCancel, onDelete, submitting, serverErrors }: Props) {
-  const fields = useMemo(() => visibleFields(spec), [spec]);
-  const key = draftKey(appId, initial?.id);
-  const base = useMemo<RecordValues>(() => (initial ? { ...initial.values } : defaultValues(spec)), [initial, spec]);
+/** Defaults for a new record: the shown fields, plus required fields that carry a default, plus the preset. */
+function newRecordBase(spec: AppSpec, fields: FieldSpec[], preset: RecordValues | undefined): RecordValues {
+  const all = defaultValues(spec);
+  const keep = new Set(fields.map((f) => f.id));
+  for (const f of spec.fields) if (f.required && f.id in all) keep.add(f.id);
+  const out: RecordValues = {};
+  for (const k of Object.keys(all)) if (keep.has(k)) out[k] = all[k];
+  return { ...out, ...(preset ?? {}) };
+}
+
+export function RecordForm({ spec, appId, fields: fieldsProp, preset, draftScope, restoreDraft = true, initial, onSubmit, onCancel, onDelete, submitting, serverErrors, submitLabel }: Props) {
+  const fields = useMemo(() => fieldsProp ?? visibleFields(spec), [fieldsProp, spec]);
+  const key = draftKey(appId, initial?.id, draftScope);
+  const base = useMemo<RecordValues>(() => (initial ? { ...initial.values } : newRecordBase(spec, fields, preset)), [initial, spec, fields, preset]);
 
   // Restore a draft once, when the form opens.
   const init = useRef<{ values: RecordValues; restored: boolean } | null>(null);
   if (!init.current) {
-    const draft = readJson<unknown>(key);
+    const draft = restoreDraft ? readJson<unknown>(key) : null;
     const usable = isValuesMap(draft) && !sameValues(draft, base);
-    init.current = usable ? { values: { ...base, ...draft }, restored: true } : { values: base, restored: false };
+    init.current = usable ? { values: { ...base, ...draft, ...(preset ?? {}) }, restored: true } : { values: base, restored: false };
   }
   const [values, setValues] = useState<RecordValues>(init.current.values);
   const [restored, setRestored] = useState(init.current.restored);
@@ -71,7 +92,12 @@ export function RecordForm({ spec, appId, initial, onSubmit, onCancel, onDelete,
   for (const [k, msg] of Object.entries(serverErrors ?? {})) {
     if (!changedSinceServer.current.has(k) && !(k in merged)) merged[k] = msg;
   }
-  const general = merged._;
+  // Problems with fields this form does not show are reported at the top instead of vanishing.
+  const shownIds = new Set(fields.map((f) => f.id));
+  const hiddenProblems = Object.entries(merged)
+    .filter(([k]) => k !== '_' && !shownIds.has(k))
+    .map(([k, msg]) => `${spec.fields.find((f) => f.id === k)?.label ?? k}: ${msg}`);
+  const general = merged._ ?? (hiddenProblems.length ? hiddenProblems.join(' · ') : undefined);
 
   const discardDraft = () => {
     removeKey(key);
@@ -135,7 +161,7 @@ export function RecordForm({ spec, appId, initial, onSubmit, onCancel, onDelete,
           Cancel
         </button>
         <button type="submit" className="btn btn-primary" data-testid="rt-save-record" disabled={submitting} aria-label={submitting ? `Saving ${noun}` : undefined}>
-          {submitting ? 'Saving…' : 'Save'}
+          {submitting ? 'Saving…' : (submitLabel ?? 'Save')}
         </button>
       </div>
     </form>

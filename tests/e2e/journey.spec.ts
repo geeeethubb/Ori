@@ -1,153 +1,158 @@
 /**
- * The demo journey, end to end in sample mode:
- * sign up → bring sample context → review facts → For You → customize → build → save an entry
- * → reload (entry persists) → revise (add a field) → entry retained → undo.
+ * The guitar slice, end to end in sample mode:
+ * sign up → share a sound with the Agent → honest read status and a grounded proposal → Make mine
+ * with the 15-minute choice → the practice app at its own URL → run the timer, save a session →
+ * reload keeps it → "Make this more me" adds a field, the session survives → undo.
+ * Second test: two contrasting sample profiles give materially different Playground sets.
  */
-import { test, expect } from '@playwright/test';
-import { PASSWORD, expectNoHorizontalOverflow, uniqueEmail } from './helpers.ts';
+import { test, expect, type Page } from '@playwright/test';
+import { PASSWORD, appDetail, expectNoHorizontalOverflow, listRecords, signupViaApi, uniqueEmail } from './helpers.ts';
 
 test.describe.configure({ mode: 'serial' });
 
-/** E2E_LIVE=1 runs against the real model: titles vary, so assertions become shape-based. */
+/** E2E_LIVE=1 runs against the real model: copy varies, so some assertions become shape-based. */
 const LIVE = process.env.E2E_LIVE === '1';
 
-/** Fill every visible text-like control in the open record form with plausible content. */
-async function fillOpenForm(page: import('@playwright/test').Page, headline: string, body: string) {
-  const controls = page.locator('[data-testid^="rt-input-"]');
-  const n = await controls.count();
-  let firstText = true;
-  for (let i = 0; i < n; i++) {
-    const el = controls.nth(i);
-    const tag = await el.evaluate((e) => e.tagName.toLowerCase());
-    const type = (await el.getAttribute('type')) ?? '';
-    if (tag === 'textarea') await el.fill(body);
-    else if (tag === 'input' && (type === 'text' || type === '')) { await el.fill(firstText ? headline : 'Logan Square'); firstText = false; }
-    else if (tag === 'input' && type === 'number') await el.fill('3');
-    else if (tag === 'input' && type === 'url') await el.fill('https://example.com/photo');
-  }
+/** Current app version, or -1 while the app cannot be read (lets expect.poll retry quietly). */
+async function appVersion(page: Page, appId: string): Promise<number> {
+  const res = await page.request.get(`/api/apps/${appId}`);
+  if (res.status() !== 200) return -1;
+  return ((await res.json()) as { version: number }).version;
 }
 
-test('context → recommendations → build → use → reopen → revise without data loss', async ({ page }) => {
-  test.setTimeout(180_000);
-  const email = uniqueEmail('journey');
+test('share a sound → Make mine → practise → the session survives a change and an undo', async ({ page }) => {
+  test.setTimeout(240_000);
+  const email = uniqueEmail('guitar');
 
-  // Sign up through the UI.
+  // Sign up through the UI; new people land on the Agent.
   await page.goto('/signup');
-  await page.getByLabel(/email/i).fill(email);
-  await page.getByLabel(/^password/i).fill(PASSWORD);
+  await page.getByTestId('auth-email').fill(email);
+  await page.getByTestId('auth-password').fill(PASSWORD);
   await page.getByTestId('auth-submit').click();
-  await expect(page).toHaveURL(/\/import/);
+  await expect(page).toHaveURL(/\/agent/);
   await expectNoHorizontalOverflow(page);
 
-  // Bring sample context (clearly labelled sample).
-  await page.getByTestId('store-sample-founder').click();
-  await expect(page).toHaveURL(/\/context/, { timeout: 60_000 });
-  const facts = page.getByTestId('fact-item');
-  await expect(facts.first()).toBeVisible();
-  expect(await facts.count()).toBeGreaterThanOrEqual(8);
-  await expect(page.getByText(/sample/i).first()).toBeVisible();
+  // Share the note: the item shows what was read, and the reply offers a new app (and a plain keep).
+  await page.getByTestId('agent-text').fill('I like this sound and have 15 minutes to practice');
+  await page.getByTestId('agent-send').click();
+  const item = page.getByTestId('agent-item').first();
+  await expect(item).toBeVisible({ timeout: 60_000 });
+  await expect(item.getByTestId('agent-read-status')).toHaveAttribute('data-status', 'read');
+  const reply = item.getByTestId('agent-reply');
+  await expect(reply).toBeVisible({ timeout: 60_000 });
+  const card = reply.locator('[data-testid="proposal-card"][data-kind="new_app"]').first();
+  await expect(card).toBeVisible();
+  await expect(reply.locator('[data-testid="proposal-card"][data-kind="keep"]')).toHaveCount(1);
   await expectNoHorizontalOverflow(page);
 
-  // Remove one fact; it disappears.
-  const before = await facts.count();
-  await page.getByTestId('fact-remove').first().click();
-  await expect(facts).toHaveCount(before - 1);
-
-  // For You: grounded recommendations spanning work and exploration.
-  await page.getByTestId('store-go-for-you').click();
-  await expect(page).toHaveURL(/\/for-you/);
-  const cards = page.getByTestId('rec-card');
-  await expect(cards.first()).toBeVisible({ timeout: 120_000 });
-  expect(await cards.count()).toBeGreaterThanOrEqual(3);
-  if (!LIVE) {
-    await expect(page.getByText('People to Follow Up With').first()).toBeVisible();
-    await expect(page.getByText('Photo Walk Journal').first()).toBeVisible();
-  }
-  await expect(page.getByText(/Get things done/).first()).toBeVisible();
-  await expect(page.getByText(/Explore life/).first()).toBeVisible();
+  // Make mine, with one meaningful choice: the 15-minute preset. The preview is the real renderer,
+  // labelled as example content, and the CTA only arms once the preview is ready.
+  await card.getByTestId('proposal-action').click();
+  await expect(page).toHaveURL(/\/make\/[A-Za-z0-9_-]{8,40}/);
+  await page.getByTestId('make-choice-minutes-15').click();
+  await expect(page.getByTestId('make-preview')).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByTestId('make-preview-example-banner')).toBeVisible();
   await expectNoHorizontalOverflow(page);
-
-  // Choose the journal, customize, preview, build.
-  const journalCard = LIVE
-    ? cards.filter({ hasText: /photo|walk|light|journal/i }).first()
-    : cards.filter({ hasText: 'Photo Walk Journal' }).first();
-  await journalCard.getByTestId('rec-build').click();
-  await expect(page).toHaveURL(/\/recommendations\//);
-  await page.getByTestId('build-instructions').fill('Make it a weekly photography challenge and add a reflection field about what I learned');
-  await page.getByTestId('build-preview').click();
-  await expect(page.getByTestId('build-confirm')).toBeVisible({ timeout: 120_000 });
-  await expect(page.getByText(/weekly/i).first()).toBeVisible();
-  await page.getByTestId('build-confirm').click();
+  const makeMine = page.getByTestId('make-mine');
+  await expect(makeMine).toBeEnabled({ timeout: 90_000 });
+  await makeMine.click();
   await expect(page).toHaveURL(/\/apps\/[A-Za-z0-9_-]{8,32}\/?$/, { timeout: 60_000 });
   const appUrl = page.url();
+  const appId = /\/apps\/([A-Za-z0-9_-]+)/.exec(appUrl)?.[1] ?? '';
+  expect(appId).not.toBe('');
+
+  // The choice landed in the app: the timer offers 15 minutes first.
+  const detail = await appDetail(page.request, appId);
+  const practiceView = detail.spec.views.find((v) => v.type === 'practice');
+  expect(practiceView, 'the built app has a practice view').toBeDefined();
+  expect(practiceView?.presets?.[0]).toBe(15);
+
+  // Practise: preset → start → pause → save, then the record sheet.
+  await expect(page.getByTestId('rt-practice')).toBeVisible({ timeout: 30_000 });
   await expectNoHorizontalOverflow(page);
-
-  // The weekly challenge is visible; save a reflection.
-  await expect(page.getByText(/challenge|this week/i).first()).toBeVisible();
-  await page.getByTestId('rt-new-entry').click();
-  await fillOpenForm(page, 'Low sun across the brick wall by the station', 'Underexposing kept the highlights. Try getting lower next time.');
+  await page.getByTestId('rt-practice-preset-15').click();
+  await page.getByTestId('rt-practice-start').click();
+  await page.waitForTimeout(1500);
+  await page.getByTestId('rt-practice-pause').click();
+  await page.getByTestId('rt-practice-save').click();
+  await expect(page.getByTestId('rt-save-record')).toBeVisible();
   await page.getByTestId('rt-save-record').click();
-  await expect(page.getByTestId('rt-entry')).toHaveCount(1);
-  await expect(page.getByText('Low sun across the brick wall by the station')).toBeVisible();
 
-  // Reload the stable URL: the entry is still there.
+  // A session appears, and it is a real record that belongs to the practice view.
+  await expect(page.getByTestId('rt-entry').first()).toBeVisible({ timeout: 15_000 });
+  const saved = await listRecords(page.request, appId);
+  expect(saved).toHaveLength(1);
+  const session = saved[0]!.values;
+  if (practiceView?.filter) expect(session[practiceView.filter.fieldId]).toBe(practiceView.filter.value);
+  expect(Number(session[practiceView?.minutesFieldId ?? 'minutes'])).toBeGreaterThanOrEqual(1);
+
+  // Reload the stable URL: the session is still there.
   await page.goto(appUrl);
   await expect(page.getByTestId('rt-entry')).toHaveCount(1);
-  await expect(page.getByText('Low sun across the brick wall by the station')).toBeVisible();
 
-  // Revise: add a "next experiment" field; the entry survives.
+  // Make this more me: add a field for the song; the session survives.
   await page.getByTestId('rt-settings-link').click();
-  await page.getByTestId('rt-revise-input').fill('Add a field for the next experiment I want to try');
+  await expectNoHorizontalOverflow(page);
+  await page.getByTestId('rt-revise-input').fill('Add a field for which song I practised');
   await page.getByTestId('rt-revise-preview').click();
-  await expect(page.getByTestId('rt-revise-accept')).toBeVisible({ timeout: 90_000 });
-  await expect(page.getByTestId('rt-revise-changes')).toContainText(LIVE ? /experiment|next/i : /next experiment/i);
+  await expect(page.getByTestId('rt-revise-changes')).toContainText(LIVE ? /song/i : /which song/i, { timeout: 90_000 });
   await page.getByTestId('rt-revise-accept').click();
-  await expect(page.getByText(/change applied/i)).toBeVisible({ timeout: 30_000 });
+  await expect.poll(() => appVersion(page, appId), { timeout: 30_000 }).toBe(2);
+  const revised = await appDetail(page.request, appId);
+  expect(revised.spec.fields.some((f) => /song/i.test(f.label))).toBe(true);
   await page.goto(appUrl);
   await expect(page.getByTestId('rt-entry')).toHaveCount(1);
-  await expect(page.getByText('Low sun across the brick wall by the station')).toBeVisible();
-  await page.getByTestId('rt-new-entry').click();
-  await expect(page.getByText(LIVE ? /experiment/i : /next experiment/i).first()).toBeVisible();
-  await page.keyboard.press('Escape');
+  expect(await listRecords(page.request, appId)).toEqual(saved);
 
-  // Undo restores the previous definition and keeps the entry.
+  // Undo restores the previous definition and keeps the session.
   await page.getByTestId('rt-settings-link').click();
   await page.getByTestId('rt-undo').click();
-  await expect(page.getByText(/undone/i)).toBeVisible({ timeout: 30_000 });
+  await expect.poll(() => appVersion(page, appId), { timeout: 30_000 }).toBe(3);
+  const restored = await appDetail(page.request, appId);
+  expect(restored.spec.fields.map((f) => f.id)).toEqual(detail.spec.fields.map((f) => f.id));
   await page.goto(appUrl);
   await expect(page.getByTestId('rt-entry')).toHaveCount(1);
-  await page.getByTestId('rt-new-entry').click();
-  await expect(page.getByText(LIVE ? /next experiment/i : /next experiment/i)).toHaveCount(0);
 
-  // My Collection lists the app.
-  await page.goto('/collection');
-  await expect(page.getByTestId('collection-tile').first()).toBeVisible();
+  // My apps lists it.
+  await page.goto('/apps');
+  await expect(page.locator(`[data-testid="app-tile"][data-app-id="${appId}"]`)).toBeVisible();
   await expectNoHorizontalOverflow(page);
 });
 
-test('two contrasting profiles produce different grounded recommendations', async ({ browser }) => {
-  test.setTimeout(180_000);
-  const titlesFor = async (profile: 'store-sample-founder' | 'store-sample-student') => {
+test('two contrasting sample profiles produce different, visibly grounded Playground sets', async ({ browser }) => {
+  test.setTimeout(240_000);
+  const titlesFor = async (button: 'store-sample-founder' | 'store-sample-student') => {
     const context = await browser.newContext();
     const page = await context.newPage();
-    const res = await page.request.post('/api/auth/signup', { data: { email: uniqueEmail(profile), password: PASSWORD } });
-    expect(res.status()).toBe(201);
-    await page.goto('/import');
-    await page.getByTestId(profile).click();
-    await expect(page).toHaveURL(/\/context/, { timeout: 60_000 });
-    await page.goto('/for-you');
-    const cards = page.getByTestId('rec-card');
+    await signupViaApi(page, uniqueEmail(button));
+    await page.goto('/settings/import');
+    await expectNoHorizontalOverflow(page);
+    await page.getByTestId(button).click();
+    // The import is done once facts exist (the page may move on to What you've shared).
+    await expect
+      .poll(async () => ((await (await page.request.get('/api/context')).json()) as { facts: unknown[] }).facts.length, { timeout: 60_000 })
+      .toBeGreaterThanOrEqual(8);
+
+    await page.goto('/playground');
+    const cards = page.getByTestId('pg-card');
+    await cards.first().or(page.getByTestId('pg-refresh')).or(page.getByTestId('pg-empty')).first().waitFor({ timeout: 60_000 });
+    if ((await cards.count()) === 0) await page.getByTestId('pg-refresh').click();
     await expect(cards.first()).toBeVisible({ timeout: 120_000 });
-    const titles = await cards.locator('h3').allTextContents();
-    // Every card shows a reason and at least one evidence chip (grounding is visible).
-    await expect(cards.first().getByText(/why this fits you/i)).toBeVisible();
+    expect(await cards.count()).toBeGreaterThanOrEqual(3);
+    await expect(cards.first().getByTestId('pg-why')).toBeVisible(); // the grounding is on the card
+    if (!LIVE) await expect(page.getByTestId('pg-sample-badge').first()).toBeVisible(); // Sample mode is always visible
+    await expectNoHorizontalOverflow(page);
+
+    const res = await page.request.get('/api/recommendations');
+    expect(res.status()).toBe(200);
+    const recs = ((await res.json()) as { recommendations: { title: string; status: string }[] }).recommendations.filter((r) => r.status === 'fresh');
+    expect(recs.length).toBeGreaterThanOrEqual(3);
+    for (const r of recs) await expect(page.getByText(r.title).first()).toBeVisible(); // every proposal is on the page
     await context.close();
-    return titles.map((t) => t.trim());
+    return recs.map((r) => r.title.trim());
   };
   const founder = await titlesFor('store-sample-founder');
   const student = await titlesFor('store-sample-student');
   const overlap = founder.filter((t) => student.includes(t));
-  expect(founder.length).toBeGreaterThanOrEqual(3);
-  expect(student.length).toBeGreaterThanOrEqual(3);
   expect(overlap.length, `founder: ${founder.join(', ')} | student: ${student.join(', ')}`).toBeLessThanOrEqual(1);
 });

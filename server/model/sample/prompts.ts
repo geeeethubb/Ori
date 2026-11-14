@@ -298,6 +298,25 @@ export function promptsFor(conceptId: string | undefined, pattern: Pattern, purp
   return specific ?? GENERIC[pattern][purpose];
 }
 
+/**
+ * Daily practice prompts sized to the minutes the person has (used when a practice app's prompts are
+ * resized through "Make this more me" or an Agent update). General practice only: no artists, no links.
+ */
+export function practicePromptsFor(minutes: number): string[] {
+  const m = Math.max(3, Math.min(180, Math.round(minutes)));
+  const slow = Math.max(2, Math.round(m / 3));
+  const loop = Math.max(2, Math.round(m / 5));
+  return [
+    `Play the riff at half tempo for ${slow} minutes, then once at full speed`,
+    `Loop the two chords that trip you up for ${loop} minutes`,
+    'Play along with the source once, no stopping',
+    'Record 30 seconds and listen back before you judge it',
+    `${m} minutes: one of only the right hand, one of only the left, the rest playing`,
+    'Learn the first two bars of something new by ear',
+    `Play the whole piece slowly enough to make zero mistakes, all ${m} minutes`,
+  ];
+}
+
 /** Title shown above the rotating prompt, e.g. "This week's challenge". */
 export function promptTitle(cadence: 'daily' | 'weekly', pattern: Pattern): string {
   if (cadence === 'daily') return pattern === 'tracker' ? 'Today’s focus' : 'Today’s prompt';

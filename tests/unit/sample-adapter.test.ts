@@ -3,7 +3,8 @@ import { AppSpecSchema, type AppSpec } from '../../shared/appSpec.ts';
 import { RecommendationDraftSchema, type ExtractionResult, type RecommendationDraft } from '../../shared/context.ts';
 import { applyRevision } from '../../shared/revision.ts';
 import { SAMPLE_PROFILES } from '../../server/fixtures/sampleContext.ts';
-import { CONCEPTS, conceptById } from '../../server/model/sample/catalog.ts';
+import { RIFF_PRACTICE } from '../../server/fixtures/specs.ts';
+import { CONCEPTS, PLAYGROUND_CONCEPTS, conceptById } from '../../server/model/sample/catalog.ts';
 import { extractFacts } from '../../server/model/sample/extract.ts';
 import { generateSpec } from '../../server/model/sample/generate.ts';
 import { applyInstructionHeuristics } from '../../server/model/sample/heuristics.ts';
@@ -33,6 +34,16 @@ function quotesAreGrounded(rec: RecommendationDraft, facts: RecommendInput['fact
   const cited = facts.filter((f) => rec.evidenceFactIds.includes(f.id)).map((f) => f.value.replace(/\s+/g, ' '));
   const quotes = [...rec.reason.matchAll(/"([^"]+)"/g)].map((m) => (m[1] ?? '').replace(/…/g, '').trim());
   return quotes.length > 0 && quotes.every((q) => cited.some((v) => v.includes(q)));
+}
+
+/** A catalog card the way the Playground would store it, for build tests that need a specific concept. */
+function cardFor(conceptId: string, evidenceFactIds: string[] = ['f-1']): RecommendationDraft {
+  const concept = conceptById(conceptId);
+  if (!concept) throw new Error(`unknown concept ${conceptId}`);
+  return RecommendationDraftSchema.parse({
+    conceptId, kind: 'new_app', title: concept.title, purpose: concept.purpose, pattern: concept.pattern, icon: concept.icon, tagline: concept.tagline,
+    description: concept.description, reason: 'You mentioned "street photography on weekend walks".', evidenceFactIds, firstAction: concept.firstAction, previewLines: ['Example line'],
+  });
 }
 
 const founderResult = extractProfile('founder-photographer');
@@ -121,14 +132,18 @@ describe('extractFacts (sample profiles)', () => {
 });
 
 describe('recommend', () => {
-  it('recommends follow-ups and photo walks for the founder, quoting their own words', () => {
+  it('surfaces People and Light for the founder (one app per need), both purposes, quoting their own words', () => {
     const recs = recommendFor(founderFacts);
     expect(recs.length).toBe(4);
     const titles = recs.map((r) => r.title);
-    expect(titles).toContain('People to Follow Up With');
-    expect(titles).toContain('Photo Walk Journal');
+    expect(titles).toContain('People');
+    expect(titles).toContain('Light');
+    // The reference concept replaces its original sibling; never both for one need.
+    expect(titles).not.toContain('People to Follow Up With');
+    expect(titles).not.toContain('Photo Walk Journal');
     expect(recs.some((r) => r.purpose === 'work')).toBe(true);
     expect(recs.some((r) => r.purpose === 'explore')).toBe(true);
+    expect(recs.filter((r) => r.kind === 'explore').length).toBe(1);
     const ids = new Set(founderFacts.map((f) => f.id));
     for (const rec of recs) {
       RecommendationDraftSchema.parse(rec);
@@ -138,14 +153,40 @@ describe('recommend', () => {
       expect(rec.previewLines.length).toBeGreaterThanOrEqual(1);
       expect(rec.reason.length).toBeLessThanOrEqual(400);
     }
-    expect(recs.find((r) => r.title === 'People to Follow Up With')?.reason).toMatch(/follow up|investors|mentors|coffee chats/i);
-    expect(recs.find((r) => r.title === 'Photo Walk Journal')?.reason).toMatch(/photograph|light|walks/i);
+    const people = recs.find((r) => r.title === 'People');
+    expect(people?.reason).toMatch(/follow up|following up|investors|mentors|coffee chats/i);
+    expect(people?.pattern).toBe('queue');
+    expect(people?.capabilities).toContain('next_actions');
+    const light = recs.find((r) => r.title === 'Light');
+    expect(light?.reason).toMatch(/photograph|light|walks/i);
+    expect(light?.pattern).toBe('gallery');
+    expect(light?.capabilities).toContain('photo_upload');
+    expect(light?.design?.theme).toBe('paper');
+    expect(light?.previewLines.some((l) => /Contact sheet/.test(l))).toBe(true);
+  });
+
+  it('adds one exploration when the context clearly supports it: a light walk for the founder, a listening session for the student', () => {
+    const founderExplore = recommendFor(founderFacts).find((r) => r.kind === 'explore');
+    const studentExplore = recommendFor(studentFacts).find((r) => r.kind === 'explore');
+    expect(founderExplore?.title).toMatch(/light walk/i);
+    expect(studentExplore?.title).toMatch(/listening/i);
+    for (const e of [founderExplore, studentExplore]) {
+      expect(e?.explorationSteps?.length).toBeGreaterThanOrEqual(3);
+      expect(e?.explorationSteps?.length).toBeLessThanOrEqual(5);
+      expect(e?.explorationSteps?.join(' ')).not.toMatch(/https?:\/\//);
+      expect(e?.capabilities).toEqual([]);
+      expect(e?.evidenceFactIds.length).toBeGreaterThanOrEqual(1);
+      expect(e?.tagline).toBe('No app needed');
+    }
+    expect(studentExplore?.explorationSteps?.join(' ')).toMatch(/30 minutes/); // "practising about 30 minutes most evenings"
+    expect(quotesAreGrounded(founderExplore as RecommendationDraft, founderFacts)).toBe(true);
   });
 
   it('recommends a music concept and a study concept for the student', () => {
     const recs = recommendFor(studentFacts);
     const titles = recs.map((r) => r.title);
-    expect(titles.some((t) => /music|practice/i.test(t))).toBe(true);
+    expect(titles).toContain('Riff');
+    expect(titles).not.toContain('Music Practice Companion');
     expect(titles.some((t) => /study|course|assignment/i.test(t))).toBe(true);
     for (const rec of recs) expect(quotesAreGrounded(rec, studentFacts)).toBe(true);
   });
@@ -157,24 +198,50 @@ describe('recommend', () => {
     expect(3 - overlap).toBeGreaterThanOrEqual(2);
   });
 
-  it('skips apps already in the collection and stays deterministic', () => {
+  it('skips apps already in the collection (and their sibling concept) and stays deterministic', () => {
     const recs = recommendFor(founderFacts, { existingApps: [{ id: 'app-existing-1', name: 'People to Follow Up With', purpose: 'work', pattern: 'board', capabilities: ['board', 'due_soon', 'summary'] }] });
-    expect(recs.map((r) => r.title)).not.toContain('People to Follow Up With');
+    const titles = recs.map((r) => r.title);
+    expect(titles).not.toContain('People to Follow Up With');
+    expect(titles).not.toContain('People');
     expect(recommendFor(founderFacts)).toEqual(recommendFor(founderFacts));
   });
 
-  it('falls back to popular starting points when nothing matches, still citing a real fact', () => {
+  it('still explores a domain whose app the person already owns, without recommending that app again', () => {
+    const recs = recommendFor(founderFacts, { existingApps: [{ id: 'app-light-0001', name: 'Light', purpose: 'explore', pattern: 'gallery', capabilities: ['gallery', 'photo_upload', 'summary', 'prompts'] }] });
+    const titles = recs.map((r) => r.title);
+    expect(titles).not.toContain('Light');
+    expect(titles).not.toContain('Photo Walk Journal');
+    expect(recs.find((r) => r.kind === 'explore')?.title).toMatch(/light walk/i);
+  });
+
+  it('falls back to the three reference starting points when nothing matches, still citing a real fact', () => {
     const facts: RecommendInput['facts'] = [
       { id: 'x1', category: 'interest', value: 'Zxqv blorp wumple', status: 'inferred', confidence: 0.55 },
       { id: 'x2', category: 'routine', value: 'Qwerty zorple fnord', status: 'confirmed', confidence: 0.9 },
     ];
     const recs = recommendFor(facts);
-    expect(recs.map((r) => r.title)).toEqual(['People to Follow Up With', 'Photo Walk Journal', 'Habit Streaks']);
+    expect(recs.map((r) => r.title)).toEqual(['People', 'Light', 'Riff']);
     for (const rec of recs) {
+      expect(rec.kind).toBe('new_app');
       expect(rec.reason).toBe(SPARSE_REASON);
       expect(rec.evidenceFactIds).toEqual(['x2']);
     }
     expect(recommendFor([])).toEqual([]);
+  });
+
+  it('grounds recommendations in recent captures when there are no facts, citing the capture only', () => {
+    const text = 'Street photography walk around the harbour on Saturday morning';
+    const recs = recommend({ facts: [], existingApps: [], chosenInterests: [], count: 4, recentCaptures: [{ id: 'cap-walk-1', kind: 'note', text, url: null, linkMeta: null, readStatus: 'read' }] });
+    expect(recs.length).toBe(4);
+    expect(recs[0]?.title).toBe('Light');
+    expect(recs.some((r) => r.kind === 'explore')).toBe(true);
+    for (const r of recs) {
+      expect(r.sourceCaptureIds).toEqual(['cap-walk-1']);
+      expect(r.evidenceFactIds).toEqual([]);
+    }
+    const quotes = [...(recs[0]?.reason ?? '').matchAll(/"([^"]+)"/g)].map((m) => (m[1] ?? '').replace(/…/g, ''));
+    expect(quotes.length).toBeGreaterThan(0);
+    for (const q of quotes) expect(text).toContain(q);
   });
 });
 
@@ -218,10 +285,22 @@ describe('catalog', () => {
     }
     expect(signatures.size).toBe(CONCEPTS.length);
   });
+
+  it('ships the three reference concepts, each building a structurally different valid app with its own design', () => {
+    expect(PLAYGROUND_CONCEPTS.map((c) => c.id)).toEqual(['riff-practice', 'light-gallery', 'people-queue']);
+    const viewTypes = PLAYGROUND_CONCEPTS.map((c) => AppSpecSchema.parse(c.buildSpec({ instructions: '' })).views.map((v) => v.type).join('+'));
+    expect(viewTypes).toEqual(['practice+links+summary', 'gallery+summary', 'queue+summary']);
+    for (const c of PLAYGROUND_CONCEPTS) {
+      const spec = AppSpecSchema.parse(c.buildSpec({ instructions: '' }));
+      expect(spec.pattern).toBe(c.pattern);
+      expect(spec.design).toBeDefined();
+      expect(c.triggers.length).toBeGreaterThanOrEqual(10);
+    }
+  });
 });
 
 describe('generateSpec', () => {
-  const photoRec = recommendFor(founderFacts).find((r) => r.title === 'Photo Walk Journal') as RecommendationDraft;
+  const photoRec = cardFor('photo-walk-journal');
 
   it('turns the hero instructions into a weekly challenge and a reflection field', () => {
     const out = generateSpec({ recommendation: photoRec, instructions: 'Make it a weekly photography challenge and add a reflection field', facts: [] });
@@ -254,18 +333,66 @@ describe('generateSpec', () => {
   });
 
   it('builds a working board for a work recommendation and honours a due-date request', () => {
-    const rec = recommendFor(founderFacts).find((r) => r.title === 'People to Follow Up With') as RecommendationDraft;
-    const out = generateSpec({ recommendation: rec, instructions: 'Add a priority field and a field for the company', facts: [] });
+    const out = generateSpec({ recommendation: cardFor('people-to-follow-up-with'), instructions: 'Add a priority field and a field for the company', facts: [] });
     expect(out.spec.pattern).toBe('board');
     expect(out.spec.fields.some((f) => f.id === 'priority' && f.type === 'select')).toBe(true);
     expect(out.spec.fields.some((f) => f.label === 'Company' && f.type === 'text')).toBe(true);
     expect(out.spec.rules.some((r) => r.type === 'due_soon')).toBe(true);
+  });
+
+  it('makes the time budget the first preset of Riff, applies the look and the goal, and keeps its identity', () => {
+    const riffRec = cardFor('riff-practice');
+    const out = generateSpec({ recommendation: riffRec, instructions: '', facts: [], choices: { timeBudgetMinutes: 15 } });
+    const practice = out.spec.views.find((v) => v.type === 'practice');
+    expect(practice?.type).toBe('practice');
+    if (practice?.type === 'practice') expect(practice.presets[0]).toBe(15);
+    expect(out.description).toMatch(/15 minutes/);
+
+    const twenty = generateSpec({ recommendation: riffRec, instructions: '', facts: [], choices: { timeBudgetMinutes: 20, look: 'charcoal', goal: 'Play the intro cleanly' } });
+    const p2 = twenty.spec.views.find((v) => v.type === 'practice');
+    if (p2?.type === 'practice') expect(p2.presets).toEqual([20, 15, 10, 25]);
+    expect(twenty.spec.design?.theme).toBe('charcoal');
+    expect(twenty.spec.design?.accent).toBe('lime'); // the rest of the identity stays
+    expect(twenty.spec.tagline).toBe('Play the intro cleanly');
+    expect(twenty.spec.name).toBe('Riff');
+    expect(twenty.description).toMatch(/20 minutes/);
+    expect(twenty.description).toMatch(/charcoal look/);
+    // A tracker without a timer: the budget becomes the default of its minutes field instead.
+    const tracker = generateSpec({ recommendation: cardFor('music-practice-companion'), instructions: '', facts: [], choices: { timeBudgetMinutes: 25 } });
+    const minutes = tracker.spec.fields.find((f) => f.id === 'minutes');
+    if (minutes?.type === 'number') expect(minutes.default).toBe(25);
+  });
+
+  it('applies instructions to the new views without breaking them', () => {
+    const riff = generateSpec({ recommendation: cardFor('riff-practice'), instructions: 'Add a mood field and make sessions 20 minutes', facts: [] });
+    AppSpecSchema.parse(riff.spec);
+    const practice = riff.spec.views.find((v) => v.type === 'practice');
+    const sources = riff.spec.views.find((v) => v.type === 'links');
+    expect(practice?.formFieldIds).toContain('mood'); // the primary (sessions) form shows it
+    expect(sources?.formFieldIds).not.toContain('mood'); // the saved-sources form does not
+    if (practice?.type === 'practice') expect(practice.presets[0]).toBe(20);
+    expect(riff.unsupported).toEqual([]);
+
+    const light = generateSpec({ recommendation: cardFor('light-gallery'), instructions: 'Let me upload photos and add tags', facts: [], choices: { look: 'paper' } });
+    AppSpecSchema.parse(light.spec);
+    expect(light.unsupported).toEqual([]); // photo upload is already real in a gallery app
+    expect(light.spec.fields.filter((f) => f.type === 'url').length).toBe(0);
+    expect(light.spec.fields.some((f) => f.type === 'image')).toBe(true);
+    expect(light.spec.views.find((v) => v.type === 'gallery')?.formFieldIds).toContain('tags');
+
+    const people = generateSpec({ recommendation: cardFor('people-queue'), instructions: 'Add a priority field and remind me by email', facts: [] });
+    AppSpecSchema.parse(people.spec);
+    expect(people.spec.fields.some((f) => f.id === 'priority' && f.type === 'select')).toBe(true);
+    expect(people.unsupported.length).toBe(1);
+    expect(people.unsupported[0]?.alternative).toMatch(/queue/);
+    expect(people.spec.views[0]?.type).toBe('queue');
   });
 });
 
 describe('proposeRevision', () => {
   const journal = AppSpecSchema.parse(conceptById('photo-walk-journal')!.buildSpec({ instructions: '' }));
   const board = AppSpecSchema.parse(conceptById('people-to-follow-up-with')!.buildSpec({ instructions: '' }));
+  const riff = AppSpecSchema.parse(RIFF_PRACTICE);
   const revise = (spec: AppSpec, request: string) => proposeRevision({ spec, request, sampleRecords: [] });
 
   it('adds a next experiment field as one additive op', () => {
@@ -325,6 +452,42 @@ describe('proposeRevision', () => {
     expect(revise(journal, 'add a location field').ops).toEqual([]);
   });
 
+  it('sets practice presets, session-sized prompts and tempo on Riff, and changes the look', () => {
+    const p = revise(riff, 'make the default session 20 minutes');
+    expect(p.ops.map((o) => o.op)).toEqual(['replace_view']);
+    const applied = applyRevision(riff, p.ops);
+    expect(applied.ok).toBe(true);
+    const practice = applied.spec?.views.find((v) => v.type === 'practice');
+    if (practice?.type === 'practice') expect(practice.presets).toEqual([20, 15, 10, 25]);
+    expect(p.summary).toMatch(/20/);
+    // Already the default: honest about it, no empty op.
+    const same = revise(riff, 'add a 15-minute preset');
+    expect(same.ops).toEqual([]);
+    expect(same.unsupported[0]?.reason).toMatch(/already starts at 15 minutes/);
+
+    const both = revise(riff, 'Add a 20-minute preset to the practice timer as the default. Set the metronome to 60 bpm');
+    expect(both.ops.filter((o) => o.op === 'replace_view').length).toBe(1); // one consistent view, not two
+    const view = applyRevision(riff, both.ops).spec?.views.find((v) => v.type === 'practice');
+    if (view?.type === 'practice') { expect(view.presets[0]).toBe(20); expect(view.defaultTempo).toBe(60); }
+    expect(both.summary).toMatch(/60 bpm/);
+
+    const sized = revise(riff, 'Size the daily prompts to 15-minute sessions');
+    expect(sized.ops[0]?.op).toBe('replace_rule');
+    if (sized.ops[0]?.op === 'replace_rule' && sized.ops[0].rule.type === 'prompt_rotation') {
+      expect(sized.ops[0].rule.cadence).toBe('daily');
+      expect(sized.ops[0].rule.prompts.join(' ')).toMatch(/5 minutes/);
+    }
+    expect(applyRevision(riff, sized.ops).ok).toBe(true);
+
+    // The look changes only its theme: the rest of the identity (lime accent, display type, waves) travels along untouched.
+    expect(revise(riff, 'make it dark').ops).toEqual([{ op: 'set_design', design: { theme: 'charcoal', accent: 'lime', typography: 'display', density: 'regular', artwork: 'waves' } }]);
+    const dark = applyRevision(riff, revise(riff, 'make it dark').ops).spec;
+    expect(dark?.design).toEqual({ ...riff.design, theme: 'charcoal' });
+    expect(revise(journal, 'use the paper look').ops[0]).toMatchObject({ op: 'set_design', design: { theme: 'paper', typography: 'editorial' } });
+    expect(revise(riff, 'use the ink theme').unsupported[0]?.reason).toMatch(/already uses the ink theme/);
+    expect(revise(journal, 'make the default session 20 minutes').unsupported[0]?.reason).toMatch(/no practice timer/);
+  });
+
   it('never deletes data, declines external actions, and explains when nothing matched', () => {
     const wipe = revise(board, 'delete all entries');
     expect(wipe.ops).toEqual([]);
@@ -382,8 +545,11 @@ describe('SampleAdapter', () => {
     expect(extracted.generatedBy).toBe('sample');
     const recs = await sampleAdapter.recommend({ facts: founderFacts, existingApps: [], chosenInterests: [], count: 3 });
     expect(recs.generatedBy).toBe('sample');
-    expect(recs.data.length).toBe(3);
-    const built = await sampleAdapter.generateSpec({ recommendation: recs.data[0] as RecommendationDraft, instructions: '', facts: [] });
+    expect(recs.data.length).toBe(3); // two apps and one exploration
+    expect(recs.data.filter((r) => r.kind === 'explore').length).toBe(1);
+    const first = recs.data[0] as RecommendationDraft;
+    expect(first.kind).toBe('new_app');
+    const built = await sampleAdapter.generateSpec({ recommendation: first, instructions: '', facts: [] });
     expect(built.generatedBy).toBe('sample');
     expect(AppSpecSchema.safeParse(built.data.spec).success).toBe(true);
     const revised = await sampleAdapter.proposeRevision({ spec: built.data.spec, request: 'add a notes field', sampleRecords: [] });

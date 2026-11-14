@@ -1,99 +1,71 @@
 # Velocity contribution
 
-**Status: PENDING.** No Velocity workspace access or exported outputs were available in this repository while the prototype was built. Nothing below claims Velocity was used. The sections marked *Founder to run* are ready to paste into the Velocity workspace; the *Integration point* under each one says exactly where the reviewed output changes the build.
+**Status: PENDING.** No Velocity workspace access and no exported Velocity outputs were available
+while the redesign was built (as of 2026-11-14). Nothing in this document claims that Velocity was
+used; every decision in the redesign so far came from `redesign/*.md`, `docs/redesign-contract.md`
+and the repository itself. The three prompts below are copied verbatim from
+`redesign/BUILD_PLAN.md` section 6 and are ready to run; the *Would change* lines say exactly which
+code a reviewed output would touch, so an actual contribution can be integrated and attributed
+honestly later. Never describe a prepared prompt as an executed contribution.
 
-The live app does **not** depend on a Velocity runtime API. Velocity is used interactively; the model adapter in `server/model/anthropic.ts` is separate.
+The live app does not depend on a Velocity runtime API. Velocity is used interactively by the
+founder; the model adapter (`server/model/anthropic.ts`) and the deterministic sample adapter
+(`server/model/sample/*`) are separate.
 
-## How to complete this (≈ 45 minutes)
+## How to complete this
 
-1. Open the Velocity workspace. Run the four tasks below in order (sensing → concepts → requirements → validation).
-2. Save each output (export or screenshot) into `docs/velocity/` as `01-customer.md`, `02-concepts.md`, `03-requirements.md`, `04-validation.md` (screenshots as PNG next to them).
-3. Apply the integration point for each task (small, targeted edits; file paths given).
-4. Fill the *What changed because of Velocity* table at the bottom. Keep hypotheses and Velocity outputs distinguishable from observed user behaviour.
+1. Open the actual hackathon Velocity workspace. Run Prompt A, then B, then C.
+2. Save each output (export or screenshots) under `docs/velocity/` with the file names given below,
+   plus the run date and the exact prompt text used (if it had to be adapted, keep both versions).
+3. Apply the integration for each prompt (small, targeted edits at the paths listed), run
+   `npm run typecheck` and `npm test`, and record what the output changed and what it did not.
+4. Fill the evidence table at the bottom. Keep Velocity outputs, hypotheses and observed user
+   behaviour distinguishable.
 
-## Task 1 — Pressure-test the customer hypothesis (sensing)
-
-*Founder to run:*
-
-```text
-We are building "AI App Store": a personal AI app store for individuals. Someone imports a
-context summary from their AI conversations, reviews the facts, sees apps recommended for both
-their recurring workflows and their hobbies/curiosity, builds one in a minute, adds it to their
-phone home screen, and revises it later without losing data. B2C subscription: 14 days free,
-$7.50/month for two months, then $15/month.
-
-Initial segment hypothesis: AI-heavy students, founders and early-career builders juggling
-several projects and at least one active hobby.
-
-1. Stress-test this segment. Which three sub-segments feel the pain of "advice and inspiration
-   that never becomes a tool" most acutely, and why?
-2. For each sub-segment, list the top 3 recurring workflows and top 3 interests they would
-   realistically want a small personal app for.
-3. Which objections would stop them from pasting an AI-generated profile into a new product?
-4. What would make them return on day 2 and in week 2?
-Return a concise table plus 5 interview questions to ask in a 10-minute first-use session.
-```
-
-*Integration point:* interview questions → `docs/DEMO.md` (observed-session script). Sub-segment workflows/interests → trigger keywords and concept list in `server/model/sample/catalog.ts`, and the two sample profiles in `server/fixtures/sampleContext.ts` (keep them fictional and labelled sample).
-
-## Task 2 — Concept generation for the three demo apps
-
-*Founder to run:*
+## Prompt A: intent to useful proposal
 
 ```text
-Generate concepts for three small personal apps our runtime can build. The runtime supports only:
-fields (text, long text, date, number, choice, checkbox, 1–5 rating, link, tags), views (dated
-journal, board with columns from a choice field, list, summary with count/sum/average/streak),
-and rules (due-soon/overdue highlighting; a rotating daily/weekly prompt). No notifications,
-integrations, attachments or custom code.
-
-Apps: (a) "People to Follow Up With" for a founder who forgets follow-ups after networking;
-(b) "Photo Walk Journal" for someone learning street photography on weekend walks who wants a
-weekly challenge and a reflection; (c) a third app that connects work and exploration for a
-student learning guitar with assignment deadlines.
-
-For each: the 5–8 fields with conversational labels, the default view, the one rule that makes it
-useful on day one, the empty-state sentence, the first action in the first minute, and two
-revisions users are likely to ask for after a week.
+We are building a personal AI playground with three surfaces: Agent, Playground, and My apps. A user shares an inspiration or an everyday need. Design a compact decision workflow that chooses among: keep as a source, suggest an exploration, update an existing app, or propose a new app. Inputs: the user's explicit note, read-status of the source, existing app capabilities, and editable context. Output a small validated proposal contract with an outcome, first action, short reason, and source IDs. Never infer inaccessible video contents. Demonstrate the workflow on one guitar inspiration, one photography inspiration, and one follow-up task. Return the workflow, sample inputs/outputs, failure cases, and the implementation contribution that can be exported into our repository.
 ```
 
-*Integration point:* field labels, prompts and rules → `server/fixtures/specs.ts` (fixtures) and the matching `buildSpec` functions in `server/model/sample/catalog.ts`; likely revisions → `tests/unit/sample-adapter.test.ts` and the "quick suggestion" chips in `client/src/pages/RecommendationPage.tsx`.
+- **Output stored at:** `docs/velocity/01-intent-to-proposal.md` (plus screenshots as PNG next to it).
+- **Would change:** the Sample-mode decision workflow in `server/model/sample/respond.ts` and
+  `server/model/sample/domains.ts` (when to keep / explore / update / make, the honesty lines per
+  `readStatus`, what is learned from a note); the Agent system prompt and proposal instructions in
+  `server/model/anthropic.ts` (`respondToCapture`); the failure cases become tests in
+  `tests/unit/sample-respond.test.ts`. The proposal contract (`RecommendationDraftSchema` in
+  `shared/context.ts`) changes only if the output shows a field the current contract cannot carry.
 
-## Task 3 — Requirements and edge cases
-
-*Founder to run:*
+## Prompt B: capability and design mapping
 
 ```text
-Write acceptance requirements for a personal-app runtime with versioned definitions and
-records that must survive revisions. Cover: adding a field after entries exist; hiding a field
-without losing values; undo; due-date boundaries (due today vs overdue vs due in 3 days,
-completed items never overdue); offline save failure; a sign-in that returns to the exact app
-URL on an iPhone home-screen web app; two home-screen icons that open two different apps.
-Format: Given/When/Then, max 20 items, ordered by demo risk.
+Review our app-generation contract and propose a maintainable mapping from user outcome to capability, view structure, and design. Photography must be image-first; music must be session/control-first; follow-up must be person/action-first. Shared data and auth should remain reusable. Identify where one generic form renderer prevents the desired result. Return a concrete contract/schema proposal, three worked app specifications, and validation cases. Label anything that requires an unavailable integration.
 ```
 
-*Integration point:* new Given/When/Then items → browser tests in `tests/e2e/` and unit tests in `tests/unit/rules.test.ts`; record pass/fail in `docs/TEST_RESULTS.md`.
+- **Output stored at:** `docs/velocity/02-capability-design-mapping.md`.
+- **Would change:** the app contract in `shared/appSpec.ts` (views, capabilities, `design`), the
+  three reference specifications in `server/fixtures/specs.ts` (Riff, Light, People), the
+  generation prompt and its outcome-to-capability guidance in `server/model/anthropic.ts`
+  (`generateSpec`), and the validation cases in `tests/unit/appSpec-redesign.test.ts`. Anything the
+  output marks as needing an unavailable integration is recorded as not built, not simulated.
 
-## Task 4 — Persona validation of recommendations (simulation)
-
-*Founder to run:*
+## Prompt C: evaluate the revised demo
 
 ```text
-Here are two context profiles (paste fixtures/sample-context-founder-photographer.md and
-fixtures/sample-context-student-musician.md). For each, act as that persona and react to these
-recommendation cards: <paste the For You cards from the app, including "Why this fits you">.
-Which card would you tap first and why? Which reason felt generic? What is missing that you
-would have expected from someone who read your profile? Suggest better one-line reasons that
-quote the profile.
+Evaluate the attached real screens and demo results against this promise: a personal AI turns interests and everyday needs into a playground of apps made for the user. Assess grounding, first-use friction, actual usefulness, structural differences between apps, and phone delivery. Separate observed evidence from assumptions. Return the five most consequential fixes, each with a reproducible acceptance check. Do not invent user research, test results, or product capabilities.
 ```
 
-*Integration point:* reason wording → the recommendation system prompt in `server/model/anthropic.ts` (`recommend`) and `reasonTemplate` strings in `server/model/sample/catalog.ts`. Persona reactions are hypotheses; confirm with the five observed first-use sessions.
+- **Output stored at:** `docs/velocity/03-demo-evaluation.md`, together with the exact screenshots
+  that were attached (from `docs/screenshots/`).
+- **Would change:** `docs/TEST_RESULTS.md` gains the five acceptance checks with their observed
+  pass/fail status; each fix is applied where the evaluation points (storefront pages under
+  `client/src/pages/`, runtime renderers under `client/src/runtime/`, or the adapters) and recorded
+  in `BUILD_STATUS.md`. Fixes that cannot be verified on a phone are listed as pending, not done.
 
-## What changed because of Velocity
+## Evidence (empty until outputs exist)
 
-| Task | Output file | Decision changed | Where |
-| --- | --- | --- | --- |
-| 1 | pending | – | – |
-| 2 | pending | – | – |
-| 3 | pending | – | – |
-| 4 | pending | – | – |
+| Prompt | Run date | Output file | Decision changed | Where in code | Remaining gap |
+| --- | --- | --- | --- | --- | --- |
+| A | not run | pending | none yet | – | workspace access |
+| B | not run | pending | none yet | – | workspace access |
+| C | not run | pending | none yet | – | workspace access |

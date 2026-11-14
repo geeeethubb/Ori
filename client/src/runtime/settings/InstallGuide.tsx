@@ -75,7 +75,7 @@ export function InstallGuide({ appId, name }: Props) {
         <p>You're using the installed app. Tap its icon on your home screen any time to come straight back here.</p>
       ) : (
         <>
-          <p className="muted small">Add {name} to your home screen so it opens like any other app. You do this step yourself in the browser; we cannot do it for you.</p>
+          <p className="muted small">Add {name} to your home screen so it opens like any other app. This is a step you take yourself in your browser's menu; we only show the way and never do it for you.</p>
           {platform === 'ios' && (
             <ol className="rt-steps">
               <li>Tap the Share button (square with an arrow).</li>

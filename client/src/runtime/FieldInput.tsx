@@ -2,9 +2,13 @@
  * One form control per field type. The wrapper carries data-testid="rt-field-<fieldId>" and the
  * control itself data-testid="rt-input-<fieldId>"; the label is bound by id in every case.
  */
-import { useEffect, useRef, type ReactNode, type TextareaHTMLAttributes } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode, type TextareaHTMLAttributes } from 'react';
 import type { FieldSpec } from '@shared/appSpec.ts';
 import type { FieldValue } from '@shared/records.ts';
+import { describeError } from '../api.ts';
+import { Icons } from '../components/ui.tsx';
+import { AuthImage } from './AuthImage.tsx';
+import { MEDIA_ACCEPT, uploadMedia } from './media.ts';
 import { TagsInput } from './TagsInput.tsx';
 
 interface Props {
@@ -25,7 +29,7 @@ export function FieldInput({ field, value, onChange, error, autoFocus }: Props) 
   const describedBy = [helpId, errorId].filter(Boolean).join(' ') || undefined;
   const inputTestId = `rt-input-${field.id}`;
   const invalid = error ? true : undefined;
-  const isGroup = field.type === 'rating' || (field.type === 'select' && field.options.length <= 4);
+  const isGroup = field.type === 'rating' || (field.type === 'select' && field.options.length <= 4) || field.type === 'image';
 
   const meta = (
     <>
@@ -232,6 +236,9 @@ export function FieldInput({ field, value, onChange, error, autoFocus }: Props) 
         />
       );
       break;
+    case 'image':
+      control = <ImageInput id={id} labelId={labelId} testId={inputTestId} value={value} describedBy={describedBy} onChange={onChange} />;
+      break;
   }
 
   return (
@@ -262,3 +269,57 @@ function AutoGrowTextarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea ref={ref} {...props} />;
 }
 
+interface ImageInputProps {
+  id: string;
+  labelId: string;
+  testId: string;
+  value: unknown;
+  describedBy?: string;
+  onChange: (value: FieldValue) => void;
+}
+
+/** A photo field: thumbnail of the chosen photo plus a file button that uploads and stores the media id. */
+function ImageInput({ id, labelId, testId, value, describedBy, onChange }: ImageInputProps) {
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const has = typeof value === 'string' && value !== '';
+
+  const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setBusy(true);
+    setProblem(null);
+    try {
+      const media = await uploadMedia(file);
+      onChange(media.id);
+    } catch (err) {
+      setProblem(describeError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rt-image-input" role="group" id={id} aria-labelledby={labelId} aria-describedby={describedBy}>
+      {has && <AuthImage value={value} alt="Chosen photo" className="rt-image-input-thumb" fit="cover" loading="eager" />}
+      <div className="rt-image-input-actions">
+        <label className={`btn btn-secondary rt-file-btn${busy ? ' is-busy' : ''}`} aria-disabled={busy}>
+          {Icons.camera}
+          {busy ? 'Uploading…' : has ? 'Change photo' : 'Choose photo'}
+          <input type="file" accept={MEDIA_ACCEPT} className="sr-only" onChange={(e) => void onFile(e)} disabled={busy} data-testid={testId} />
+        </label>
+        {has && !busy && (
+          <button type="button" className="btn btn-ghost" onClick={() => onChange(null)}>
+            Remove
+          </button>
+        )}
+      </div>
+      {problem && (
+        <div className="field-error" role="alert">
+          {problem}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -2,18 +2,21 @@
  * Natural-language revision planner for sample mode. Maps a request onto the bounded set of
  * revision operations (always additive or reversible) and declines everything else with a concrete
  * supported alternative. Every proposal is dry-run through applyRevision before it is returned.
+ * Besides fields, options, rules and names it understands the redesign's practice timer (presets,
+ * prompts sized to a session, tempo) and the app's look ("make it dark", "use the paper look").
  */
-import { FieldSchema, RuleSchema, type AppSpec, type FieldSpec, type ViewSpec } from '../../../shared/appSpec.ts';
+import { FieldSchema, RuleSchema, designFor, type AppSpec, type AppTheme, type FieldSpec, type ViewSpec } from '../../../shared/appSpec.ts';
 import type { FieldInput, RuleInput } from './builders.ts';
 import { slugifyFieldId } from '../../../shared/ids.ts';
 import { RevisionProposalSchema, applyRevision, type RevisionOp, type RevisionProposal } from '../../../shared/revision.ts';
 import type { ReviseInput } from '../types.ts';
 import { conceptForSpec } from './catalog.ts';
 import { cleanLabel, dueDatePlan, genericField, planInstructions, promptRotationPlan, typeWord, type Unsupported } from './heuristics.ts';
+import { practicePromptsFor } from './prompts.ts';
 import { clip, contentTokens, jaccard, normalize, quote } from './text.ts';
 
 export const NO_MATCH_SUMMARY = "I couldn't map that to a supported change";
-export const SUPPORTED_HINT = 'Supported changes: add a field, hide or show a field, rename a field or the app, add a stage or option, change the due-soon window, or add a weekly challenge or daily prompt.';
+export const SUPPORTED_HINT = 'Supported changes: add a field, hide or show a field, rename a field or the app, add a stage or option, change the due-soon window, add a weekly challenge or daily prompt, set the practice timer presets or tempo, or change the look (dark, paper, mint, lilac, sunset, bright).';
 
 const RX = {
   clearData: /\b(?:delete|clear|remove|wipe|erase|reset)\s+(?:all\s+)?(?:the\s+|my\s+)?(?:entries|data|records|everything|history|all)\b|\bstart (?:over|fresh|from scratch)\b/i,
@@ -26,9 +29,29 @@ const RX = {
   required: /\bmake\s+(?:the\s+)?(.+?)\s+(?:field\s+)?(required|optional|mandatory)\b/i,
   entryNoun: /\bcall\s+(?:each\s+|the\s+|every\s+)?(?:entry|entries|item|items|card|cards|record|records)\s+(?:an?\s+)?["“']?([a-z][a-z \-]{1,30}?)["”']?$/i,
   typeWord: /^(?:date|rating|number|checkbox|tags?|link|url|text|notes?|long text|select|choice|dropdown)$/i,
+  /** "size the daily prompts to 15-minute sessions", "prompts for 20 minutes". Checked before `preset`. */
+  sizedPrompts: /\bprompts?\b[^.;]*?\b(\d{1,3})\s*(?:-\s*)?(?:min(?:ute)?s?)\b|\b(\d{1,3})\s*(?:-\s*)?(?:min(?:ute)?s?)\b[^.;]*?\bprompts?\b/i,
+  /** "a 15-minute preset", "make the default session 20 minutes", "20-minute sessions". */
+  preset: /\b(\d{1,3})\s*(?:-\s*)?(?:min(?:ute)?s?)\b[^.;]*?\b(?:presets?|timer|sessions?|default)\b|\b(?:presets?|timer|sessions?|default)\b[^.;]*?\b(\d{1,3})\s*(?:-\s*)?(?:min(?:ute)?s?)\b/i,
+  /** "set the metronome to 60 bpm", "tempo 80". */
+  tempo: /\b(?:tempo|metronome|bpm)\b[^.;]*?\b(\d{2,3})\b|\b(\d{2,3})\s*bpm\b/i,
+  /** A clause is about the look only when it says so (keeps "add a light field" out of it). */
+  lookCue: /\b(?:look|theme|colou?rs?|background|palette|style|dark(?:er)?|light mode|lighter|mode)\b/i,
 };
 
+/** Theme words, checked in order; the first match wins. */
+const THEME_WORDS: [RegExp, AppTheme][] = [
+  [/\b(?:charcoal|dark(?:er)?|black|night)\b/i, 'charcoal'],
+  [/\b(?:ink|navy|midnight|deep blue)\b/i, 'ink'],
+  [/\b(?:paper|cream|off[- ]white|warm(?:er)? white)\b/i, 'paper'],
+  [/\b(?:mint|green)\b/i, 'mint'],
+  [/\b(?:lilac|purple|lavender|violet)\b/i, 'lilac'],
+  [/\b(?:sunset|orange|coral|warm(?:er)?)\b/i, 'sunset'],
+  [/\b(?:bright|white|light mode|lighter)\b/i, 'bright'],
+];
+
 type MatchOpts = { hidden?: boolean };
+type PracticeView = Extract<ViewSpec, { type: 'practice' }>;
 
 /** Fuzzy field lookup by label, id or type word; returns the best candidate above a threshold. */
 function findField(spec: AppSpec, phrase: string, opts: MatchOpts = {}): FieldSpec | undefined {
@@ -74,13 +97,25 @@ function structuralFieldIds(spec: AppSpec): Set<string> {
     if (v.type === 'board') { ids.add(v.stageFieldId); ids.add(v.titleFieldId); }
     if (v.type === 'list') ids.add(v.titleFieldId);
     if (v.type === 'summary') for (const m of v.metrics) if (m.fieldId && m.kind !== 'count') ids.add(m.fieldId);
+    if (v.type === 'gallery') ids.add(v.imageFieldId);
+    if (v.type === 'practice') ids.add(v.minutesFieldId);
+    if (v.type === 'links') ids.add(v.urlFieldId);
+    if (v.type === 'queue') { ids.add(v.personFieldId); ids.add(v.actionFieldId); if (v.doneFieldId) ids.add(v.doneFieldId); if (v.stageFieldId) ids.add(v.stageFieldId); }
+    if (v.filter) ids.add(v.filter.fieldId);
   }
   for (const r of spec.rules) if (r.type === 'due_soon') { ids.add(r.dateFieldId); if (r.stageFieldId) ids.add(r.stageFieldId); if (r.doneFieldId) ids.add(r.doneFieldId); }
   return ids;
 }
 
 function viewKind(spec: AppSpec): string {
-  return spec.pattern === 'board' ? 'board' : spec.pattern === 'journal' ? 'journal' : 'list';
+  switch (spec.pattern) {
+    case 'board': return 'board';
+    case 'journal': return 'journal';
+    case 'gallery': return 'gallery';
+    case 'practice': return 'practice room';
+    case 'queue': return 'queue';
+    default: return 'list';
+  }
 }
 
 function splitClauses(text: string): string[] {
@@ -96,11 +131,15 @@ function pluralize(word: string): string {
   return `${word}s`;
 }
 
+const clampMinutes = (n: number) => Math.max(1, Math.min(180, Math.round(n)));
+
 export function proposeRevision(input: ReviseInput): RevisionProposal {
   const spec = input.spec;
   const request = (input.request ?? '').replace(/\s+/g, ' ').trim().slice(0, 2000);
   const ops: RevisionOp[] = [];
   const unsupported: Unsupported[] = [];
+  /** Extra summary lines, keyed by the op they describe, for changes whose generic line says too little. */
+  const detail = new Map<string, string>();
   if (!request) return RevisionProposalSchema.parse({ summary: NO_MATCH_SUMMARY, ops: [], unsupported: [{ request: '', reason: 'The request was empty.', alternative: SUPPORTED_HINT }] });
 
   const structural = structuralFieldIds(spec);
@@ -109,6 +148,17 @@ export function proposeRevision(input: ReviseInput): RevisionProposal {
   const takeId = (label: string) => { const id = slugifyFieldId(label, taken); taken.add(id); return id; };
   const addField = (field: FieldInput) => ops.push({ op: 'add_field', field: FieldSchema.parse(field), ...(lastVisible ? { afterFieldId: lastVisible } : {}) });
   const rule = (r: RuleInput) => RuleSchema.parse(r);
+  // The practice view accumulates preset/tempo changes so several clauses end in ONE replace_view op.
+  const practiceView = spec.views.find((v): v is PracticeView => v.type === 'practice');
+  const practiceDraft: PracticeView | undefined = practiceView ? structuredClone(practiceView) : undefined;
+  const practiceDetail: string[] = [];
+  const replacePractice = () => {
+    if (!practiceDraft) return;
+    const i = ops.findIndex((o) => o.op === 'replace_view' && o.viewId === practiceDraft.id);
+    if (i >= 0) ops.splice(i, 1);
+    ops.push({ op: 'replace_view', viewId: practiceDraft.id, view: structuredClone(practiceDraft) });
+  };
+  const notPractice = (clause: string, reason: string) => unsupported.push({ request: clip(clause, 400), reason, alternative: 'Make a practice app like Riff; its timer, prompts and metronome can be tuned to the minutes you have.' });
 
   const remaining: string[] = [];
   for (const clause of splitClauses(request)) {
@@ -218,6 +268,70 @@ export function proposeRevision(input: ReviseInput): RevisionProposal {
       ops.push({ op: 'set_entry_noun', singular, plural: pluralize(singular) });
       continue;
     }
+    // Daily prompts sized to a session ("size the daily prompts to 15-minute sessions").
+    const sized = RX.sizedPrompts.exec(clause);
+    if (sized) {
+      const n = clampMinutes(Number(sized[1] ?? sized[2]));
+      if (!practiceDraft) { notPractice(clause, 'Only practice apps have prompts sized to a session.'); continue; }
+      const prompts = practicePromptsFor(n);
+      const current = spec.rules.find((r) => r.type === 'prompt_rotation');
+      if (current && current.type === 'prompt_rotation') {
+        if (current.prompts.join('\n') === prompts.join('\n')) {
+          unsupported.push({ request: clip(clause, 400), reason: `The prompts are already sized to ${n}-minute sessions.`, alternative: 'Pick a different session length, or change the presets, tempo or look instead.' });
+        } else {
+          const op: RevisionOp = { op: 'replace_rule', ruleId: current.id, rule: rule({ ...current, cadence: 'daily', prompts }) };
+          ops.push(op);
+          detail.set(JSON.stringify(op), `The daily prompts are sized to ${n}-minute sessions.`);
+        }
+      } else {
+        const op: RevisionOp = { op: 'add_rule', rule: rule({ id: slugifyFieldId('tonight', spec.rules.map((r) => r.id)), type: 'prompt_rotation', cadence: 'daily', title: 'Tonight', prompts }) };
+        ops.push(op);
+        detail.set(JSON.stringify(op), `A daily prompt sized to ${n}-minute sessions is added.`);
+      }
+      continue;
+    }
+    // Practice timer presets ("make the default session 20 minutes").
+    const preset = RX.preset.exec(clause);
+    if (preset) {
+      const n = clampMinutes(Number(preset[1] ?? preset[2]));
+      if (!practiceDraft) { notPractice(clause, 'This app has no practice timer to set presets on.'); continue; }
+      const presets = [n, ...practiceDraft.presets.filter((p) => p !== n)].slice(0, 6);
+      if (presets.join(',') === practiceDraft.presets.join(',')) {
+        unsupported.push({ request: clip(clause, 400), reason: `The timer already starts at ${n} minutes.`, alternative: 'Pick a different length, or change the prompts, tempo or look instead.' });
+      } else {
+        practiceDraft.presets = presets;
+        replacePractice();
+        practiceDetail.push(`Timer presets become ${presets.join(', ')} minutes, ${n} first.`);
+      }
+      continue;
+    }
+    // Metronome default ("set the metronome to 60 bpm").
+    const tempo = RX.tempo.exec(clause);
+    if (tempo) {
+      const n = Number(tempo[1] ?? tempo[2]);
+      if (!practiceDraft) { notPractice(clause, 'This app has no metronome.'); continue; }
+      if (n < 30 || n > 240) {
+        unsupported.push({ request: clip(clause, 400), reason: 'The metronome runs between 30 and 240 bpm.', alternative: 'Pick a tempo in that range.' });
+      } else if (practiceDraft.defaultTempo === n) {
+        unsupported.push({ request: clip(clause, 400), reason: `The metronome already starts at ${n} bpm.`, alternative: 'Pick a different tempo, or change the presets or look instead.' });
+      } else {
+        practiceDraft.defaultTempo = n;
+        replacePractice();
+        practiceDetail.push(`The metronome starts at ${n} bpm.`);
+      }
+      continue;
+    }
+    // The look ("make it dark", "use the paper look").
+    if (RX.lookCue.test(clause)) {
+      const theme = THEME_WORDS.find(([rx]) => rx.test(clause))?.[1];
+      if (theme) {
+        const current = designFor(spec);
+        if (current.theme === theme) unsupported.push({ request: clip(clause, 400), reason: `It already uses the ${theme} theme.`, alternative: 'Pick another look: bright, paper, charcoal, ink, mint, lilac or sunset.' });
+        // The whole resolved design travels with the op, so the schema's defaults cannot reset typography or artwork.
+        else ops.push({ op: 'set_design', design: { ...current, theme } });
+        continue;
+      }
+    }
     remaining.push(clause);
   }
 
@@ -250,10 +364,21 @@ export function proposeRevision(input: ReviseInput): RevisionProposal {
       case 'rename':
         if (!ops.some((o) => o.op === 'rename_app')) ops.push({ op: 'rename_app', name: intent.name });
         break;
+      case 'practice_preset':
+        if (practiceDraft && practiceDraft.presets[0] !== intent.minutes) {
+          practiceDraft.presets = [intent.minutes, ...practiceDraft.presets.filter((p) => p !== intent.minutes)].slice(0, 6);
+          replacePractice();
+          practiceDetail.push(`Timer presets become ${practiceDraft.presets.join(', ')} minutes, ${intent.minutes} first.`);
+        }
+        break;
       case 'unsupported':
         unsupported.push(intent.item);
         break;
     }
+  }
+  if (practiceDetail.length) {
+    const op = ops.find((o) => o.op === 'replace_view' && o.viewId === practiceDraft?.id);
+    if (op) detail.set(JSON.stringify(op), practiceDetail.join(' '));
   }
 
   // Dry run: keep only the operations that apply cleanly, in order.
@@ -276,7 +401,8 @@ export function proposeRevision(input: ReviseInput): RevisionProposal {
     summary = clip(`Nothing to change yet. ${unsupported[0]?.reason ?? ''}`.trim(), 300);
   } else {
     const firsts = changes.map((c) => c.split(/(?<=\.)\s+/)[0] ?? c);
-    const joined = firsts.join(' ');
+    const extra = kept.map((o) => detail.get(JSON.stringify(o))).filter((s): s is string => Boolean(s));
+    const joined = [...firsts, ...extra].join(' ');
     summary = clip(joined.length <= 300 ? joined : `${firsts.length} changes: ${firsts.map((f) => f.replace(/\.$/, '')).join('; ')}.`, 300);
     if (unsupported.length) summary = clip(`${summary.replace(/\.?$/, '.')} ${unsupported.length === 1 ? 'One request' : `${unsupported.length} requests`} not included; see below.`, 300);
   }

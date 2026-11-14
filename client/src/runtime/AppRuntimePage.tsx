@@ -2,8 +2,9 @@
  * Entry point for /apps/:appId/* (outside the storefront chrome). Validates the ID, signs the
  * person in IN PLACE when needed, loads the app, keeps an offline copy, and routes between
  * the app itself and its settings. Only validated AppSpecs are rendered; no generated code runs.
+ * The root wears the app's own identity (theme, typography, density) via resolveTheme.
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import { Navigate, Route, Routes, useParams } from 'react-router';
 import type { AppDetailDto } from '@shared/api.ts';
 import { APP_ID_PATTERN } from '@shared/ids.ts';
@@ -14,6 +15,7 @@ import { AppHome } from './AppHome.tsx';
 import { AppSettingsPage } from './AppSettingsPage.tsx';
 import { RuntimeSignIn } from './RuntimeSignIn.tsx';
 import { LoadErrorScreen, NotFoundScreen, OfflineBanner, RuntimeSkeleton } from './RuntimeStates.tsx';
+import { resolveTheme } from './theme.ts';
 import { appHomePath, bootTarget, postEvent, readCache } from './runtimeUtils.ts';
 import { useAppData, type AppData } from './useAppData.ts';
 import './runtime.css';
@@ -86,8 +88,9 @@ const noop = () => undefined;
 
 function Shell({ appId, detail, records, data, offline = false, savedAt, onRetry, busy }: ShellProps) {
   const actions = data && !offline ? { createRecord: data.createRecord, updateRecord: data.updateRecord, deleteRecord: data.deleteRecord } : undefined;
+  const theme = useMemo(() => resolveTheme(detail.spec), [detail.spec]);
   return (
-    <div className="rt-root" data-testid="rt-app" data-offline={offline || undefined}>
+    <div className="rt-root" data-testid="rt-app" data-offline={offline || undefined} {...theme.attrs} style={theme.style as CSSProperties}>
       {offline && savedAt && onRetry && <OfflineBanner savedAt={savedAt} onRetry={onRetry} busy={busy} />}
       <Routes>
         <Route path="/" element={<AppHome appId={appId} detail={detail} records={records} actions={actions} />} />

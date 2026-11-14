@@ -1,8 +1,9 @@
 /**
  * Build a validated app from a proposal plus the person's instructions and choices, in sample mode.
  * The concept supplies a genuinely different base app; instructions are applied through the shared
- * heuristics; choices (time budget, look) are applied directly; the result is always validated
- * against AppSpecSchema before it is returned.
+ * heuristics; choices (time budget, look, goal) are applied directly; the result is always validated
+ * against AppSpecSchema before it is returned, and falls back to the untouched base app if an
+ * instruction would have broken it.
  */
 import { AppSpecSchema, type AppSpec, type AppSpecInput } from '../../../shared/appSpec.ts';
 import type { GeneratedApp, RecommendationDraft } from '../../../shared/context.ts';
@@ -23,16 +24,28 @@ export function conceptForRecommendation(rec: Pick<RecommendationDraft, 'concept
 }
 
 /** Apply the one or two choices the person made before "Make mine". */
-function applyChoices(spec: AppSpecInput, choices: GenerateSpecInput['choices']): string[] {
+export function applyChoices(spec: AppSpecInput, choices: GenerateSpecInput['choices']): string[] {
   const changes: string[] = [];
   if (!choices) return changes;
   if (choices.timeBudgetMinutes) {
+    const minutes = choices.timeBudgetMinutes;
+    let applied = false;
+    // Practice timers: the budget becomes the first (default) preset.
     for (const v of spec.views) {
       if (v.type !== 'practice') continue;
-      const rest = (v.presets ?? [10, 15, 25]).filter((p) => p !== choices.timeBudgetMinutes);
-      v.presets = [choices.timeBudgetMinutes, ...rest].slice(0, 6);
-      changes.push(`set the default session to ${choices.timeBudgetMinutes} minutes`);
+      const rest = (v.presets ?? [10, 15, 25]).filter((p) => p !== minutes);
+      v.presets = [minutes, ...rest].slice(0, 6);
+      applied = true;
     }
+    // No timer (e.g. a tracker): the minutes field, if any, defaults to the budget instead.
+    if (!applied) {
+      const minutesField = spec.fields.find((x) => x.type === 'number' && !x.hidden && (x.unit === 'min' || /minute/i.test(x.label)));
+      if (minutesField && minutesField.type === 'number') {
+        minutesField.default = minutes;
+        applied = true;
+      }
+    }
+    if (applied) changes.push(`set the default session to ${minutes} minutes`);
   }
   if (choices.look) {
     spec.design = { ...(spec.design ?? {}), theme: choices.look };
@@ -69,7 +82,7 @@ export function generateSpec(input: GenerateSpecInput): GeneratedApp & { spec: A
 
   let parsed = AppSpecSchema.safeParse(result.spec);
   if (!parsed.success) {
-    // Defensive: fall back to the untouched base app and say what was left out.
+    // Defensive: fall back to the base app with the choices applied and say what was left out.
     parsed = AppSpecSchema.safeParse(base);
     if (!parsed.success) throw new ModelOutputError('The sample app definition did not pass validation.', parsed.error.issues);
     unsupported.push({

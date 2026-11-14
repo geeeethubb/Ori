@@ -25,6 +25,8 @@ export default defineConfig({
   },
   projects: [
     { name: 'phone', use: { ...devices['Pixel 7'] } },
+    /** The narrowest supported phone (320px): the journey and app screens must not overflow there either. */
+    { name: 'phone-small', use: { ...devices['Pixel 7'], viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true } },
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: {
@@ -39,6 +41,8 @@ export default defineConfig({
       NODE_ENV: 'test',
       MODEL_PROVIDER: LIVE ? 'auto' : 'sample',
       DATABASE_PATH: `./data/test-e2e-${PORT}${LIVE ? '-live' : ''}.db`,
+      // Uploaded test photos stay next to the throwaway database, never in data/media.
+      MEDIA_DIR: `./data/test-e2e-${PORT}${LIVE ? '-live' : ''}-media`,
       PUBLIC_ORIGIN: BASE,
       COOKIE_SECURE: 'false',
     },
