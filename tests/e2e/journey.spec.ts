@@ -50,6 +50,9 @@ test('share a sound → Make mine → practise → the session survives a change
   await card.getByTestId('proposal-action').click();
   await expect(page).toHaveURL(/\/make\/[A-Za-z0-9_-]{8,40}/);
   await page.getByTestId('make-choice-minutes-15').click();
+  // Preview is an explicit step (it spends a model call in Live mode): the real renderer appears,
+  // labelled as example content.
+  await page.getByTestId('make-preview-button').click();
   await expect(page.getByTestId('make-preview')).toBeVisible({ timeout: 90_000 });
   await expect(page.getByTestId('make-preview-example-banner')).toBeVisible();
   await expectNoHorizontalOverflow(page);
@@ -79,7 +82,7 @@ test('share a sound → Make mine → practise → the session survives a change
   await page.getByTestId('rt-save-record').click();
 
   // A session appears, and it is a real record that belongs to the practice view.
-  await expect(page.getByTestId('rt-entry').first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('rt-session').first()).toBeVisible({ timeout: 15_000 });
   const saved = await listRecords(page.request, appId);
   expect(saved).toHaveLength(1);
   const session = saved[0]!.values;
@@ -88,7 +91,7 @@ test('share a sound → Make mine → practise → the session survives a change
 
   // Reload the stable URL: the session is still there.
   await page.goto(appUrl);
-  await expect(page.getByTestId('rt-entry')).toHaveCount(1);
+  await expect(page.getByTestId('rt-session')).toHaveCount(1);
 
   // Make this more me: add a field for the song; the session survives.
   await page.getByTestId('rt-settings-link').click();
@@ -101,7 +104,7 @@ test('share a sound → Make mine → practise → the session survives a change
   const revised = await appDetail(page.request, appId);
   expect(revised.spec.fields.some((f) => /song/i.test(f.label))).toBe(true);
   await page.goto(appUrl);
-  await expect(page.getByTestId('rt-entry')).toHaveCount(1);
+  await expect(page.getByTestId('rt-session')).toHaveCount(1);
   expect(await listRecords(page.request, appId)).toEqual(saved);
 
   // Undo restores the previous definition and keeps the session.
@@ -111,7 +114,7 @@ test('share a sound → Make mine → practise → the session survives a change
   const restored = await appDetail(page.request, appId);
   expect(restored.spec.fields.map((f) => f.id)).toEqual(detail.spec.fields.map((f) => f.id));
   await page.goto(appUrl);
-  await expect(page.getByTestId('rt-entry')).toHaveCount(1);
+  await expect(page.getByTestId('rt-session')).toHaveCount(1);
 
   // My apps lists it.
   await page.goto('/apps');
