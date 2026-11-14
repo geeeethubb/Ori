@@ -3,7 +3,7 @@
  * rules before submitting, keeps an unsaved draft on this device, and restores it when the form
  * opens again (unless the form was opened with fresh results, e.g. from the practice timer).
  */
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { visibleFields, type AppSpec, type FieldSpec } from '@shared/appSpec.ts';
 import { defaultValues, validateValues, type AppRecord, type FieldValue, type RecordValues } from '@shared/records.ts';
 import { FieldInput } from './FieldInput.tsx';
@@ -31,6 +31,17 @@ interface Props {
   serverErrors?: Record<string, string>;
   /** Label of the submit button (default "Save"). */
   submitLabel?: string;
+  /** What was prefilled and what to check (timer results, an Agent suggestion), shown above the fields. */
+  note?: ReactNode;
+}
+
+/** The keys an edit actually changed: untouched stored values (legacy, hidden or newer fields) are never re-sent. */
+function changedValues(before: RecordValues, after: RecordValues): RecordValues {
+  const out: RecordValues = {};
+  for (const k of Object.keys(after)) {
+    if (JSON.stringify(after[k] ?? null) !== JSON.stringify(before[k] ?? null)) out[k] = after[k];
+  }
+  return out;
 }
 
 function isValuesMap(v: unknown): v is RecordValues {
@@ -47,7 +58,7 @@ function newRecordBase(spec: AppSpec, fields: FieldSpec[], preset: RecordValues 
   return { ...out, ...(preset ?? {}) };
 }
 
-export function RecordForm({ spec, appId, fields: fieldsProp, preset, draftScope, restoreDraft = true, initial, onSubmit, onCancel, onDelete, submitting, serverErrors, submitLabel }: Props) {
+export function RecordForm({ spec, appId, fields: fieldsProp, preset, draftScope, restoreDraft = true, initial, onSubmit, onCancel, onDelete, submitting, serverErrors, submitLabel, note }: Props) {
   const fields = useMemo(() => fieldsProp ?? visibleFields(spec), [fieldsProp, spec]);
   const key = draftKey(appId, initial?.id, draftScope);
   const base = useMemo<RecordValues>(() => (initial ? { ...initial.values } : newRecordBase(spec, fields, preset)), [initial, spec, fields, preset]);
@@ -110,7 +121,9 @@ export function RecordForm({ spec, appId, fields: fieldsProp, preset, draftScope
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (submitting) return;
-    const check = validateValues(spec, values);
+    // A new entry is checked in full. An edit sends only what changed (so an old entry without a field
+    // added later, or with a photo that is gone, stays editable) and the server merges it.
+    const check = initial ? validateValues(spec, changedValues(initial.values, values), { partial: true }) : validateValues(spec, values);
     if (!check.ok) {
       setErrors(check.errors);
       const first = fields.find((f) => f.id in check.errors);
@@ -135,6 +148,11 @@ export function RecordForm({ spec, appId, fields: fieldsProp, preset, draftScope
 
   return (
     <form className="rt-form" onSubmit={submit} noValidate aria-busy={submitting} data-testid="rt-record-form">
+      {note && (
+        <div className="banner banner-info rt-form-note" role="note" data-testid="rt-form-note">
+          {note}
+        </div>
+      )}
       {restored && (
         <div className="banner banner-info rt-draft-note" role="status" data-testid="rt-draft-note">
           <span>Draft restored.</span>

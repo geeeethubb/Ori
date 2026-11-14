@@ -4,13 +4,13 @@
  */
 import { useEffect, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import type { AppDetailDto } from '@shared/api.ts';
-import type { Purpose } from '@shared/appSpec.ts';
+import { AppSpecSchema, type Purpose } from '@shared/appSpec.ts';
 import type { AppRecord } from '@shared/records.ts';
 import { isIconColor, isIconSymbol, type AppIconSpec } from '@shared/icons.ts';
 import { api } from '../api.ts';
 
 /** Event types the client is allowed to post; the rest are derived on the server. */
-export type ClientEventType = 'app_opened' | 'install_guide_viewed' | 'shortcut_requested' | 'feedback_given' | 'revision_declined' | 'first_action_completed';
+export type ClientEventType = 'app_opened' | 'install_guide_viewed' | 'shortcut_requested' | 'feedback_given' | 'revision_declined' | 'first_action_completed' | 'useful_action';
 
 export interface CachedApp {
   detail: AppDetailDto;
@@ -56,7 +56,10 @@ export function removeKey(key: string): void {
 export function readCache(appId: string): CachedApp | null {
   const c = readJson<Partial<CachedApp>>(cacheKey(appId));
   if (!c || !c.detail || !c.detail.spec || !Array.isArray(c.records) || typeof c.savedAt !== 'string') return null;
-  return c as CachedApp;
+  // A copy written by an older build (or damaged) is never rendered unparsed.
+  const spec = AppSpecSchema.safeParse(c.detail.spec);
+  if (!spec.success) return null;
+  return { ...(c as CachedApp), detail: { ...c.detail, spec: spec.data } };
 }
 
 export function writeCache(appId: string, cache: CachedApp): void {
@@ -83,6 +86,15 @@ export function markFirstAction(appId: string, meta?: Record<string, unknown>): 
   if (readJson<boolean>(firstActionKey(appId))) return;
   writeJson(firstActionKey(appId), true);
   postEvent(appId, 'first_action_completed', meta);
+}
+
+/**
+ * A real, useful action (a timed session, a photo kept, a follow-up added or done), reported every
+ * time with bounded meta, so activation and active reuse can be told apart from saves and opens.
+ */
+export function markUseful(appId: string, meta: Record<string, string | number | boolean | null>): void {
+  if (!appId || appId === 'preview') return;
+  postEvent(appId, 'useful_action', meta);
 }
 
 /** Copy text to the clipboard; resolves false when neither the async API nor execCommand worked. */

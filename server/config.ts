@@ -38,7 +38,8 @@ export const config = {
   anthropicModel: env.ANTHROPIC_MODEL ?? 'claude-opus-5-5',
   modelTimeoutMs: Number(env.MODEL_TIMEOUT_MS ?? 45_000),
   seedDemoPassword: env.SEED_DEMO_PASSWORD ?? 'demo-pass-2026',
-  clientDist: path.resolve(process.cwd(), 'dist/client'),
+  /** Built client served by this process. Tests build into their own folder so a running prototype is never swapped underneath. */
+  clientDist: path.resolve(process.cwd(), env.CLIENT_DIST ?? 'dist/client'),
   isTest: env.NODE_ENV === 'test' || Boolean(env.VITEST),
   /** Monthly AI generation fair-use allowance disclosed to users. */
   aiGenerationAllowance: Number(env.AI_GENERATION_ALLOWANCE ?? 300),

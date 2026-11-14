@@ -11,7 +11,19 @@ import { Icons } from '../components/ui.tsx';
 import { readTempo, usePracticeTimer, writeTempo } from './practiceTimer.ts';
 import { pressable } from './runtimeUtils.ts';
 import { ValueDisplay } from './ValueDisplay.tsx';
-import { clampTempo, elapsedMinutes, formatClock, recentSessions, recordDate, TEMPO_MAX, TEMPO_MIN, type PracticeViewSpec } from './viewLogic.ts';
+import { clampTempo, clockTime, elapsedMinutes, formatClock, recentSessions, recordDate, TEMPO_MAX, TEMPO_MIN, type PracticeViewSpec } from './viewLogic.ts';
+
+/** What the timer measured for a save: the plan and the clock stay separate, and an untimed save says so. */
+export interface PracticeSaveMeta {
+  timed: boolean;
+  elapsedMs: number;
+  plannedMinutes: number;
+  endedAway: boolean;
+  needsReview: boolean;
+  completedAt: number | null;
+  /** The timed session's id: the saved record uses it, so a retried save is the same session. */
+  sessionId: string | null;
+}
 
 interface Props {
   appId: string;
@@ -21,7 +33,7 @@ interface Props {
   records: AppRecord[];
   onEdit?: (record: AppRecord) => void;
   /** Opens the save form with the prefilled values; `afterSaved` resets the timer. Omitted when read-only. */
-  onSave?: (preset: RecordValues, afterSaved: () => void) => void;
+  onSave?: (preset: RecordValues, meta: PracticeSaveMeta, afterSaved: () => void) => void;
   /** Why saving is unavailable (offline copy, preview). */
   readOnlyNote?: string;
   /** Extra content between the controls and the recent list (e.g. the prompt strip). */
@@ -91,9 +103,17 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
     }
   }, [done]);
 
+  /** Measured time is only thrown away when the person says so. */
+  const discardOk = () => timer.elapsed < 1000 || window.confirm(`Discard ${formatClock(timer.elapsed)} of practice? It has not been saved.`);
+
   const start = () => {
+    if (done && !discardOk()) return;
     ensureAudio();
     timer.start();
+  };
+
+  const reset = () => {
+    if (discardOk()) timer.reset();
   };
 
   const toggleMetronome = () => {
@@ -118,13 +138,26 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
 
   const save = () => {
     if (!onSave) return;
-    const minutes = elapsedMinutes(timer.elapsed, state.presetMinutes);
+    const timedMs = timer.elapsed;
+    const minutes = elapsedMinutes(timedMs);
+    // Never the plan as time played: an untimed session is typed in by hand (the field starts empty).
     const preset: RecordValues = { [view.minutesFieldId]: minutes };
+    if (view.targetMinutesFieldId) preset[view.targetMinutesFieldId] = state.presetMinutes;
+    if (view.timedSecondsFieldId) preset[view.timedSecondsFieldId] = minutes === null ? null : Math.round(timedMs / 1000);
     if (view.tempoFieldId && view.tempoHelper) preset[view.tempoFieldId] = tempo;
     if (view.dateFieldId) preset[view.dateFieldId] = todayIso();
     if (ticking) toggleMetronome();
     if (running) timer.pause();
-    onSave(preset, () => timer.reset());
+    const meta: PracticeSaveMeta = {
+      timed: minutes !== null,
+      elapsedMs: timedMs,
+      plannedMinutes: state.presetMinutes,
+      endedAway: state.endedAway,
+      needsReview: state.needsReview,
+      completedAt: state.completedAt,
+      sessionId: minutes !== null ? state.sessionId : null,
+    };
+    onSave(preset, meta, () => timer.reset());
   };
 
   const recent = recentSessions(view, records, 5);
@@ -141,7 +174,15 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
           {formatClock(timer.remaining)}
         </div>
         <p className="rt-timer-note" role="status">
-          {done ? "Time's up. Nice work." : running ? 'Keep going.' : state.status === 'paused' ? 'Paused.' : `${state.presetMinutes} minute${state.presetMinutes === 1 ? '' : 's'} of practice`}
+          {done
+            ? state.endedAway && state.completedAt
+              ? `Time's up. It finished at ${clockTime(state.completedAt)} while this page was closed.`
+              : "Time's up. Nice work."
+            : running
+              ? 'Keep going.'
+              : state.status === 'paused'
+                ? state.needsReview ? 'Paused. The clock changed while it ran; check the minutes when you save.' : 'Paused.'
+                : `${state.presetMinutes} minute${state.presetMinutes === 1 ? '' : 's'} of practice`}
         </p>
         <div className="rt-presets" role="group" aria-label="Session length">
           {view.presets.map((m) => (
@@ -150,7 +191,7 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
               key={m}
               className="rt-preset"
               aria-pressed={state.presetMinutes === m}
-              disabled={running}
+              disabled={state.status !== 'idle'}
               onClick={() => timer.choosePreset(m)}
               data-testid={`rt-practice-preset-${m}`}
             >
@@ -170,7 +211,7 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
               {state.status === 'paused' ? 'Resume' : done ? 'Again' : 'Start'}
             </button>
           )}
-          <button type="button" className="btn btn-secondary btn-lg" onClick={timer.reset} disabled={state.status === 'idle'} data-testid="rt-practice-reset" aria-label="Reset timer">
+          <button type="button" className="btn btn-secondary btn-lg" onClick={reset} disabled={state.status === 'idle'} data-testid="rt-practice-reset" aria-label="Reset timer">
             {Icons.reset}
             Reset
           </button>
@@ -223,8 +264,11 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
             {view.addLabel ?? 'Save session'}
           </button>
         )}
-        <p className="small muted rt-practice-hint">
-          {readOnlyNote ?? (state.status === 'idle' ? `Saves ${state.presetMinutes} min unless you run the timer.` : `Saves ${elapsedMinutes(timer.elapsed, state.presetMinutes)} min so far; you can adjust before saving.`)}
+        <p className="small muted rt-practice-hint" data-testid="rt-practice-hint">
+          {readOnlyNote ??
+            (timer.elapsed < 1000
+              ? 'Not timed yet. You can still log a session you did without the timer.'
+              : `Timed ${formatClock(timer.elapsed)} so far of a ${state.presetMinutes}-minute plan; you can adjust before saving.`)}
         </p>
       </div>
 
@@ -235,6 +279,8 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
             {recent.map((r) => {
               const minutes = r.values[view.minutesFieldId];
               const focus = focusField ? r.values[focusField.id] : undefined;
+              const planned = view.targetMinutesFieldId ? r.values[view.targetMinutesFieldId] : undefined;
+              const timedSec = view.timedSecondsFieldId ? r.values[view.timedSecondsFieldId] : undefined;
               return (
                 <li key={r.id} className={`rt-session${onEdit ? ' rt-pressable' : ''}`} data-testid="rt-session" {...pressable(onEdit ? () => onEdit(r) : undefined)}>
                   <span className="rt-session-minutes">
@@ -245,6 +291,10 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
                     <span className="rt-session-focus">{typeof focus === 'string' && focus.trim() ? focus : 'Practice'}</span>
                     <span className="rt-session-meta">
                       <span>{friendlyDate(recordDate(r, view.dateFieldId))}</span>
+                      {typeof planned === 'number' && <span data-testid="rt-session-planned">of {planned} planned</span>}
+                      {typeof timedSec === 'number'
+                        ? <span title="Measured by the timer" data-testid="rt-session-timed">timed {formatClock(timedSec * 1000)}</span>
+                        : view.timedSecondsFieldId ? <span>typed in</span> : null}
                       {feelField && <ValueDisplay field={feelField} value={r.values[feelField.id]} />}
                     </span>
                   </span>

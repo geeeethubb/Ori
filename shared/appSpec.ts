@@ -161,6 +161,10 @@ export const PracticeViewSchema = ViewBase.extend({
   feelFieldId: fieldId.optional(),
   notesFieldId: fieldId.optional(),
   dateFieldId: fieldId.optional(),
+  /** Optional number field for the planned minutes (the preset chosen for the session): the target, never played time. */
+  targetMinutesFieldId: fieldId.optional(),
+  /** Optional number field for the seconds the timer actually measured; left empty for sessions typed in by hand. */
+  timedSecondsFieldId: fieldId.optional(),
   /** Minute presets offered by the timer; the first is the default. */
   presets: z.array(z.number().int().min(1).max(180)).min(1).max(6).default([10, 15, 25]),
   defaultTempo: z.number().int().min(30).max(240).default(72),
@@ -190,6 +194,10 @@ export const QueueViewSchema = ViewBase.extend({
   doneStageValues: z.array(z.string()).max(20).default([]),
   contextFieldId: fieldId.optional(),
   channelFieldId: fieldId.optional(),
+  /** Optional text field keeping the person's own words for when (e.g. "Thursday"); a date is only set once they confirm one. */
+  dueTextFieldId: fieldId.optional(),
+  /** Optional text field holding a message draft to copy; nothing is ever sent. */
+  draftFieldId: fieldId.optional(),
   groupBy: z.enum(['due', 'person']).default('due'),
 });
 
@@ -367,6 +375,8 @@ export const AppSpecSchema = z
         need(v.feelFieldId, [...p, 'feelFieldId'], ['rating', 'select']);
         need(v.notesFieldId, [...p, 'notesFieldId'], ['text', 'long_text']);
         need(v.dateFieldId, [...p, 'dateFieldId'], ['date']);
+        need(v.targetMinutesFieldId, [...p, 'targetMinutesFieldId'], ['number']);
+        need(v.timedSecondsFieldId, [...p, 'timedSecondsFieldId'], ['number']);
       } else if (v.type === 'links') {
         need(v.urlFieldId, [...p, 'urlFieldId'], ['url']);
         need(v.titleFieldId, [...p, 'titleFieldId'], ['text']);
@@ -381,6 +391,8 @@ export const AppSpecSchema = z
         need(v.stageFieldId, [...p, 'stageFieldId'], ['select']);
         need(v.contextFieldId, [...p, 'contextFieldId'], ['text', 'long_text']);
         need(v.channelFieldId, [...p, 'channelFieldId'], ['select']);
+        need(v.dueTextFieldId, [...p, 'dueTextFieldId'], ['text', 'long_text']);
+        need(v.draftFieldId, [...p, 'draftFieldId'], ['text', 'long_text']);
         if (!v.doneFieldId && !v.stageFieldId) ctx.addIssue({ code: 'custom', path: p, message: 'A queue needs doneFieldId or stageFieldId so actions can be completed' });
         checkDoneStages(v.stageFieldId, v.doneStageValues, [...p, 'doneStageValues']);
       }
@@ -445,6 +457,93 @@ export function formFieldsFor(spec: AppSpec, view: ViewSpec): FieldSpec[] {
 export function recordMatchesView(view: ViewSpec, values: Record<string, unknown>): boolean {
   if (!view.filter) return true;
   return values[view.filter.fieldId] === view.filter.value;
+}
+
+/** One semantic role a view binds to a field, always by explicit field id (never by order or label). */
+export interface ViewRole {
+  role: string;
+  fieldId: string;
+  /** The view cannot work without it, so it must stay visible. */
+  structural: boolean;
+}
+
+/** Every role a view binds. Renderers, checks, drafts and preview content all read roles from here. */
+export function viewRoles(view: ViewSpec): ViewRole[] {
+  const out: ViewRole[] = [];
+  const add = (role: string, fieldId: string | undefined, structural = false) => {
+    if (fieldId) out.push({ role, fieldId, structural });
+  };
+  switch (view.type) {
+    case 'journal':
+      add('date', view.dateFieldId, true); add('title', view.titleFieldId, true);
+      break;
+    case 'board':
+      add('stage', view.stageFieldId, true); add('title', view.titleFieldId, true); add('due', view.dueFieldId);
+      break;
+    case 'list':
+      add('title', view.titleFieldId, true); add('sort', view.sortFieldId);
+      break;
+    case 'summary':
+      break;
+    case 'gallery':
+      add('image', view.imageFieldId, true); add('caption', view.captionFieldId); add('note', view.noteFieldId); add('date', view.dateFieldId);
+      break;
+    case 'practice':
+      add('minutes', view.minutesFieldId, true); add('focus', view.focusFieldId); add('tempo', view.tempoFieldId);
+      add('feel', view.feelFieldId); add('notes', view.notesFieldId); add('date', view.dateFieldId);
+      add('target_minutes', view.targetMinutesFieldId); add('timed_seconds', view.timedSecondsFieldId);
+      break;
+    case 'links':
+      add('url', view.urlFieldId, true); add('title', view.titleFieldId); add('note', view.noteFieldId); add('kind', view.kindFieldId); add('tags', view.tagsFieldId);
+      break;
+    case 'queue':
+      add('person', view.personFieldId, true); add('action', view.actionFieldId, true); add('due', view.dueFieldId);
+      add('done', view.doneFieldId, true); add('stage', view.stageFieldId, true); add('context', view.contextFieldId);
+      add('channel', view.channelFieldId); add('due_text', view.dueTextFieldId); add('draft', view.draftFieldId);
+      break;
+  }
+  return out;
+}
+
+/** The field a view binds to a role, if any (e.g. roleField(view, 'person')). */
+export function roleField(view: ViewSpec, role: string): string | undefined {
+  return viewRoles(view).find((r) => r.role === role)?.fieldId;
+}
+
+/**
+ * Acceptance-time binding checks for a NEW or CHANGED definition (generation, Make mine, revisions).
+ * Deliberately not part of AppSpecSchema: stored specs are parsed with it, and a stricter load-time
+ * schema would make existing apps unreadable. Returns plain-language problems; empty means fine.
+ */
+export function checkBindings(spec: AppSpec): string[] {
+  const problems: string[] = [];
+  const fields = new Map(spec.fields.map((f) => [f.id, f]));
+  for (const v of spec.views) {
+    const name = v.title ? `“${v.title}”` : `the ${viewTypeLabel(v.type)} view`;
+    const seen = new Map<string, string>();
+    for (const r of viewRoles(v)) {
+      const f = fields.get(r.fieldId);
+      if (!f) continue; // unknown ids are already rejected by the schema
+      if (r.structural && f.hidden) problems.push(`${name} needs “${f.label}” (${r.role}) but it is hidden.`);
+      const other = seen.get(r.fieldId);
+      if (other && other !== r.role) problems.push(`${name} uses “${f.label}” both as ${other} and as ${r.role}; each role needs its own field.`);
+      else seen.set(r.fieldId, r.role);
+    }
+    if (v.filter) {
+      const f = fields.get(v.filter.fieldId);
+      if (f?.hidden) problems.push(`${name} sorts entries by “${f.label}”, which is hidden.`);
+    }
+    if (v.type === 'summary') {
+      for (const m of v.metrics) {
+        if (m.kind === 'count' && m.fieldId) {
+          const f = fields.get(m.fieldId);
+          if (!f) problems.push(`The metric “${m.label}” counts by a field that does not exist (“${m.fieldId}”).`);
+          else if (f.type !== 'date') problems.push(`The metric “${m.label}” counts by “${f.label}”, which is not a date.`);
+        }
+      }
+    }
+  }
+  return problems;
 }
 
 /**

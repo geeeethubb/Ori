@@ -10,6 +10,7 @@ import type { GeneratedApp, RecommendationDraft } from '../../../shared/context.
 import { ModelOutputError, type GenerateSpecInput } from '../types.ts';
 import { ALL_CONCEPTS, CONCEPTS, conceptById, conceptByTitle, type Concept } from './catalog.ts';
 import { applyInstructionHeuristics, type Unsupported } from './heuristics.ts';
+import { findUnsupported } from './unsupported.ts';
 import { clip, joinNatural } from './text.ts';
 
 /** The catalog concept behind a proposal (by id, then title, then pattern and purpose). */
@@ -79,6 +80,11 @@ export function generateSpec(input: GenerateSpecInput): GeneratedApp & { spec: A
   const result = applyInstructionHeuristics(base, instructions, concept.id);
   let changes = [...choiceChanges, ...result.changes];
   const unsupported: Unsupported[] = [...result.unsupported];
+  for (const cap of input.captures ?? []) {
+    for (const u of findUnsupported(cap.text)) {
+      if (!unsupported.some((x) => x.request === u.request)) unsupported.push({ request: u.request, reason: u.reason, alternative: u.alternative ?? '' });
+    }
+  }
 
   let parsed = AppSpecSchema.safeParse(result.spec);
   if (!parsed.success) {

@@ -31,15 +31,21 @@ test('main screens fit 320, 390, 768 and 1440 without clipping', async ({ page }
   await addRecord(page.request, people.app.id, { person: 'Marcus (mentor)', action: 'Intro to a design partner', due: isoDaysFromToday(0), context: 'Asked about pricing for small teams' });
   await addRecord(page.request, people.app.id, { person: 'Lena (meetup)', action: 'Share the photo walk route', due: isoDaysFromToday(5), done: true });
   await seedPlayground(page.request);
+  // With Riff already made, the guitar note points back to Riff (use the app you have).
   const shared = await shareNote(page.request, 'I like this sound and have 15 minutes to practice');
-  const proposal = shared.reply?.proposals.find((p) => p.kind === 'new_app' || p.kind === 'update_app');
-  expect(proposal, 'the agent should propose an app for the guitar note').toBeDefined();
+  const proposal = shared.reply?.proposals.find((p) => p.kind === 'use_app');
+  expect(proposal, 'the agent should point the guitar note to the Riff app it already has').toBeDefined();
+  // The full Make flow (choices, preview, Make mine) comes from a new-app idea on the Playground.
+  const ideas = await page.request.get('/api/recommendations');
+  const newApp = ((await ideas.json()) as { recommendations: { id: string; kind: string }[] }).recommendations.find((r) => r.kind === 'new_app');
+  expect(newApp, 'the Playground should have a new-app idea').toBeDefined();
 
   const screens: [string, string][] = [
     ['/agent', 'agent'],
     ['/playground', 'playground'],
     ['/apps', 'apps'],
-    [`/make/${proposal!.id}`, 'make'],
+    [`/make/${newApp!.id}`, 'make'],
+    [`/make/${proposal!.id}`, 'make-use'],
     [`/apps/${riff.app.id}/`, 'riff'],
     [`/apps/${light.app.id}/`, 'light'],
     [`/apps/${people.app.id}/`, 'people'],

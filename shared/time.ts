@@ -50,6 +50,31 @@ export function startOfMonthIso(now: Date = new Date()): string {
   return toIsoDate(new Date(now.getFullYear(), now.getMonth(), 1));
 }
 
+const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const WHEN_RX = /\b(?:(?:on|by|this|next|before)\s+)?(?:today|tonight|tomorrow|this weekend|next week|(?:sun|mon|tues?|wed(?:nes)?|thu(?:rs?)?|fri|sat(?:ur)?)(?:day)?)\b/i;
+
+/** The person's own words for when (e.g. "Thursday", "by Friday", "tomorrow"), if a note has any. */
+export function findWhenWords(text: string): string | null {
+  const m = WHEN_RX.exec(text);
+  return m ? m[0].trim() : null;
+}
+
+/**
+ * A suggested date for words like "Thursday" or "tomorrow", in the person's own calendar. Only a
+ * suggestion: the UI shows it next to the original words and nothing is stored until they confirm.
+ * A bare weekday means the next one after today (said on a Thursday, "Thursday" means next week).
+ */
+export function suggestDateFor(words: string, now: Date = new Date()): string | null {
+  const w = words.toLowerCase();
+  const today = todayIso(now);
+  if (/\b(today|tonight)\b/.test(w)) return today;
+  if (/\btomorrow\b/.test(w)) return addDays(today, 1);
+  const idx = WEEKDAYS.findIndex((d) => new RegExp(`\\b${d.slice(0, 3)}`).test(w));
+  if (idx < 0) return null;
+  const ahead = ((idx - now.getDay() + 7) % 7) || 7;
+  return addDays(today, ahead);
+}
+
 /** ISO-8601 week number (1–53) for weekly prompt rotation. */
 export function isoWeekNumber(now: Date = new Date()): number {
   const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));

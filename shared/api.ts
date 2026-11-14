@@ -105,6 +105,21 @@ export interface RecommendationsDto {
 
 export interface BuildResultDto {
   app: AppDetailDto;
+  /** True when this proposal was already made into an app (a retry or a second tap): nothing new was created. */
+  alreadyBuilt?: boolean;
+  /** Entries Make mine carried over from what was shared (e.g. the saved link), in plain words. */
+  carried?: string[];
+}
+
+/** What an undo would do before it runs: the design it restores and what stays saved. */
+export interface UndoPreviewDto {
+  ok: boolean;
+  /** The version whose design comes back. */
+  restores: number;
+  /** "Redo" when the last change was itself an undo. */
+  label: 'Undo' | 'Redo';
+  kept: string[];
+  blocked: string[];
 }
 
 // ---------- Agent ----------
@@ -140,9 +155,19 @@ export interface ProposalDetailDto {
   recommendation: Recommendation;
   evidence: ProfileFact[];
   captures: Capture[];
-  /** Existing app for update_app proposals. */
+  /** Existing app for update_app and use_app proposals. */
   targetApp: AppSummaryDto | null;
+  /** Why this proposal can no longer be made (what it was based on changed), or null. */
+  stale?: string | null;
 }
+
+/** Make mine: the new app, or the one a retry already made. */
+export type BuildResponseDto = AppDetailDto & {
+  /** True when this proposal was already made into an app (a retry or a second tap): nothing new was created. */
+  alreadyBuilt?: boolean;
+  /** What Make mine carried over from what was shared (e.g. the saved link), in plain words. */
+  carried?: string[];
+};
 
 export interface ProposalPreviewDto {
   spec: AppSpec;

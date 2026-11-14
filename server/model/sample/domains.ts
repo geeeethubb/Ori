@@ -24,6 +24,8 @@ export interface ExploreContext {
   source?: 'link' | 'image' | null;
   /** Title of the link when an allowlisted provider gave one (readStatus metadata_only). */
   sourceTitle?: string | null;
+  /** The whole note, for telling a request for a change apart from using what is there. */
+  note?: string | null;
 }
 
 /** A change request for an existing app, phrased so the sample revision planner maps it to real ops. */
@@ -57,7 +59,11 @@ export interface Domain {
     because: string;
     steps: (ctx: ExploreContext) => string[];
   };
-  updateRequest: (app: ExistingAppSummary, ctx: ExploreContext) => UpdatePlan | null;
+  /**
+   * A design change for an existing app, or null. `full` means the app already does what the domain needs:
+   * then a change is only proposed when the person asked for something it lacks; using the app is the answer.
+   */
+  updateRequest: (app: ExistingAppSummary, ctx: ExploreContext, full: boolean) => UpdatePlan | null;
 }
 
 const MINUTES_RX = /\b(\d{1,3})\s*(?:-\s*)?(?:min(?:ute)?s?)\b/i;
@@ -105,22 +111,15 @@ export const DOMAINS: Domain[] = [
     updateRequest: (app, ctx) => {
       const caps = new Set(app.capabilities);
       if (caps.has('practice_timer') || app.pattern === 'practice') {
-        const parts: string[] = [];
-        const changes: string[] = [];
-        const lines: string[] = [];
-        if (ctx.minutes) {
-          parts.push(`Add a ${ctx.minutes}-minute preset to the practice timer as the default`);
-          parts.push(`Size the daily prompts to ${ctx.minutes}-minute sessions`);
-          changes.push(`a ${ctx.minutes}-minute timer preset`, `daily prompts sized to ${ctx.minutes} minutes`);
-          lines.push(`Timer starts at ${ctx.minutes} minutes`, `Tonight's prompts fit ${ctx.minutes} minutes`);
-        }
-        if (ctx.source === 'link' && caps.has('source_links')) {
-          parts.push('Add an option called Clip to the kind of source');
-          changes.push('a "Clip" kind for saved links');
-          lines.push('A "Clip" kind for saved links');
-        }
-        if (!parts.length) return null;
-        return { request: parts.join('. '), change: joinNatural(changes), previewLines: [...lines, 'Your sessions and sources stay as they are'] };
+        // A timer app already does the job. Only a session length it does not offer is a real change;
+        // a length it already has, a link to save or a sound to practise is simply using the app.
+        const presets = app.minutePresets ?? (app.defaultMinutes ? [app.defaultMinutes] : []);
+        if (!ctx.minutes || presets.includes(ctx.minutes)) return null;
+        return {
+          request: `Add a ${ctx.minutes}-minute preset to the practice timer as the default`,
+          change: joinNatural([`a ${ctx.minutes}-minute timer preset`]),
+          previewLines: [`Timer starts at ${ctx.minutes} minutes`, 'Your sessions and sources stay as they are'],
+        };
       }
       return {
         request: 'Add a link field called Inspiration, for the song or riff behind each session',
@@ -153,11 +152,13 @@ export const DOMAINS: Domain[] = [
         ];
       },
     },
-    updateRequest: () => ({
-      request: 'Add tags so I can group photos by the kind of light I was chasing',
-      change: 'tags for the kind of light',
-      previewLines: ['Tags on each photo', 'Everything you saved stays as it is'],
-    }),
+    updateRequest: (_app, ctx, full) => (full && !/\b(?:tags?|group(?:ed|ing)? by|sort(?:ed)? by|label)\b/i.test(ctx.note ?? '')
+      ? null
+      : {
+        request: 'Add tags so I can group photos by the kind of light I was chasing',
+        change: 'tags for the kind of light',
+        previewLines: ['Tags on each photo', 'Everything you saved stays as it is'],
+      }),
   },
   {
     id: 'people',
@@ -180,9 +181,11 @@ export const DOMAINS: Domain[] = [
         'Note what they asked for, so the next message starts from their question.',
       ],
     },
-    updateRequest: (app) => {
+    updateRequest: (app, ctx, full) => {
       const caps = new Set(app.capabilities);
       if (caps.has('next_actions') || app.pattern === 'queue') {
+        // Adding a follow-up is an entry, not a design change; priority only when it is asked for.
+        if (full && !/\b(?:priorit(?:y|ies|ise|ize)|urgent|most important)\b/i.test(ctx.note ?? '')) return null;
         return {
           request: 'Add a priority choice so the most important follow-ups float up',
           change: 'a priority choice',

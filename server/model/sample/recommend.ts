@@ -10,7 +10,8 @@ import { RecommendationDraftSchema, type RecommendationDraft } from '../../../sh
 import type { RecommendInput } from '../types.ts';
 import { CONCEPTS, DEFAULT_CONCEPT_IDS, PLAYGROUND_CONCEPTS, conceptById, type Concept, type MatchedFact } from './catalog.ts';
 import { reasonFrom } from './concept.ts';
-import { DOMAINS, domainForConcept, exploreDraft, minutesIn } from './domains.ts';
+import { DOMAINS, domainForConcept, exploreDraft, fittingApp, minutesIn } from './domains.ts';
+import { PATTERNS } from '../../../shared/appSpec.ts';
 import { clip, escapeRegExp, normalize, snippet, uniq } from './text.ts';
 
 type Fact = RecommendInput['facts'][number];
@@ -254,6 +255,40 @@ function explorationFor(scoredAll: Scored[]): RecommendationDraft | null {
   });
 }
 
+/**
+ * "Use the app you have": when a need clearly matches a domain that an owned app already covers, the
+ * Playground points back to that app instead of suggesting another one (or a design change).
+ */
+function useCards(scoredAll: Scored[], existing: RecommendInput['existingApps']): RecommendationDraft[] {
+  const out: RecommendationDraft[] = [];
+  for (const d of DOMAINS) {
+    const s = scoredAll.find((x) => x.concept.id === d.conceptId) ?? scoredAll.find((x) => x.concept.id === d.legacyConceptId);
+    if (!s || s.score < EXPLORE_THRESHOLD || s.matches.length === 0) continue;
+    const fit = fittingApp(d, existing);
+    if (!fit?.full) continue;
+    const app = fit.app;
+    const { factIds, captureIds } = splitIds(s.matches.slice(0, 4));
+    out.push(RecommendationDraftSchema.parse({
+      conceptId: d.conceptId,
+      kind: 'use_app',
+      title: clip(d.id === 'music' ? `Practise in ${app.name}` : d.id === 'photo' ? `Take your camera out with ${app.name}` : `Catch up in ${app.name}`, 50),
+      purpose: app.purpose === 'work' ? 'work' : 'explore',
+      pattern: (PATTERNS as readonly string[]).includes(app.pattern) ? app.pattern : s.concept.pattern,
+      icon: app.icon ?? s.concept.icon,
+      tagline: 'You already have the app for this',
+      description: clip(`${app.name} already does this. Open it and start; nothing about it changes.`, 500),
+      reason: clip(reasonFrom('You mentioned', s.matches.slice(0, 2), `${app.name} already does this, so there is nothing new to make.`), 400),
+      evidenceFactIds: factIds.slice(0, 8),
+      sourceCaptureIds: captureIds.slice(0, 4),
+      firstAction: clip(`Open ${app.name}.`, 200),
+      previewLines: [`Open ${app.name}`, 'Nothing new to make'],
+      capabilities: app.capabilities.slice(0, 8),
+      targetAppId: app.id,
+    }));
+  }
+  return out.slice(0, 1);
+}
+
 export function recommend(input: RecommendInput): RecommendationDraft[] {
   const facts = input.facts.filter((x) => x.status !== 'removed' && x.value.trim().length > 0);
   const fromCaptures = captureFacts(input.recentCaptures);
@@ -265,7 +300,8 @@ export function recommend(input: RecommendInput): RecommendationDraft[] {
 
   const scoredAll = SCORED_CONCEPTS.map((c) => scoreConcept(c, all, chosen));
   const exploration = count > 1 ? explorationFor(scoredAll) : null;
-  const appCount = exploration ? count - 1 : count;
+  const uses = useCards(scoredAll, existing);
+  const appCount = Math.max(0, (exploration ? count - 1 : count) - uses.length);
 
   const available = availableConcepts(existing);
   const availableIds = new Set(available.map((c) => c.id));
@@ -276,16 +312,17 @@ export function recommend(input: RecommendInput): RecommendationDraft[] {
   const anchor = [...anchorPool].sort((a, b) => b.confidence - a.confidence || a.id.localeCompare(b.id))[0] as Fact;
   const anchorMatch: MatchedFact = { id: anchor.id, category: anchor.category, value: anchor.value };
 
-  const out: RecommendationDraft[] = [];
+  const out: RecommendationDraft[] = [...uses];
   for (const s of picked) out.push(draftFor(s.concept, s.matches.slice(0, 8), s.concept.reasonTemplate(s.matches.slice(0, 3))));
 
-  if (out.length < appCount) {
-    const sparse = out.length === 0;
+  // Starting points only when nothing matched at all (said plainly). Once something matched, a set is
+  // never padded with "popular" cards that cite an unrelated fact as their grounding.
+  if (out.length === 0) {
     for (const id of DEFAULT_CONCEPT_IDS) {
       if (out.length >= appCount) break;
       const concept = conceptById(id);
       if (!concept || out.some((d) => d.conceptId === id) || !availableIds.has(concept.id)) continue;
-      out.push(draftFor(concept, [anchorMatch], sparse ? SPARSE_REASON : FILL_REASON));
+      out.push(draftFor(concept, [anchorMatch], SPARSE_REASON));
     }
   }
   if (exploration) out.splice(Math.min(1, out.length), 0, exploration);

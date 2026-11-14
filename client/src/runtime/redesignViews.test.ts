@@ -152,10 +152,12 @@ describe('practice helpers', () => {
     expect(formatClock(15 * 60_000)).toBe('15:00');
     expect(formatClock(61_500)).toBe('01:02');
     expect(formatClock(-5)).toBe('00:00');
-    expect(elapsedMinutes(0, 15)).toBe(15);
-    expect(elapsedMinutes(14 * 60_000 + 40_000, 15)).toBe(15);
-    expect(elapsedMinutes(20_000, 15)).toBe(1);
-    expect(elapsedMinutes(7 * 60_000 + 10_000, 25)).toBe(7);
+    // Nothing timed means nothing measured: the plan is never returned as time played.
+    expect(elapsedMinutes(0)).toBeNull();
+    expect(elapsedMinutes(800)).toBeNull();
+    expect(elapsedMinutes(14 * 60_000 + 40_000)).toBe(15);
+    expect(elapsedMinutes(20_000)).toBe(1);
+    expect(elapsedMinutes(7 * 60_000 + 10_000)).toBe(7);
   });
   it('clamps tempo to 30–240 bpm', () => {
     expect(clampTempo(10)).toBe(30);

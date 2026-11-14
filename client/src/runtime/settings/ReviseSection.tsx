@@ -20,7 +20,7 @@ interface SuggestionResponse {
   generatedBy: 'anthropic' | 'sample';
 }
 
-type ApplyResponse = AppDetailDto & { changes: string[] };
+type ApplyResponse = AppDetailDto & { changes: string[]; alreadyApplied?: boolean };
 
 export function ReviseSection({ appId, detail, onDetail }: Props) {
   const { toast } = useToast();
@@ -34,6 +34,11 @@ export function ReviseSection({ appId, detail, onDetail }: Props) {
   const [feedbackNote, setFeedbackNote] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const plural = detail.spec.entryNoun.plural;
+
+  // A preview belongs to the version it was made from: after any change (an undo, another device) it is gone.
+  useEffect(() => {
+    setPreview((p) => (p && p.baseVersion !== undefined && p.baseVersion !== detail.version ? null : p));
+  }, [detail.version]);
 
   // Suggestions depend on usage and the current definition, so refresh after each change.
   useEffect(() => {
@@ -75,10 +80,10 @@ export function ReviseSection({ appId, detail, onDetail }: Props) {
     try {
       const res = await api<ApplyResponse>(`/api/apps/${appId}/revisions/apply`, {
         method: 'POST',
-        body: { ops: preview.ops, summary: preview.summary, baseVersion: detail.version, proposalId: preview.proposalId },
+        body: { ops: preview.ops, summary: preview.summary, baseVersion: preview.baseVersion ?? detail.version, proposalId: preview.proposalId },
       });
       onDetail({ app: res.app, spec: res.spec, version: res.version, canUndo: res.canUndo });
-      toast('Change applied');
+      toast(res.alreadyApplied ? 'That change was already applied.' : 'Change applied. Your entries are kept.');
       setPreview(null);
       setRequest('');
     } catch (err) {

@@ -30,13 +30,15 @@ export default defineConfig({
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: {
-    command: `npm run build && node --import tsx server/index.ts`,
+    // Builds into its own folder: the person's running prototype keeps serving dist/client untouched.
+    command: `npx vite build --outDir ../dist/client-e2e && node --import tsx server/index.ts`,
     url: `${BASE}/api/health`,
     reuseExistingServer: false,
     timeout: 180_000,
     env: {
       ...process.env,
       PORT: String(PORT),
+      CLIENT_DIST: 'dist/client-e2e',
       AAS_SERVE: '1',
       NODE_ENV: 'test',
       MODEL_PROVIDER: LIVE ? 'auto' : 'sample',

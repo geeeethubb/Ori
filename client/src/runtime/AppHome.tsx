@@ -4,14 +4,16 @@
  * sheet. Each view type brings its own primary interaction: generic forms, "Add photo" uploads,
  * the practice timer's "Save session", saved sources, and one-tap completion in the queue.
  */
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import type { AppDetailDto } from '@shared/api.ts';
+import type { AppDetailDto, ProposalDetailDto } from '@shared/api.ts';
 import { primaryView, recordMatchesView, type AppSpec, type PromptRotationRule, type ViewSpec } from '@shared/appSpec.ts';
+import type { Recommendation } from '@shared/context.ts';
+import { draftEntry, type DraftEntry } from '@shared/drafts.ts';
 import type { AppRecord, RecordValues } from '@shared/records.ts';
 import { currentPrompt } from '@shared/rules.ts';
 import { todayIso } from '@shared/time.ts';
-import { describeError } from '../api.ts';
+import { api, describeError } from '../api.ts';
 import { AppIcon } from '../components/AppIcon.tsx';
 import { EmptyState, Icons, useToast } from '../components/ui.tsx';
 import { BoardView } from './BoardView.tsx';
@@ -19,13 +21,26 @@ import { AddPhotoButton, GalleryView } from './GalleryView.tsx';
 import { JournalView } from './JournalView.tsx';
 import { LinksView } from './LinksView.tsx';
 import { ListView } from './ListView.tsx';
-import { PracticeView } from './PracticeView.tsx';
+import { PracticeView, type PracticeSaveMeta } from './PracticeView.tsx';
 import { QueueView } from './QueueView.tsx';
 import { RecordSheet, type SheetState } from './RecordSheet.tsx';
 import { SummaryView } from './SummaryView.tsx';
 import { resolveTheme } from './theme.ts';
 import type { RecordActions } from './useAppData.ts';
-import { appSettingsPath, capitalize, COLLECTION_LABEL, markFirstAction, readJson, useStandalone, viewKey, writeJson } from './runtimeUtils.ts';
+import { appSettingsPath, capitalize, COLLECTION_LABEL, markFirstAction, markUseful, readJson, useStandalone, viewKey, writeJson } from './runtimeUtils.ts';
+import { clockTime, formatClock } from './viewLogic.ts';
+
+/** What the save form says about a practice session: measured or typed in, and anything to check. */
+function practiceNote(meta: PracticeSaveMeta): string {
+  if (!meta.timed) return 'You did not run the timer, so nothing was measured. Type the minutes you practised.';
+  const minutes = Math.max(1, Math.round(meta.elapsedMs / 60_000));
+  const rounded = Math.round(meta.elapsedMs / 1000) % 60 !== 0;
+  const parts = [`Your timer measured ${formatClock(meta.elapsedMs)} of your ${meta.plannedMinutes}-minute plan, saved as ${minutes} min${rounded ? ' (rounded)' : ''}.`];
+  if (meta.endedAway && meta.completedAt) parts.push(`It finished at ${clockTime(meta.completedAt)} while this page was closed; change the minutes if you stopped earlier.`);
+  else if (meta.needsReview) parts.push('The clock changed while it ran, so check the minutes.');
+  else parts.push('Change it if you stopped earlier.');
+  return parts.join(' ');
+}
 
 interface Props {
   appId: string;
@@ -58,6 +73,62 @@ export function AppHome({ appId, detail, records, actions, preview = false }: Pr
     if (!preview) writeJson(viewKey(appId), id);
   };
 
+  // ---------- "use the app you have": an Agent suggestion opens here with its entry prefilled ----------
+  // Read from the address once (previews render outside the router); the parameter is then removed.
+  const [fromId] = useState(() => (preview || typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('from')));
+  const [suggestion, setSuggestion] = useState<{ rec: Recommendation; entry: DraftEntry } | null>(null);
+  const openSuggested = (rec: Recommendation, entry: DraftEntry) =>
+    setSheet({
+      mode: 'new',
+      view: entry.view,
+      preset: entry.values,
+      title: entry.view.addLabel ?? `Add to ${spec.name}`,
+      fresh: true,
+      note: entry.note,
+      recommendationId: rec.id,
+      // One entry per suggestion, however many times it is confirmed.
+      recordId: `use_${rec.id}`,
+      onSaved: () => {
+        setSuggestion(null);
+        markUseful(appId, { kind: rec.recordDraft?.kind ?? 'entry', via: 'agent' });
+      },
+    });
+  useEffect(() => {
+    if (!fromId || !actions) return;
+    let alive = true;
+    const drop = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('from');
+      window.history.replaceState(window.history.state, '', url.toString());
+    };
+    api<ProposalDetailDto>(`/api/recommendations/${fromId}`)
+      .then((d) => {
+        if (!alive) return;
+        drop();
+        const rec = d.recommendation;
+        if (rec.kind !== 'use_app' || rec.targetAppId !== appId) return;
+        // A timer app opens on its timer: practising is the point.
+        const practice = spec.views.find((v) => v.type === 'practice');
+        if (practice && (!rec.recordDraft || rec.recordDraft.kind === 'source')) selectView(practice.id);
+        if (rec.status === 'applied') {
+          toast('Already added from your AI.');
+          return;
+        }
+        const entry = rec.recordDraft ? draftEntry(spec, rec.recordDraft) : null;
+        if (!entry || !rec.recordDraft) return;
+        if (rec.recordDraft.kind === 'source') setSuggestion({ rec, entry });
+        else openSuggested(rec, entry);
+      })
+      .catch(() => {
+        if (alive) drop();
+      });
+    return () => {
+      alive = false;
+    };
+    // Runs once per suggestion link; the param is removed so a reload never re-opens it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromId]);
+
   /** Edit uses the form of the view the record belongs to (an app may hold several kinds of record). */
   const viewForRecord = useCallback(
     (record: AppRecord): ViewSpec => spec.views.find((v) => v.type !== 'summary' && recordMatchesView(v, record.values)) ?? formView,
@@ -65,7 +136,7 @@ export function AppHome({ appId, detail, records, actions, preview = false }: Pr
   );
   const onEdit = actions ? (record: AppRecord) => setSheet({ mode: 'edit', record, view: viewForRecord(record) }) : undefined;
 
-  const openNew = (target: ViewSpec, extra?: { preset?: RecordValues; title?: string; fresh?: boolean; onSaved?: (r: AppRecord) => void }) =>
+  const openNew = (target: ViewSpec, extra?: { preset?: RecordValues; title?: string; fresh?: boolean; recordId?: string; note?: string; onSaved?: (r: AppRecord) => void }) =>
     setSheet({ mode: 'new', view: target, ...extra });
 
   const onMove =
@@ -118,27 +189,27 @@ export function AppHome({ appId, detail, records, actions, preview = false }: Pr
         <AddPhotoButton
           label={addLabel}
           onUploaded={(mediaId) =>
-            openNew(gallery, { preset: { [gallery.imageFieldId]: mediaId }, title: addLabel, fresh: true, onSaved: () => first('photo') })
+            openNew(gallery, {
+              preset: { [gallery.imageFieldId]: mediaId },
+              title: addLabel,
+              fresh: true,
+              onSaved: () => {
+                first('photo');
+                markUseful(appId, { kind: 'photo' });
+              },
+            })
           }
         />
       );
     } else if (formView.type === 'practice') {
-      // On the practice tab the timer owns "Save session"; from other tabs the same form opens with the default length.
+      // The timer owns saving a session (it knows what was measured); from other tabs this goes to it,
+      // instead of opening a form prefilled with the planned length as if it had been played.
       const practice = formView;
       primaryAction =
         view.type === 'practice' ? null : (
-          <button
-            type="button"
-            className="btn btn-primary rt-new"
-            data-testid="rt-new-entry"
-            onClick={() => {
-              const preset: RecordValues = { [practice.minutesFieldId]: practice.presets[0] ?? 10 };
-              if (practice.dateFieldId) preset[practice.dateFieldId] = todayIso();
-              openNew(practice, { preset, title: addLabel, onSaved: () => first('session') });
-            }}
-          >
-            {Icons.plus}
-            {addLabel}
+          <button type="button" className="btn btn-primary rt-new" data-testid="rt-new-entry" onClick={() => selectView(practice.id)}>
+            {Icons.play}
+            {practice.title ?? 'Timer'}
           </button>
         );
     } else {
@@ -197,6 +268,20 @@ export function AppHome({ appId, detail, records, actions, preview = false }: Pr
         </section>
       )}
 
+      {suggestion && (
+        <div className="banner banner-info rt-suggestion" role="status" data-testid="rt-suggestion">
+          <span>{suggestion.entry.note} Save it in “{suggestion.entry.view.title ?? 'your list'}”?</span>
+          <span className="rt-suggestion-actions">
+            <button type="button" className="btn btn-primary btn-sm" data-testid="rt-suggestion-review" onClick={() => openSuggested(suggestion.rec, suggestion.entry)}>
+              Review and save
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSuggestion(null)}>
+              Not now
+            </button>
+          </span>
+        </div>
+      )}
+
       {(spec.views.length > 1 || (!emptyView && primaryAction)) && (
         <div className="rt-toolbar">
           {spec.views.length > 1 ? (
@@ -230,19 +315,27 @@ export function AppHome({ appId, detail, records, actions, preview = false }: Pr
           readOnlyNote={actions ? undefined : preview ? 'Example: sessions are saved once the app is yours.' : 'Reconnect to save a session.'}
           onPracticeSave={
             actions
-              ? (preset, afterSaved) =>
+              ? (preset, meta, afterSaved) =>
                   openNew(view, {
                     preset,
                     title: view.addLabel ?? 'Save session',
                     fresh: true,
+                    // A timed session is saved under its own id: retrying the save cannot double it.
+                    recordId: meta.sessionId ?? undefined,
+                    note: practiceNote(meta),
                     onSaved: () => {
-                      first('session');
+                      // Only time the clock measured counts as practice done; a typed-in log is kept, not counted.
+                      if (meta.timed) first('session');
+                      markUseful(appId, { kind: 'session', timed: meta.timed, elapsedSec: Math.round(meta.elapsedMs / 1000), endedAway: meta.endedAway });
                       afterSaved();
                     },
                   })
               : undefined
           }
-          onCompleted={() => first('action')}
+          onCompleted={() => {
+            first('action');
+            markUseful(appId, { kind: 'task_done' });
+          }}
         />
       </div>
 
@@ -264,7 +357,7 @@ interface ViewBodyProps {
   onMove?: (record: AppRecord, stage: string) => void;
   onPatch?: (record: AppRecord, patch: RecordValues) => Promise<void>;
   onDelete?: (record: AppRecord) => Promise<void>;
-  onPracticeSave?: (preset: RecordValues, afterSaved: () => void) => void;
+  onPracticeSave?: (preset: RecordValues, meta: PracticeSaveMeta, afterSaved: () => void) => void;
   onCompleted?: (record: AppRecord) => void;
   readOnlyNote?: string;
 }

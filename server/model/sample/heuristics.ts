@@ -229,7 +229,10 @@ export function dueDatePlan(spec: SpecLike): { field?: FieldInput; rule?: RuleIn
   if (!hasRule) {
     const board = spec.views.find((v): v is Extract<ViewInput, { type: 'board' }> => v.type === 'board');
     const stage = board ? spec.fields.find((x) => x.id === board.stageFieldId && x.type === 'select') : undefined;
-    const done = spec.fields.find((x) => x.type === 'checkbox' && /done|complete|finished/i.test(x.label));
+    // "Done" comes only from a view binding (a queue's done box); a checkbox that merely mentions
+    // completion (e.g. "Completed the warm-up?") must never decide whether an item is overdue.
+    const queue = spec.views.find((v): v is Extract<ViewInput, { type: 'queue' }> => v.type === 'queue');
+    const done = queue?.doneFieldId ? spec.fields.find((x) => x.id === queue.doneFieldId && x.type === 'checkbox') : undefined;
     const doneValues = board?.doneStageValues ?? [];
     out.rule = {
       id: slugifyFieldId('due_soon', (spec.rules ?? []).map((r) => r.id)),

@@ -373,7 +373,9 @@ export function completionPatch(spec: AppSpec, view: QueueViewSpec, record: AppR
 }
 
 /** A long-text field meant as a message draft (id or label mentions "draft"); copied, never sent. */
-export function draftFieldFor(spec: AppSpec): FieldSpec | undefined {
+export function draftFieldFor(spec: AppSpec, view?: QueueViewSpec): FieldSpec | undefined {
+  if (view?.draftFieldId) return spec.fields.find((f) => f.id === view.draftFieldId && !f.hidden);
+  // Older specs have no binding: fall back to a long text field called a draft.
   return spec.fields.find((f) => f.type === 'long_text' && !f.hidden && /draft/i.test(`${f.id} ${f.label}`));
 }
 
@@ -395,9 +397,18 @@ export function formatClock(ms: number): string {
 }
 
 /** Minutes to save for a session: elapsed time rounded (at least 1); the selected preset when the timer never ran. */
-export function elapsedMinutes(elapsedMs: number, presetMinutes: number): number {
-  if (elapsedMs < 1000) return Math.max(1, Math.round(presetMinutes));
+/**
+ * Whole minutes the clock measured (at least 1 once anything was timed), or null when nothing was
+ * timed. The plan (the preset) is never returned as time played.
+ */
+export function elapsedMinutes(elapsedMs: number): number | null {
+  if (elapsedMs < 1000) return null;
   return Math.max(1, Math.round(elapsedMs / 60_000));
+}
+
+/** Wall-clock time for a timestamp, e.g. "8:42 PM" (the person's own locale and timezone). */
+export function clockTime(ms: number): string {
+  return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
 export const TEMPO_MIN = 30;

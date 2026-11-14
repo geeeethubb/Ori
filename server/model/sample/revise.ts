@@ -8,7 +8,7 @@
 import { FieldSchema, RuleSchema, designFor, type AppSpec, type AppTheme, type FieldSpec, type ViewSpec } from '../../../shared/appSpec.ts';
 import type { FieldInput, RuleInput } from './builders.ts';
 import { slugifyFieldId } from '../../../shared/ids.ts';
-import { RevisionProposalSchema, applyRevision, type RevisionOp, type RevisionProposal } from '../../../shared/revision.ts';
+import { RevisionProposalSchema, applyRevision, structuralFieldIds, type RevisionOp, type RevisionProposal } from '../../../shared/revision.ts';
 import type { ReviseInput } from '../types.ts';
 import { conceptForSpec } from './catalog.ts';
 import { cleanLabel, dueDatePlan, genericField, planInstructions, promptRotationPlan, typeWord, type Unsupported } from './heuristics.ts';
@@ -90,22 +90,6 @@ function cleanPhrase(s: string): string {
 }
 
 /** Fields a view or rule is organised by; hiding them would break the app's main screen. */
-function structuralFieldIds(spec: AppSpec): Set<string> {
-  const ids = new Set<string>();
-  for (const v of spec.views) {
-    if (v.type === 'journal') { ids.add(v.dateFieldId); if (v.titleFieldId) ids.add(v.titleFieldId); }
-    if (v.type === 'board') { ids.add(v.stageFieldId); ids.add(v.titleFieldId); }
-    if (v.type === 'list') ids.add(v.titleFieldId);
-    if (v.type === 'summary') for (const m of v.metrics) if (m.fieldId && m.kind !== 'count') ids.add(m.fieldId);
-    if (v.type === 'gallery') ids.add(v.imageFieldId);
-    if (v.type === 'practice') ids.add(v.minutesFieldId);
-    if (v.type === 'links') ids.add(v.urlFieldId);
-    if (v.type === 'queue') { ids.add(v.personFieldId); ids.add(v.actionFieldId); if (v.doneFieldId) ids.add(v.doneFieldId); if (v.stageFieldId) ids.add(v.stageFieldId); }
-    if (v.filter) ids.add(v.filter.fieldId);
-  }
-  for (const r of spec.rules) if (r.type === 'due_soon') { ids.add(r.dateFieldId); if (r.stageFieldId) ids.add(r.stageFieldId); if (r.doneFieldId) ids.add(r.doneFieldId); }
-  return ids;
-}
 
 function viewKind(spec: AppSpec): string {
   switch (spec.pattern) {
@@ -144,7 +128,8 @@ export function proposeRevision(input: ReviseInput): RevisionProposal {
 
   const structural = structuralFieldIds(spec);
   const lastVisible = [...spec.fields].reverse().find((f) => !f.hidden)?.id;
-  const taken = new Set(spec.fields.map((f) => f.id));
+  // Ids earlier versions used stay taken: a new field never inherits an old field's saved values.
+  const taken = new Set([...spec.fields.map((f) => f.id), ...(input.reservedFieldIds ?? [])]);
   const takeId = (label: string) => { const id = slugifyFieldId(label, taken); taken.add(id); return id; };
   const addField = (field: FieldInput) => ops.push({ op: 'add_field', field: FieldSchema.parse(field), ...(lastVisible ? { afterFieldId: lastVisible } : {}) });
   const rule = (r: RuleInput) => RuleSchema.parse(r);
@@ -227,11 +212,20 @@ export function proposeRevision(input: ReviseInput): RevisionProposal {
     if (opt?.[1]) {
       const label = clip(opt[1].trim(), 40);
       const board = spec.views.find((v): v is Extract<ViewSpec, { type: 'board' }> => v.type === 'board');
-      const target = (opt[2] ? findField(spec, opt[2], { hidden: false }) : undefined)
+      // A view's filter field sorts entries into tabs (a new value would show nowhere); choices a view
+      // binds (a link's kind, a queue's channel or stage) are the ones people mean.
+      const filterIds = new Set(spec.views.flatMap((v) => (v.filter ? [v.filter.fieldId] : [])));
+      const choices = spec.fields.filter((f) => f.type === 'select' && !f.hidden && !filterIds.has(f.id));
+      const boundIds = new Set(spec.views.flatMap((v) => (v.type === 'links' ? [v.kindFieldId] : v.type === 'queue' ? [v.channelFieldId, v.stageFieldId] : v.type === 'board' ? [v.stageFieldId] : [])));
+      const bound = choices.filter((f) => boundIds.has(f.id));
+      const named = opt[2] ? findField(spec, opt[2], { hidden: false }) : undefined;
+      const target = named
         ?? (board ? spec.fields.find((f) => f.id === board.stageFieldId) : undefined)
-        ?? spec.fields.find((f) => f.type === 'select' && !f.hidden);
+        ?? (bound.length === 1 ? bound[0] : choices.length === 1 ? choices[0] : undefined);
       if (!target || target.type !== 'select') {
-        unsupported.push({ request: clip(clause, 400), reason: 'There is no choice field to add that option to.', alternative: 'Ask for a choice field first, for example "add a priority field".' });
+        unsupported.push(choices.length > 1
+          ? { request: clip(clause, 400), reason: `There is more than one choice to add “${label}” to.`, alternative: `Say which one, for example “add an option called ${label} to ${choices[0]?.label}” (choices: ${choices.map((f) => f.label).join(', ')}).` }
+          : { request: clip(clause, 400), reason: 'There is no choice field to add that option to.', alternative: 'Ask for a choice field first, for example "add a priority field".' });
         continue;
       }
       const value = slugifyFieldId(label, target.options.map((o) => o.value));

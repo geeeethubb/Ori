@@ -39,7 +39,7 @@ export function QueueView({ spec, view, records, onEdit, onPatch, onCompleted, a
   const rule = useMemo(() => queueRule(spec, view), [spec, view]);
   const dueGroups = useMemo(() => queueGroups(spec, view, records), [spec, view, records]);
   const people = useMemo(() => (grouping === 'person' ? queueByPerson(spec, view, records) : []), [grouping, spec, view, records]);
-  const draftField = useMemo(() => draftFieldFor(spec), [spec]);
+  const draftField = useMemo(() => draftFieldFor(spec, view), [spec, view]);
   const channelField = fieldById(spec, view.channelFieldId);
   const noun = spec.entryNoun;
 
@@ -139,7 +139,9 @@ function QueueItem({ spec, view, rule, draftField, channelField, record, onEdit,
   const actionText = typeof actionRaw === 'string' && actionRaw.trim() ? actionRaw.trim() : `Follow up with ${personShortName(person)}`;
   const context = view.contextFieldId ? snippet(record.values[view.contextFieldId]) : '';
   const due = rule.dateFieldId ? record.values[rule.dateFieldId] : undefined;
-  const dueText = typeof due === 'string' ? dueLabel(status === 'done' ? 'done' : status, due) : '';
+  // With no date yet, the person's own words for when are shown as they said them.
+  const dueWords = view.dueTextFieldId ? record.values[view.dueTextFieldId] : undefined;
+  const dueText = typeof due === 'string' && due ? dueLabel(status === 'done' ? 'done' : status, due) : typeof dueWords === 'string' && dueWords.trim() ? `“${dueWords.trim()}”` : '';
   const channel = channelField?.type === 'select' ? channelField.options.find((o) => o.value === record.values[channelField.id]) : undefined;
   const draft = draftField ? record.values[draftField.id] : undefined;
   const patch = completionPatch(spec, view, record);
@@ -150,11 +152,17 @@ function QueueItem({ spec, view, rule, draftField, channelField, record, onEdit,
     try {
       await onPatch(record, patch);
       if (!done) {
-        toast('Marked done');
+        // Undo is a status change on this one item (never a design undo), checked against its latest
+        // saved copy, so it cannot overwrite an edit made meanwhile on another device.
+        const now = { ...record, values: { ...record.values, ...patch } };
+        const back = completionPatch(spec, view, now);
+        toast('Marked done', back ? { action: { label: 'Undo', onClick: () => void onPatch(now, back).catch(() => undefined) }, durationMs: 6000 } : undefined);
         onCompleted?.(record);
       } else {
         toast('Back in the queue');
       }
+    } catch {
+      /* the parent already reported it */
     } finally {
       setBusy(false);
     }

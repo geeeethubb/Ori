@@ -434,11 +434,18 @@ describe('revisions keep history and never touch entries', () => {
     expect(res.json.versions[1]!.changeSummary).toContain('Next experiment');
   });
 
-  it('undo appends version 3 whose spec equals version 1, and values saved under the field stay', async () => {
-    const res = await client.request<AppDetailDto>(`/api/apps/${app.app.id}/revisions/undo`, { method: 'POST', token: me.token });
+  it('undo appends version 3 with version 1’s design, and the field saved since stays (hidden, value kept, id reserved)', async () => {
+    const res = await client.request<AppDetailDto & { kept: string[] }>(`/api/apps/${app.app.id}/revisions/undo`, { method: 'POST', token: me.token });
     expect(res.status).toBe(200);
     expect(res.json.version).toBe(3);
-    expect(res.json.spec).toEqual(app.spec);
+    // Version 1's design comes back. The field added in version 2 holds a saved value, so it is carried
+    // over hidden (never dropped from the definition, so its id cannot be reused for another type).
+    const { fields, ...design } = res.json.spec;
+    const { fields: v1Fields, ...v1Design } = app.spec;
+    expect(design).toEqual(v1Design);
+    expect(fields.slice(0, v1Fields.length)).toEqual(v1Fields);
+    expect(fields.slice(v1Fields.length)).toEqual([expect.objectContaining({ id: 'next_experiment', hidden: true, required: false })]);
+    expect(res.json.kept.join(' ')).toMatch(/stays saved/);
     expect(res.json.canUndo).toBe(true);
     const versions = await client.request<{ versions: AppVersionDto[] }>(`/api/apps/${app.app.id}/versions`, { token: me.token });
     expect(versions.json.versions).toHaveLength(3);

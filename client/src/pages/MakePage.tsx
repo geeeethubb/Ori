@@ -4,9 +4,9 @@
  * Explorations, updates to an existing app and "just keep it" live here too.
  */
 import { BRAND } from '@shared/brand.ts';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
-import type { AppDetailDto, ProposalDetailDto, ProposalPreviewDto, RevisionPreviewDto } from '@shared/api.ts';
+import type { AppDetailDto, BuildResponseDto, ProposalDetailDto, ProposalPreviewDto, RevisionPreviewDto } from '@shared/api.ts';
 import { AppSpecSchema, type AppTheme } from '@shared/appSpec.ts';
 import { readStatusLabel, type Recommendation } from '@shared/context.ts';
 import { api, ApiError, describeError } from '../api.ts';
@@ -110,21 +110,31 @@ export function MakePage() {
         )}
       </section>
 
-      {rec.kind === 'new_app' && <NewAppFlow rec={rec} />}
+      {data.stale && (
+        <div className="banner banner-warn" role="status" data-testid="make-stale">
+          <span>{data.stale}</span>
+          <Link to={rec.captureId ? '/agent' : '/playground'} className="btn btn-secondary btn-sm">Back</Link>
+        </div>
+      )}
+      {rec.kind === 'new_app' && <NewAppFlow rec={rec} stale={Boolean(data.stale)} />}
       {rec.kind === 'explore' && <ExploreFlow rec={rec} />}
       {rec.kind === 'update_app' && <UpdateFlow rec={rec} detail={data} />}
       {rec.kind === 'keep' && <KeepFlow rec={rec} />}
+      {rec.kind === 'use_app' && <UseFlow rec={rec} detail={data} />}
     </div>
   );
 }
 
 // ---------- new_app: choices → real preview → Make mine ----------
 
-function NewAppFlow({ rec }: { rec: Recommendation }) {
+function NewAppFlow({ rec, stale = false }: { rec: Recommendation; stale?: boolean }) {
   const navigate = useNavigate();
   const { refresh } = useAuth();
+  const { toast } = useToast();
   const wantsTime = wantsTimeBudget(rec);
-  const [minutes, setMinutes] = useState<number>(DEFAULT_MINUTES);
+  // A length the person asked for outranks the template's default, and is always one of the choices.
+  const [minutes, setMinutes] = useState<number>(rec.suggestedMinutes ?? DEFAULT_MINUTES);
+  const minuteChoices = useMemo(() => [...new Set([...MINUTE_CHOICES, ...(rec.suggestedMinutes ? [rec.suggestedMinutes] : [])])].sort((a, b) => a - b), [rec.suggestedMinutes]);
   const [look, setLook] = useState<AppTheme>(() => defaultLook(rec));
   const [instructions, setInstructions] = useState('');
   const [state, setState] = useState<MakeState>('idle');
@@ -178,11 +188,15 @@ function NewAppFlow({ rec }: { rec: Recommendation }) {
     setBuilding(true);
     setErr(null);
     try {
-      const res = await api<AppDetailDto>(`/api/recommendations/${rec.id}/build`, {
+      const res = await api<BuildResponseDto>(`/api/recommendations/${rec.id}/build`, {
         method: 'POST',
         body: { spec: d.spec, description: d.description, instructions: instructions.trim() },
         timeoutMs: 120_000,
       });
+      // A retry or a second tap returns the app that was already made; the shared link or photo
+      // that the proposal promised is already inside it.
+      if (res.alreadyBuilt) toast('This was already made; here it is.');
+      else if (res.carried?.length) toast(res.carried.join(' '), { durationMs: 7000 });
       navigate(`/apps/${res.app.id}/`, { replace: true });
     } catch (e) {
       fail(e);
@@ -221,7 +235,7 @@ function NewAppFlow({ rec }: { rec: Recommendation }) {
           <fieldset className="mk-choice">
             <legend className="field-label">How long is a session?</legend>
             <div className="choice-chips" role="radiogroup" aria-label="Minutes per session">
-              {MINUTE_CHOICES.map((m) => (
+              {minuteChoices.map((m) => (
                 <button key={m} type="button" role="radio" aria-checked={minutes === m} className="choice-chip" data-testid={`make-choice-minutes-${m}`} onClick={() => setMinutes(m)} disabled={busy}>
                   {Icons.timer} {m} min
                 </button>
@@ -331,10 +345,10 @@ function NewAppFlow({ rec }: { rec: Recommendation }) {
           </p>
         )}
         <div className="mk-actions">
-          <button type="button" className="btn btn-secondary" data-testid="make-preview-button" onClick={runPreview} disabled={busy}>
+          <button type="button" className="btn btn-secondary" data-testid="make-preview-button" onClick={runPreview} disabled={busy || stale || built}>
             {draft ? 'Preview again' : 'Preview'}
           </button>
-          <button type="button" className="btn btn-primary btn-lg" data-testid="make-mine" onClick={runBuild} disabled={busy}>
+          <button type="button" className="btn btn-primary btn-lg" data-testid="make-mine" onClick={runBuild} disabled={busy || stale || built}>
             {building ? 'Making it yours…' : 'Make mine'}
           </button>
         </div>
@@ -532,6 +546,30 @@ function UpdateFlow({ rec, detail }: { rec: Recommendation; detail: ProposalDeta
 
 // ---------- keep: a save stays a save ----------
 
+// ---------- use_app: an app the person has already does this ----------
+
+function UseFlow({ rec, detail }: { rec: Recommendation; detail: ProposalDetailDto }) {
+  const target = detail.targetApp;
+  if (!target || !rec.targetAppId) {
+    return <ErrorBanner message="That app is no longer in your collection." />;
+  }
+  const to = rec.status === 'applied' ? `/apps/${rec.targetAppId}/` : `/apps/${rec.targetAppId}/?from=${rec.id}`;
+  const draft = rec.recordDraft;
+  return (
+    <section className="mk-use card card-pad" aria-labelledby="mk-use-title">
+      <h2 id="mk-use-title" className="st-h2-sm">{target.name} already does this</h2>
+      <p className="muted">
+        {draft
+          ? 'It opens with the entry filled in for you to check. Nothing is saved until you save it there, and nothing about the app changes.'
+          : 'Open it and start. Nothing about the app changes.'}
+      </p>
+      <div className="mk-actions">
+        <Link to={to} className="btn btn-primary btn-lg" data-testid="make-use-open">{Icons.open} Open {target.name}</Link>
+      </div>
+    </section>
+  );
+}
+
 function KeepFlow({ rec }: { rec: Recommendation }) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -540,8 +578,8 @@ function KeepFlow({ rec }: { rec: Recommendation }) {
   async function keep() {
     setBusy(true);
     try {
-      await api(`/api/recommendations/${rec.id}/keep`, { method: 'POST' });
-      toast('Kept. It stays a source; nothing else changes.');
+      const res = await api<{ ok: boolean; forgotten?: number }>(`/api/recommendations/${rec.id}/keep`, { method: 'POST' });
+      toast(res.forgotten ? 'Kept as a source. What I noted from it was taken out of your memory again.' : 'Kept. It stays a source; nothing else changes.');
       navigate('/agent');
     } catch (e) {
       toast(describeError(e), { kind: 'error' });

@@ -5,7 +5,7 @@
  */
 import { z } from 'zod';
 import { AppIconSchema, CAPABILITIES, DesignPatchSchema, PATTERNS, PURPOSES } from './appSpec.ts';
-import { APP_ID_PATTERN } from './ids.ts';
+import { APP_ID_PATTERN, SHORT_ID_PATTERN } from './ids.ts';
 
 export const MAX_SOURCE_CHARS = 60_000; // ~15k tokens; the export prompt asks for < 800 words
 export const MAX_SOURCES_PER_USER = 40;
@@ -145,8 +145,33 @@ export const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'
 
 // ---------- proposals / recommendations ----------
 
-export const PROPOSAL_KINDS = ['new_app', 'explore', 'update_app', 'keep'] as const;
+/**
+ * new_app: make something new · explore: try it once, no app · update_app: change an app's design
+ * (a revision) · keep: just save it · use_app: open an app the person already has and, optionally,
+ * add ONE entry to it (a record action, never a revision).
+ */
+export const PROPOSAL_KINDS = ['new_app', 'explore', 'update_app', 'keep', 'use_app'] as const;
 export type ProposalKind = (typeof PROPOSAL_KINDS)[number];
+
+/**
+ * use_app: an entry to add to the existing app, described by ROLE. The app maps roles onto its own
+ * fields through its view bindings, so a draft never guesses field ids, and nothing is saved until the
+ * person confirms it in the app's own form.
+ */
+export const RecordDraftSchema = z.object({
+  /** source: a link for a saved-sources view · follow_up: a person and an action for a queue · photo: a shared photo for a gallery. */
+  kind: z.enum(['source', 'follow_up', 'photo']),
+  title: z.string().trim().max(200).optional(),
+  note: z.string().trim().max(1000).optional(),
+  url: z.string().trim().max(2000).optional(),
+  person: z.string().trim().max(120).optional(),
+  action: z.string().trim().max(200).optional(),
+  /** The person's own words for when (e.g. "Thursday"); a due date is only set once they pick one. */
+  dueText: z.string().trim().max(80).optional(),
+  /** The capture's own photo; ownership is checked again when the entry is saved. */
+  mediaId: z.string().regex(SHORT_ID_PATTERN).optional(),
+});
+export type RecordDraft = z.infer<typeof RecordDraftSchema>;
 
 /**
  * A proposal card as stored and shown. Fact-grounded recommendations (Playground) and
@@ -181,9 +206,13 @@ export const RecommendationDraftSchema = z.object({
   design: DesignPatchSchema.optional(),
   /** explore: 3-6 concrete steps the person can do today, using only what they shared or general practice. No invented links. */
   explorationSteps: z.array(z.string().trim().min(3).max(200)).max(6).optional(),
-  /** update_app: which existing app and what to change (a change request the revision planner can apply). */
+  /** update_app / use_app: which of the person's apps. update_app also says what to change (a request the revision planner can apply). */
   targetAppId: z.string().regex(APP_ID_PATTERN).optional(),
   updateRequest: z.string().trim().max(400).optional(),
+  /** use_app: an optional entry to add, confirmed by the person in the app's own form. */
+  recordDraft: RecordDraftSchema.optional(),
+  /** new_app: a session length the person asked for (minutes); the Make page starts there instead of a template default. */
+  suggestedMinutes: z.number().int().min(1).max(180).optional(),
 });
 export type RecommendationDraft = z.infer<typeof RecommendationDraftSchema>;
 export const RecommendationBatchSchema = z.object({ recommendations: z.array(RecommendationDraftSchema).min(1).max(8) });
@@ -214,14 +243,25 @@ export const AgentReplyDraftSchema = z.object({
   proposals: z.array(RecommendationDraftSchema).min(1).max(4),
   /** New things learned about the person from their note (stored as editable context). */
   learned: z.array(ExtractedFactSchema).max(6).default([]),
+  /** Things asked for that do not exist here (e.g. Spotify sync), named plainly with what works instead. */
+  unsupported: z.array(z.lazy(() => UnsupportedItemSchema)).max(4).default([]),
 });
 export type AgentReplyDraft = z.infer<typeof AgentReplyDraftSchema>;
+
+export const UnsupportedItemSchema = z.object({
+  request: z.string().trim().min(1).max(120),
+  reason: z.string().trim().min(1).max(300),
+  alternative: z.string().trim().max(300).optional(),
+});
+export type UnsupportedItem = z.infer<typeof UnsupportedItemSchema>;
 
 export interface AgentReply {
   captureId: string;
   message: string;
   question: string | null;
   proposals: Recommendation[];
+  /** Requests that cannot be done here (integrations that do not exist), stated plainly. */
+  unsupported: UnsupportedItem[];
   generatedBy: 'anthropic' | 'sample';
   fallbackReason?: string | null;
   createdAt: string;
@@ -230,7 +270,7 @@ export interface AgentReply {
 export const EVENT_TYPES = [
   'app_built', 'first_item_saved', 'item_saved', 'task_completed', 'app_opened',
   'revision_accepted', 'revision_declined', 'revision_undone', 'feedback_given', 'install_guide_viewed',
-  'shortcut_requested', 'first_action_completed',
+  'shortcut_requested', 'first_action_completed', 'useful_action',
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 

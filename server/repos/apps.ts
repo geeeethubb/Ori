@@ -234,7 +234,7 @@ export function getRecord(ownerId: string, appId: string, recordId: string): App
   return r ? rowToRecord(r) : null;
 }
 
-export function createRecord(ownerId: string, appId: string, values: RecordValues, opts: { id?: string; createdAt?: string } = {}): AppRecord {
+export function createRecord(ownerId: string, appId: string, values: RecordValues, opts: { id?: string; createdAt?: string; origin?: 'carried' } = {}): AppRecord {
   return transaction(() => {
     if (!getApp(ownerId, appId)) throw new NotFound();
     const id = opts.id ?? newId();
@@ -245,15 +245,30 @@ export function createRecord(ownerId: string, appId: string, values: RecordValue
       .prepare('INSERT INTO app_records (id, app_id, values_json, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, NULL)')
       .run(id, appId, JSON.stringify(values), createdAt, now);
     getDb().prepare('UPDATE apps SET updated_at = ? WHERE id = ?').run(now, appId);
-    recordEvent(appId, isFirst ? 'first_item_saved' : 'item_saved', { recordId: id });
+    // Entries carried over by Make mine are marked so they never count as something the person did.
+    recordEvent(appId, isFirst ? 'first_item_saved' : 'item_saved', opts.origin ? { recordId: id, origin: opts.origin } : { recordId: id });
     return getRecord(ownerId, appId, id) as AppRecord;
   });
 }
 
-export function updateRecord(ownerId: string, appId: string, recordId: string, values: RecordValues): AppRecord | null {
+/** Thrown when an edit was based on an older copy than the one stored (another device changed it). */
+export class RecordConflict extends Error {
+  constructor(readonly current: AppRecord) {
+    super('record changed since it was loaded');
+  }
+}
+
+/** Where a record id lives, whatever the owner (client-minted ids must never collide or leak). */
+export function recordIdOwner(recordId: string): { appId: string; deleted: boolean } | null {
+  const r = getDb().prepare('SELECT app_id, deleted_at FROM app_records WHERE id = ?').get(recordId) as R | undefined;
+  return r ? { appId: String(r.app_id), deleted: r.deleted_at !== null } : null;
+}
+
+export function updateRecord(ownerId: string, appId: string, recordId: string, values: RecordValues, opts: { expectedUpdatedAt?: string } = {}): AppRecord | null {
   return transaction(() => {
     const existing = getRecord(ownerId, appId, recordId);
     if (!existing) return null;
+    if (opts.expectedUpdatedAt && opts.expectedUpdatedAt !== existing.updatedAt) throw new RecordConflict(existing);
     const merged = { ...existing.values, ...values };
     const now = nowIso();
     getDb().prepare('UPDATE app_records SET values_json = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(merged), now, recordId);

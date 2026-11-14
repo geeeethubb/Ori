@@ -31,7 +31,7 @@ function respond(over: Partial<Cap> = {}, input: Partial<Omit<RespondInput, 'cap
 
 const app = (over: Partial<ExistingAppSummary> & Pick<ExistingAppSummary, 'id' | 'name'>): ExistingAppSummary => ({ purpose: 'explore', pattern: 'journal', capabilities: [], ...over });
 
-const RIFF_APP = app({ id: 'app-riff-0001', name: 'Riff', pattern: 'practice', tagline: 'A little practice tonight', capabilities: ['practice_timer', 'tempo', 'source_links', 'summary', 'prompts'] });
+const RIFF_APP = app({ id: 'app-riff-0001', name: 'Riff', pattern: 'practice', tagline: 'A little practice tonight', capabilities: ['practice_timer', 'tempo', 'source_links', 'summary', 'prompts'], defaultMinutes: 15, minutePresets: [15, 10, 25] });
 const LIGHT_APP = app({ id: 'app-light-001', name: 'Light', pattern: 'gallery', tagline: 'Find the light', capabilities: ['gallery', 'photo_upload', 'summary', 'prompts'] });
 const PEOPLE_APP = app({ id: 'app-ppl-0001', name: 'People', purpose: 'work', pattern: 'queue', capabilities: ['next_actions', 'due_soon', 'summary'] });
 const TRACKER_APP = app({ id: 'app-trk-0001', name: 'Practice Companion', pattern: 'tracker', tagline: 'Small sessions, steady progress', capabilities: ['list', 'summary'] });
@@ -92,7 +92,8 @@ describe('three domains, three different directions', () => {
     expect(riff.sourceCaptureIds).toEqual(['cap-guitar-01']);
     expect(riff.reason).toContain(`"${GUITAR_NOTE}"`);
     expect(riff.reason).toContain('15 minutes');
-    expect(riff.firstAction).toContain('15 minutes');
+    expect(riff.firstAction).toContain('15-minute');
+    expect(riff.suggestedMinutes).toBe(15); // the Make page starts at the length they asked for
     expect(riff.previewLines.some((l) => /Timer: 15/.test(l))).toBe(true);
 
     const explore = r.proposals[1]!;
@@ -165,29 +166,31 @@ describe('three domains, three different directions', () => {
   });
 });
 
-describe('update_app when an existing app fits', () => {
-  it('adds to an existing Riff instead of making another, with a request the planner applies', () => {
+describe('an app the person has: use it, and change it only when they ask for something it lacks', () => {
+  it('uses an existing Riff instead of making another or revising it, with the shared link as the one entry', () => {
     const r = respond({ kind: 'link', url: REEL, readStatus: 'not_read', sourceLabel: 'Instagram link' }, { existingApps: [RIFF_APP] });
-    expect(r.proposals.map((p) => p.kind)).toEqual(['update_app', 'explore', 'keep']);
-    const up = r.proposals[0]!;
-    expect(up.targetAppId).toBe('app-riff-0001');
-    expect(up.title).toBe('Add this to Riff');
-    expect(up.updateRequest).toMatch(/15-minute preset/);
-    expect(up.updateRequest).toMatch(/prompts to 15-minute sessions/);
-    expect(up.updateRequest).toMatch(/Clip/);
-    expect(up.description).toMatch(/stays as it is/);
+    expect(r.proposals.map((p) => p.kind)).toEqual(['use_app', 'explore', 'keep']);
+    const use = r.proposals[0]!;
+    expect(use.targetAppId).toBe('app-riff-0001');
+    expect(use.title).toBe('Practise in Riff tonight');
+    expect(use.updateRequest).toBeUndefined();
+    expect(use.recordDraft).toEqual({ kind: 'source', url: REEL, title: 'Instagram link', note: GUITAR_NOTE });
+    expect(use.description).toMatch(/nothing about the app changes/i);
+    expect(r.message).toMatch(/Riff already does this/);
+  });
 
-    // On a Riff whose timer starts elsewhere: preset, prompts and the Clip option all change.
-    const spec = AppSpecSchema.parse({ ...RIFF_PRACTICE, views: RIFF_PRACTICE.views.map((v) => (v.type === 'practice' ? { ...v, presets: [10, 25] } : v)) });
+  it('a session length Riff does not offer is a real design change the planner applies', () => {
+    const r = respond({ id: 'cap-g-20', text: 'I have 20 minutes to practise this riff tonight' }, { existingApps: [RIFF_APP] });
+    expect(r.proposals.map((p) => p.kind)).toEqual(['use_app', 'update_app', 'explore', 'keep']);
+    const up = r.proposals[1]!;
+    expect(up.title).toBe('Give Riff a 20-minute timer preset');
+    expect(up.updateRequest).toBe('Add a 20-minute preset to the practice timer as the default');
+    const spec = AppSpecSchema.parse(RIFF_PRACTICE);
     const plan = proposeRevision({ spec, request: up.updateRequest!, sampleRecords: [] });
-    expect(plan.ops.map((o) => o.op).sort()).toEqual(['add_select_option', 'replace_rule', 'replace_view']);
     const applied = applyRevision(spec, plan.ops);
     expect(applied.ok).toBe(true);
     const practice = applied.spec?.views.find((v) => v.type === 'practice');
-    if (practice?.type === 'practice') expect(practice.presets).toEqual([15, 10, 25]);
-    const kind = applied.spec?.fields.find((f) => f.id === 'source_kind');
-    if (kind?.type === 'select') expect(kind.options.some((o) => o.label === 'Clip')).toBe(true);
-    expect(plan.summary).toMatch(/15/);
+    expect(practice?.type === 'practice' ? practice.presets[0] : null).toBe(20);
   });
 
   it('offers Riff plus an addition when a practice tracker only partly fits', () => {
@@ -202,11 +205,17 @@ describe('update_app when an existing app fits', () => {
     expect(applyRevision(spec, plan.ops).ok).toBe(true);
   });
 
-  it('photo and people captures add to Light, a photo journal, People or a follow-up board', () => {
-    const r1 = respond({ id: 'cap-photo-01', text: PHOTO_NOTE }, { existingApps: [LIGHT_APP] });
-    expect(r1.proposals.map((p) => p.kind)).toEqual(['update_app', 'explore', 'keep']);
+  it('photo and people captures use Light or People (with one entry), or add to a photo journal or a follow-up board', () => {
+    const r0 = respond({ id: 'cap-photo-01', text: PHOTO_NOTE }, { existingApps: [LIGHT_APP] });
+    expect(r0.proposals.map((p) => p.kind)).toEqual(['use_app', 'explore', 'keep']);
+    const shot = respond({ id: 'cap-photo-09', kind: 'image', text: 'Low sun on the brick wall', readStatus: 'not_read', sourceLabel: 'Screenshot', mediaId: 'media-0000001' }, { existingApps: [LIGHT_APP] });
+    expect(shot.proposals[0]).toMatchObject({ kind: 'use_app', targetAppId: LIGHT_APP.id, recordDraft: { kind: 'photo', mediaId: 'media-0000001' } });
+
+    // Tags are a change Light lacks, so asking for them is a real (previewed) design change.
+    const r1 = respond({ id: 'cap-photo-02', text: 'I want to tag my photos by the kind of light I was chasing' }, { existingApps: [LIGHT_APP] });
+    expect(r1.proposals.map((p) => p.kind)).toEqual(['use_app', 'update_app', 'explore', 'keep']);
     const light = AppSpecSchema.parse(LIGHT_GALLERY);
-    const a1 = applyRevision(light, proposeRevision({ spec: light, request: r1.proposals[0]!.updateRequest!, sampleRecords: [] }).ops);
+    const a1 = applyRevision(light, proposeRevision({ spec: light, request: r1.proposals[1]!.updateRequest!, sampleRecords: [] }).ops);
     expect(a1.ok).toBe(true);
     expect(a1.spec?.fields.some((f) => f.type === 'tags')).toBe(true);
     expect(a1.spec?.views.find((v) => v.type === 'gallery')?.formFieldIds).toContain('tags'); // visible in the gallery's form
@@ -218,10 +227,13 @@ describe('update_app when an existing app fits', () => {
     expect(p2.ops.length).toBeGreaterThanOrEqual(1);
     expect(applyRevision(journal, p2.ops).ok).toBe(true);
 
+    // Adding a follow-up is an entry, never a design change: People opens with it drafted.
     const r3 = respond({ id: 'cap-people-01', text: PEOPLE_NOTE }, { existingApps: [PEOPLE_APP] });
-    expect(r3.proposals.map((p) => p.kind)).toEqual(['update_app', 'explore', 'keep']);
+    expect(r3.proposals.map((p) => p.kind)).toEqual(['use_app', 'explore', 'keep']);
+    expect(r3.proposals[0]?.recordDraft).toMatchObject({ kind: 'follow_up', person: 'Maya', action: 'Send her the demo link', dueText: 'by Friday' });
+    const asked = respond({ id: 'cap-people-04', text: 'My follow-ups need a priority so the most important ones float up' }, { existingApps: [PEOPLE_APP] });
     const people = AppSpecSchema.parse(PEOPLE_QUEUE);
-    const p3 = proposeRevision({ spec: people, request: r3.proposals[0]!.updateRequest!, sampleRecords: [] });
+    const p3 = proposeRevision({ spec: people, request: asked.proposals.find((p) => p.kind === 'update_app')!.updateRequest!, sampleRecords: [] });
     expect(p3.ops.some((o) => o.op === 'add_field' && o.field.id === 'priority')).toBe(true);
 
     const r4 = respond({ id: 'cap-people-02', text: PEOPLE_NOTE }, { existingApps: [BOARD_APP] });
@@ -233,8 +245,9 @@ describe('update_app when an existing app fits', () => {
 
   it('says so when the app already covers the note and there is nothing concrete to add', () => {
     const r = respond({ id: 'cap-g-04', text: 'Picked up the guitar again tonight and want to learn that riff properly' }, { existingApps: [RIFF_APP] });
-    expect(r.proposals.map((p) => p.kind)).toEqual(['explore', 'keep']);
-    expect(r.message).toMatch(/You already have Riff/);
+    expect(r.proposals.map((p) => p.kind)).toEqual(['use_app', 'explore', 'keep']);
+    expect(r.proposals[0]?.recordDraft).toBeUndefined();
+    expect(r.message).toMatch(/Riff already does this/);
   });
 
   it('never targets an app of another kind', () => {
@@ -247,10 +260,9 @@ describe('update_app when an existing app fits', () => {
 
 describe('every update request applies to its reference fixture with at least one real change', () => {
   const cases: [string, Cap, ExistingAppSummary, AppSpecInput][] = [
-    ['Riff from the demo note (timer already starts at 15)', capture(), RIFF_APP, RIFF_PRACTICE],
     ['Riff from a link with a 20-minute budget', capture({ id: 'cap-g-05', text: 'Found this riff on a reel and have 20 minutes tonight to practise it', kind: 'link', url: REEL, readStatus: 'not_read', sourceLabel: 'Instagram link' }), RIFF_APP, RIFF_PRACTICE],
-    ['Light from the photo note', capture({ id: 'cap-photo-01', text: PHOTO_NOTE }), LIGHT_APP, LIGHT_GALLERY],
-    ['People from the follow-up note', capture({ id: 'cap-people-01', text: PEOPLE_NOTE }), PEOPLE_APP, PEOPLE_QUEUE],
+    ['Light when tags are asked for', capture({ id: 'cap-photo-03', text: 'I want to tag my photos by the kind of light I was chasing' }), LIGHT_APP, LIGHT_GALLERY],
+    ['People when a priority is asked for', capture({ id: 'cap-people-05', text: 'My follow-ups need a priority so the most important ones float up' }), PEOPLE_APP, PEOPLE_QUEUE],
   ];
   for (const [name, cap, existing, fixture] of cases) {
     it(name, () => {
@@ -292,14 +304,17 @@ describe('learned facts', () => {
     expect(respond({ id: 'cap-p-01', text: PEOPLE_NOTE }).learned).toEqual([]);
     expect(respond({ id: 'cap-p-02', text: 'I want to help my brother learn guitar chords' }).learned).toEqual([]);
     expect(respond({ id: 'cap-p-03', text: 'I want to reconnect with Priya about the investor intro' }).learned).toEqual([]);
-    expect(learnFromNote('She loves this song and has 15 minutes', detectDomain('she loves this song'), 15)).toEqual([{ category: 'routine', value: 'Has about 15 minutes at a time for music practice', status: 'inferred', confidence: 0.6, evidence: 'She loves this song and has 15 minutes' }]);
+    // Someone else's time budget is not the person's routine.
+    expect(learnFromNote('She loves this song and has 15 minutes', detectDomain('she loves this song'), 15)).toEqual([]);
+    expect(respond({ id: 'cap-p-04', text: 'My brother has 15 minutes a day to practise guitar' }).learned).toEqual([]);
   });
 
   it('notices repeated saves in one domain and says so', () => {
     const recent = [1, 2].map((i) => ({ id: `cap-old-${i}`, kind: 'link' as const, text: 'another guitar riff to learn', url: REEL, createdAt: '2026-11-13T10:00:00.000Z' }));
     const r = respond({}, { recentCaptures: recent });
     expect(r.message).toMatch(/3 music saves/);
-    expect(r.learned.some((f) => f.value === 'Keeps coming back to music (3 saves)')).toBe(true);
+    // Saving is not a commitment: repeated saves are mentioned, never stored as an interest.
+    expect(r.learned.some((f) => /Keeps coming back/.test(f.value))).toBe(false);
     expect(r.learned.length).toBeLessThanOrEqual(3);
   });
 });
@@ -317,7 +332,7 @@ describe('shape and determinism', () => {
   it('returns at most four valid proposals, at most one exploration and one keep, and validates as a reply', () => {
     for (const [over, extra] of inputs) {
       const r = respond(over, extra);
-      AgentReplyDraftSchema.parse({ message: r.message, question: r.question, proposals: r.proposals, learned: r.learned });
+      AgentReplyDraftSchema.parse({ message: r.message, question: r.question, proposals: r.proposals, learned: r.learned, unsupported: r.unsupported });
       expect(r.proposals.length).toBeGreaterThanOrEqual(1);
       expect(r.proposals.length).toBeLessThanOrEqual(4);
       expect(r.proposals.filter((p) => p.kind === 'explore').length).toBeLessThanOrEqual(1);
@@ -334,6 +349,9 @@ describe('shape and determinism', () => {
         if (p.kind === 'update_app') {
           expect(p.targetAppId).toBeTruthy();
           expect(p.updateRequest).toBeTruthy();
+        } else if (p.kind === 'use_app') {
+          expect(p.targetAppId).toBeTruthy();
+          expect(p.updateRequest).toBeUndefined();
         } else {
           expect(p.targetAppId).toBeUndefined();
         }

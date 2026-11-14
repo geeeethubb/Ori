@@ -341,7 +341,7 @@ describe("photo records reference the owner's own library", () => {
     const foreign = await client.request<ErrorBody>(`/api/apps/${light.app.id}/records`, { body: { values: { date: today, photo: theirs.id, caption: 'Not mine' } }, token: me.token });
     expect(foreign.status).toBe(422);
     expect(foreign.json.code).toBe('validation');
-    expect(foreign.json.details).toEqual({ photo: 'That photo is not in your library' });
+    expect(foreign.json.details).toEqual({ photo: 'That photo is not available in your library' });
 
     const example = await client.request<ErrorBody>(`/api/apps/${light.app.id}/records`, { body: { values: { date: today, photo: `${EXAMPLE_IMAGE_PREFIX}light-1` } }, token: me.token });
     expect(example.status).toBe(422);
@@ -353,7 +353,7 @@ describe("photo records reference the owner's own library", () => {
 
     const swap = await client.request<ErrorBody>(`/api/apps/${light.app.id}/records/${ok.json.record.id}`, { method: 'PATCH', body: { values: { photo: theirs.id } }, token: me.token });
     expect(swap.status).toBe(422);
-    expect(swap.json.details).toEqual({ photo: 'That photo is not in your library' });
+    expect(swap.json.details).toEqual({ photo: 'That photo is not available in your library' });
 
     const list = await client.request<{ records: AppRecord[] }>(`/api/apps/${light.app.id}/records`, { token: me.token });
     expect(list.json.records).toHaveLength(1);
@@ -609,26 +609,44 @@ describe('updating an existing app from the agent', () => {
   // The demo note on an existing practice app asks for a 15-minute preset AND daily prompts sized to
   // 15 minutes (server/model/sample/domains.ts). The sample reviser maps presets to replace_view and
   // sized prompts to replace_rule, so even an app that already starts at 15 gets a real change.
-  it("the demo note's own update request previews as at least one applicable change", async () => {
+  it('the demo note with Riff already made: use Riff (no duplicate, no design change)', async () => {
+    // Velocity case 3: Riff already offers 15 minutes, so the answer is to open it, not to revise it.
+    const before = await client.request<{ versions: unknown[] }>(`/api/apps/${riff.app.id}/versions`, { token: me.token });
     const hero = await shareOk(me.token, { text: GUITAR_NOTE });
-    const proposal = proposalOfKind(hero, 'update_app');
+    const kinds = hero.reply?.proposals.map((p) => p.kind) ?? [];
+    expect(kinds).not.toContain('new_app');
+    expect(kinds).not.toContain('update_app');
+    const use = proposalOfKind(hero, 'use_app');
+    expect(use.targetAppId).toBe(riff.app.id);
+    const after = await client.request<{ versions: unknown[] }>(`/api/apps/${riff.app.id}/versions`, { token: me.token });
+    expect(after.json.versions).toHaveLength(before.json.versions.length); // sharing never revises the app
+  });
+
+  it('a length Riff does not offer is a real design change, previewed and applicable', async () => {
+    // Earlier steps here already made 20 a preset; 30 is not one of them.
+    const thirty = await shareOk(me.token, { text: 'I have 30 minutes to practise the guitar riff tonight' });
+    expect(proposalOfKind(thirty, 'use_app').targetAppId).toBe(riff.app.id);
+    const proposal = proposalOfKind(thirty, 'update_app');
     expect(proposal.targetAppId).toBe(riff.app.id);
-    expect(proposal.updateRequest).toMatch(/15-minute/);
+    expect(proposal.updateRequest).toMatch(/30-minute/);
     const res = await client.request<RevisionPreviewDto & { appId: string }>(`/api/recommendations/${proposal.id}/update-preview`, { body: {}, token: me.token });
     expect(res.status).toBe(200);
     expect(res.json.ops.length).toBeGreaterThanOrEqual(1);
     expect(res.json.changes.length).toBeGreaterThanOrEqual(1);
-    expect(res.json.previewSpec).not.toEqual(riff.spec);
+    const practice = res.json.previewSpec.views.find((v) => v.type === 'practice');
+    expect(practice && practice.type === 'practice' ? practice.presets[0] : null).toBe(30);
     expect(AppSpecSchema.safeParse(res.json.previewSpec).success).toBe(true);
   });
 
-  it('a guitar note without anything to add gets no update proposal, but still an exploration and a keep', async () => {
+  it('a guitar note without anything to add opens Riff: no update, no duplicate, still an exploration and a keep', async () => {
     const plain = await shareOk(me.token, { text: 'Picked up the guitar again tonight and want to learn that riff properly' });
     const kinds = plain.reply?.proposals.map((p) => p.kind) ?? [];
     expect(kinds).not.toContain('new_app'); // never a second practice app
+    expect(kinds).not.toContain('update_app');
+    expect(kinds).toContain('use_app');
     expect(kinds).toContain('explore');
     expect(kinds).toContain('keep');
-    expect(plain.reply?.message).toMatch(/already have/i);
+    expect(plain.reply?.message).toMatch(/already does this/i);
   });
 
   it('update-preview is only for update proposals', async () => {

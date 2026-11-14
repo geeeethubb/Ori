@@ -4,14 +4,17 @@ import { z } from 'zod';
 import { requireAuth, type AuthEnv } from '../auth.ts';
 import { APP_ID_PATTERN, SHORT_ID_PATTERN } from '../../shared/ids.ts';
 import { AppSpecSchema, type AppSpec } from '../../shared/appSpec.ts';
-import { imageMediaIds, validateValues } from '../../shared/records.ts';
+import { BLANK_GALLERY_ENTRY, blankGalleryEntry, imageMediaIds, validateValues } from '../../shared/records.ts';
 import { ownedMediaIds } from '../repos/media.ts';
-import { RevisionOpSchema, applyRevision } from '../../shared/revision.ts';
+import { RevisionOpSchema, planUndo } from '../../shared/revision.ts';
 import { EVENT_TYPES } from '../../shared/context.ts';
-import type { AppDetailDto, AppExportDto } from '../../shared/api.ts';
+import type { AppDetailDto, AppExportDto, UndoPreviewDto } from '../../shared/api.ts';
 import * as repo from '../repos/apps.ts';
+import * as ctx from '../repos/context.ts';
+import { getProposal, setProposalStatus } from '../repos/proposals.ts';
 import { fixtureSpec, FIXTURES } from '../fixtures/specs.ts';
 import { transaction } from '../db/index.ts';
+import { guardRevision } from '../services/revisionGuards.ts';
 
 export const appRoutes = new Hono<AuthEnv>();
 appRoutes.use('*', requireAuth);
@@ -90,35 +93,78 @@ appRoutes.get('/:appId/records', (c) => {
   return c.json({ records });
 });
 
+const CreateRecordBody = z.object({
+  values: z.record(z.string(), z.unknown()),
+  /** Client-minted id: a retry or a second tap with the same id returns the first save instead of a copy. */
+  id: z.string().regex(SHORT_ID_PATTERN).optional(),
+  /** The Agent proposal (use an app you have) this entry came from; marked used in the same step. */
+  recommendationId: z.string().regex(SHORT_ID_PATTERN).optional(),
+});
+
 appRoutes.post('/:appId/records', async (c) => {
+  const ownerId = c.get('user').id;
   const id = appIdParam.safeParse(c.req.param('appId'));
   if (!id.success) return c.json(notFound, 404);
-  const current = repo.getSpec(c.get('user').id, id.data);
-  if (!current) return c.json(notFound, 404);
-  const body = z.object({ values: z.record(z.string(), z.unknown()) }).safeParse(await c.req.json().catch(() => null));
+  const body = CreateRecordBody.safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: 'Invalid record.', code: 'invalid' }, 400);
+  // From here on everything is synchronous, so two submits of the same entry cannot interleave.
+  const current = repo.getSpec(ownerId, id.data);
+  if (!current) return c.json(notFound, 404);
+  if (body.data.id) {
+    const taken = repo.recordIdOwner(body.data.id);
+    if (taken) {
+      const mine = taken.appId === id.data && !taken.deleted ? repo.getRecord(ownerId, id.data, body.data.id) : null;
+      if (mine) return c.json({ record: mine, duplicate: true }, 200);
+      return c.json({ error: 'Invalid record.', code: 'invalid' }, 400);
+    }
+  }
   const v = validateValues(current.spec, body.data.values);
   if (!v.ok) return c.json({ error: 'Some fields need attention.', code: 'validation', details: v.errors }, 422);
-  const photoProblem = foreignPhotos(c.get('user').id, current.spec, v.values);
+  const photoProblem = foreignPhotos(ownerId, current.spec, v.values);
   if (photoProblem) return c.json({ error: 'Some fields need attention.', code: 'validation', details: photoProblem }, 422);
-  const record = repo.createRecord(c.get('user').id, id.data, v.values);
+  const record = transaction(() => {
+    const created = repo.createRecord(ownerId, id.data, v.values, { id: body.data.id });
+    const rec = body.data.recommendationId ? ctx.getRecommendation(ownerId, body.data.recommendationId) : null;
+    if (rec && rec.kind === 'use_app' && rec.targetAppId === id.data && (rec.status === 'fresh' || rec.status === 'stale')) {
+      ctx.setRecommendationStatus(ownerId, rec.id, 'applied', id.data);
+    }
+    return created;
+  });
   return c.json({ record }, 201);
 });
 
 appRoutes.patch('/:appId/records/:recordId', async (c) => {
+  const ownerId = c.get('user').id;
   const id = appIdParam.safeParse(c.req.param('appId'));
   const rid = recordIdParam.safeParse(c.req.param('recordId'));
   if (!id.success || !rid.success) return c.json(notFound, 404);
-  const current = repo.getSpec(c.get('user').id, id.data);
-  if (!current) return c.json(notFound, 404);
-  const body = z.object({ values: z.record(z.string(), z.unknown()) }).safeParse(await c.req.json().catch(() => null));
+  const body = z.object({
+    values: z.record(z.string(), z.unknown()),
+    /** The updatedAt the client last saw; a newer write from another device is never overwritten. */
+    baseUpdatedAt: z.string().max(40).optional(),
+  }).safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: 'Invalid record.', code: 'invalid' }, 400);
+  const current = repo.getSpec(ownerId, id.data);
+  if (!current) return c.json(notFound, 404);
+  const before = repo.getRecord(ownerId, id.data, rid.data);
+  if (!before) return c.json({ error: 'That item no longer exists.', code: 'not_found' }, 404);
   const v = validateValues(current.spec, body.data.values, { partial: true });
   if (!v.ok) return c.json({ error: 'Some fields need attention.', code: 'validation', details: v.errors }, 422);
-  const photoProblem = foreignPhotos(c.get('user').id, current.spec, v.values);
+  const photoProblem = foreignPhotos(ownerId, current.spec, v.values);
   if (photoProblem) return c.json({ error: 'Some fields need attention.', code: 'validation', details: photoProblem }, 422);
-  const before = repo.getRecord(c.get('user').id, id.data, rid.data);
-  const record = repo.updateRecord(c.get('user').id, id.data, rid.data, v.values);
+  // A photo entry may not be emptied out (entries that were already blank stay editable).
+  if (blankGalleryEntry(current.spec, { ...before.values, ...v.values }) && !blankGalleryEntry(current.spec, before.values)) {
+    return c.json({ error: 'Some fields need attention.', code: 'validation', details: { _: BLANK_GALLERY_ENTRY } }, 422);
+  }
+  let record;
+  try {
+    record = repo.updateRecord(ownerId, id.data, rid.data, v.values, { expectedUpdatedAt: body.data.baseUpdatedAt });
+  } catch (err) {
+    if (err instanceof repo.RecordConflict) {
+      return c.json({ error: 'This changed on another device, so nothing was overwritten. Here is the latest version.', code: 'record_conflict', details: { record: err.current } }, 409);
+    }
+    throw err;
+  }
   if (!record) return c.json({ error: 'That item no longer exists.', code: 'not_found' }, 404);
   // Task completion event: a done-stage or done-checkbox transition.
   for (const rule of current.spec.rules) {
@@ -139,7 +185,7 @@ function foreignPhotos(ownerId: string, spec: AppSpec, values: Record<string, un
   for (const f of spec.fields) {
     if (f.type !== 'image') continue;
     const v = values[f.id];
-    if (typeof v === 'string' && ids.includes(v) && !owned.has(v)) errors[f.id] = 'That photo is not in your library';
+    if (typeof v === 'string' && ids.includes(v) && !owned.has(v)) errors[f.id] = 'That photo is not available in your library';
   }
   return Object.keys(errors).length ? errors : null;
 }
@@ -172,10 +218,9 @@ appRoutes.get('/:appId/versions', (c) => {
 
 /** Apply explicit operations (used after the user accepts a preview, or by tests). */
 appRoutes.post('/:appId/revisions/apply', async (c) => {
+  const ownerId = c.get('user').id;
   const id = appIdParam.safeParse(c.req.param('appId'));
   if (!id.success) return c.json(notFound, 404);
-  const current = repo.getSpec(c.get('user').id, id.data);
-  if (!current) return c.json(notFound, 404);
   const body = z.object({
     ops: z.array(RevisionOpSchema).min(1).max(20),
     summary: z.string().trim().min(1).max(300).optional(),
@@ -185,44 +230,82 @@ appRoutes.post('/:appId/revisions/apply', async (c) => {
     recommendationId: z.string().max(40).optional(),
   }).safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: 'Those changes are not valid.', code: 'invalid', details: body.error.issues.slice(0, 5) }, 400);
-  if (body.data.baseVersion !== undefined && body.data.baseVersion !== current.version) {
+  // Read state only after the body: from here on nothing awaits, so concurrent accepts cannot interleave.
+  const current = repo.getSpec(ownerId, id.data);
+  if (!current) return c.json(notFound, 404);
+  const proposal = body.data.proposalId ? getProposal(ownerId, body.data.proposalId) : null;
+  const ownProposal = proposal && proposal.appId === id.data ? proposal : null;
+  // A retried Accept (lost response, second tap) returns what the first one did instead of an error.
+  if (ownProposal?.status === 'accepted') return c.json({ ...detail(ownerId, id.data), changes: [], alreadyApplied: true });
+  const expected = body.data.baseVersion ?? ownProposal?.baseVersion;
+  if (expected !== undefined && expected !== current.version) {
     return c.json({ error: 'The app changed since this preview was made. Reload and try again.', code: 'stale_preview' }, 409);
   }
-  const result = applyRevision(current.spec, body.data.ops);
-  if (!result.ok || !result.spec) return c.json({ error: 'Those changes could not be applied.', code: 'apply_failed', details: result.errors }, 422);
-  const summary = body.data.summary ?? result.changes.join(' ');
-  const { version } = repo.appendVersion(c.get('user').id, id.data, result.spec, summary, 'revision');
-  repo.recordEvent(id.data, 'revision_accepted', { version, proposalId: body.data.proposalId ?? null });
-  if (body.data.proposalId) markProposal(c.get('user').id, id.data, body.data.proposalId, 'accepted');
-  if (body.data.recommendationId && SHORT_ID_PATTERN.test(body.data.recommendationId)) markRecommendationApplied(c.get('user').id, body.data.recommendationId, id.data);
-  return c.json({ ...detail(c.get('user').id, id.data), changes: result.changes });
+  const guarded = guardRevision(ownerId, id.data, current.spec, body.data.ops);
+  if (!guarded.spec) return c.json({ error: 'Those changes could not be applied.', code: 'apply_failed', details: guarded.errors }, 422);
+  if (guarded.blocked.length) return c.json({ error: guarded.blocked.join(' '), code: 'apply_incompatible', details: guarded.blocked }, 409);
+  const spec = guarded.spec;
+  const summary = body.data.summary ?? guarded.changes.join(' ');
+  transaction(() => {
+    const { version } = repo.appendVersion(ownerId, id.data, spec, summary, 'revision');
+    repo.recordEvent(id.data, 'revision_accepted', { version, proposalId: ownProposal?.id ?? null });
+    if (ownProposal) setProposalStatus(ownerId, id.data, ownProposal.id, 'accepted');
+    const rec = body.data.recommendationId && SHORT_ID_PATTERN.test(body.data.recommendationId) ? ctx.getRecommendation(ownerId, body.data.recommendationId) : null;
+    if (rec && rec.kind === 'update_app' && rec.targetAppId === id.data) ctx.setRecommendationStatus(ownerId, rec.id, 'applied', id.data);
+  });
+  return c.json({ ...detail(ownerId, id.data), changes: guarded.changes });
 });
 
-/** Undo: append a version whose spec equals the previous version (history stays linear). */
-appRoutes.post('/:appId/revisions/undo', (c) => {
-  const id = appIdParam.safeParse(c.req.param('appId'));
-  if (!id.success) return c.json(notFound, 404);
-  const app = repo.getApp(c.get('user').id, id.data);
-  if (!app) return c.json(notFound, 404);
-  if (app.currentVersion <= 1) return c.json({ error: 'This is the first version; nothing to undo.', code: 'nothing_to_undo' }, 409);
-  const versions = repo.listVersions(c.get('user').id, id.data);
+/**
+ * The data-safe undo for an app's current version: the previous version's design comes back, but fields
+ * and choices that saved entries use stay (hidden where the older design had no place for them), and an
+ * undo that would strand entries is refused with the reason. If the current version is itself an undo,
+ * undoing again restores what was undone (a redo), and is labelled that way.
+ */
+function undoPlanFor(ownerId: string, appId: string) {
+  const app = repo.getApp(ownerId, appId);
+  if (!app) return null;
+  if (app.currentVersion <= 1) return { app, nothing: true as const };
+  const versions = repo.listVersions(ownerId, appId);
   const current = versions.find((v) => v.version === app.currentVersion);
   const previous = versions.find((v) => v.version === app.currentVersion - 1);
-  if (!previous || !current) return c.json(notFound, 404);
-  // If the current version is itself an undo, undoing again restores what was undone (redo).
-  const { version } = repo.appendVersion(c.get('user').id, id.data, previous.spec, `Undo: back to version ${previous.version}`, 'undo');
-  repo.recordEvent(id.data, 'revision_undone', { version, restored: previous.version });
-  return c.json(detail(c.get('user').id, id.data));
+  if (!previous || !current) return null;
+  const plan = planUndo(current.spec, previous.spec, repo.listRecords(ownerId, appId) ?? []);
+  const label: UndoPreviewDto['label'] = current.origin === 'undo' ? 'Redo' : 'Undo';
+  return { app, nothing: false as const, previous, plan, label };
+}
+
+appRoutes.post('/:appId/revisions/undo/preview', (c) => {
+  const id = appIdParam.safeParse(c.req.param('appId'));
+  if (!id.success) return c.json(notFound, 404);
+  const p = undoPlanFor(c.get('user').id, id.data);
+  if (!p) return c.json(notFound, 404);
+  if (p.nothing) return c.json({ error: 'This is the first version; nothing to undo.', code: 'nothing_to_undo' }, 409);
+  const dto: UndoPreviewDto = { ok: p.plan.ok, restores: p.previous.version, label: p.label, kept: p.plan.kept, blocked: p.plan.blocked };
+  return c.json(dto);
 });
 
-function markProposal(ownerId: string, appId: string, proposalId: string, status: string): void {
-  // Lazy import avoids a cycle with the revisions module which owns proposals.
-  import('../repos/proposals.ts').then((m) => m.setProposalStatus(ownerId, appId, proposalId, status)).catch(() => undefined);
-}
-
-function markRecommendationApplied(ownerId: string, recommendationId: string, appId: string): void {
-  import('../repos/context.ts').then((m) => m.setRecommendationStatus(ownerId, recommendationId, 'applied', appId)).catch(() => undefined);
-}
+appRoutes.post('/:appId/revisions/undo', async (c) => {
+  const ownerId = c.get('user').id;
+  const id = appIdParam.safeParse(c.req.param('appId'));
+  if (!id.success) return c.json(notFound, 404);
+  const body = z.object({ expectedVersion: z.number().int().optional() }).safeParse(await c.req.json().catch(() => ({})));
+  const p = undoPlanFor(ownerId, id.data);
+  if (!p) return c.json(notFound, 404);
+  if (p.nothing) return c.json({ error: 'This is the first version; nothing to undo.', code: 'nothing_to_undo' }, 409);
+  // A retried undo (lost response) must not turn into a redo.
+  const expected = body.success ? body.data.expectedVersion : undefined;
+  if (expected !== undefined && expected !== p.app.currentVersion) {
+    return c.json({ error: 'The app changed since you looked at it. Reload and try again.', code: 'stale_preview' }, 409);
+  }
+  if (!p.plan.ok || !p.plan.spec) return c.json({ error: p.plan.blocked.join(' '), code: 'undo_incompatible', details: p.plan.blocked }, 409);
+  const spec = p.plan.spec;
+  transaction(() => {
+    const { version } = repo.appendVersion(ownerId, id.data, spec, `${p.label}: back to version ${p.previous.version}`, 'undo');
+    repo.recordEvent(id.data, 'revision_undone', { version, restored: p.previous.version, kept: p.plan.kept.length });
+  });
+  return c.json({ ...detail(ownerId, id.data), kept: p.plan.kept });
+});
 
 // ---------- export / import ----------
 
@@ -260,6 +343,13 @@ appRoutes.post('/import', async (c) => {
   const ownerId = c.get('user').id;
   const versions = [...body.data.versions].sort((a, b) => a.version - b.version);
   const first = versions[0]!;
+  const latestSpec = versions[versions.length - 1]!.spec;
+  for (const r of body.data.records) {
+    const v = validateValues(latestSpec, r.values, { partial: true });
+    if (v.errors._) return c.json({ error: `One entry in this file cannot be imported as it is (${v.errors._}). Nothing was imported.`, code: 'invalid_import' }, 400);
+  }
+  // Photo fields from every version count: an older version's photo could resurface after an undo.
+  const imageFields = [...new Set(versions.flatMap((v) => v.spec.fields.filter((f) => f.type === 'image').map((f) => f.id)))];
   const appId = transaction(() => {
     const app = repo.createApp({ ownerId, spec: first.spec, changeSummary: `Imported: ${first.changeSummary}`, origin: 'import' });
     for (const v of versions.slice(1)) repo.appendVersion(ownerId, app.id, v.spec, v.changeSummary, 'import');
@@ -268,10 +358,15 @@ appRoutes.post('/import', async (c) => {
       const v = validateValues(latest, r.values, { partial: true });
       // Imported files can come from anyone: photos that are not in this library and links that are not
       // web addresses are dropped (the record survives and stays editable), never stored as given.
-      const photos = foreignPhotos(ownerId, latest, v.values);
-      if (photos) for (const k of Object.keys(photos)) v.values[k] = null;
+      const photoIds = imageFields.map((f) => v.values[f]).filter((x): x is string => typeof x === 'string' && SHORT_ID_PATTERN.test(x));
+      const owned = ownedMediaIds(ownerId, photoIds);
+      for (const f of imageFields) {
+        const x = v.values[f];
+        if (typeof x === 'string' && SHORT_ID_PATTERN.test(x) && !owned.has(x)) v.values[f] = null;
+      }
       for (const [k, msg] of Object.entries(v.errors)) if (/^Links should start/.test(msg)) v.values[k] = null;
-      repo.createRecord(ownerId, app.id, v.values, { createdAt: r.createdAt });
+      const createdAt = Number.isNaN(Date.parse(r.createdAt)) ? undefined : new Date(r.createdAt).toISOString();
+      repo.createRecord(ownerId, app.id, v.values, { createdAt });
     }
     return app.id;
   });
@@ -295,7 +390,7 @@ appRoutes.post('/:appId/events', async (c) => {
   const body = z.object({ type: z.enum(EVENT_TYPES), meta: EventMeta.optional() }).safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: 'Invalid event.', code: 'invalid' }, 400);
   // Only client-originated event types are accepted here; server-owned ones are derived.
-  if (!['app_opened', 'install_guide_viewed', 'shortcut_requested', 'feedback_given', 'revision_declined', 'first_action_completed'].includes(body.data.type)) {
+  if (!['app_opened', 'install_guide_viewed', 'shortcut_requested', 'feedback_given', 'revision_declined', 'first_action_completed', 'useful_action'].includes(body.data.type)) {
     return c.json({ error: 'That event is recorded automatically.', code: 'invalid' }, 400);
   }
   if (body.data.type === 'app_opened') repo.touchOpened(c.get('user').id, id.data);

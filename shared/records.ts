@@ -156,8 +156,27 @@ export function validateValues(spec: AppSpec, input: unknown, opts: { partial?: 
       if (!requiredApplies(f.id)) continue;
       if (!(f.id in raw)) errors[f.id] = 'Required';
     }
+    if (!errors._ && blankGalleryEntry(spec, out)) errors._ = BLANK_GALLERY_ENTRY;
   }
   return { ok: Object.keys(errors).length === 0, values: out, errors };
+}
+
+export const BLANK_GALLERY_ENTRY = 'Add a photo or write an observation.';
+
+/**
+ * A gallery entry needs a photo or a written observation (caption or note). Only applies to entries
+ * whose every home view is a gallery: in an app with a timer and an unfiltered gallery, a timed session
+ * without a photo is a normal session, not a blank photo.
+ */
+export function blankGalleryEntry(spec: AppSpec, values: RecordValues): boolean {
+  const homes = spec.views.filter((v) => v.type !== 'summary' && recordMatchesView(v, values));
+  if (!homes.length || homes.some((v) => v.type !== 'gallery')) return false;
+  const filled = (id: string | undefined) => {
+    if (!id) return false;
+    const v = values[id];
+    return typeof v === 'string' && v.trim() !== '';
+  };
+  return homes.every((v) => v.type === 'gallery' && !filled(v.imageFieldId) && !filled(v.captionFieldId) && !filled(v.noteFieldId));
 }
 
 /** Image field ids whose values are media ids (so a server can check ownership before saving). */

@@ -121,7 +121,7 @@ describe('view filters and forms', () => {
   it('formFieldsFor shows the view\'s own fields, never the filter field or hidden fields', () => {
     const spec = riff();
     const practice = viewOf(spec, 'practice');
-    expect(formFieldsFor(spec, practice).map((f) => f.id)).toEqual(['date', 'minutes', 'focus', 'tempo', 'feel', 'notes']);
+    expect(formFieldsFor(spec, practice).map((f) => f.id)).toEqual(['date', 'minutes', 'target_minutes', 'focus', 'tempo', 'feel', 'notes']);
     const sources = viewOf(spec, 'sources');
     expect(formFieldsFor(spec, sources).map((f) => f.id)).toEqual(['url', 'title', 'source_note', 'source_kind']);
 

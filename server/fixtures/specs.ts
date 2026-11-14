@@ -131,6 +131,8 @@ export const RIFF_PRACTICE: AppSpecInput = {
     { id: 'tempo', label: 'Tempo', type: 'number', min: 30, max: 240, unit: 'bpm' },
     { id: 'feel', label: 'How did it feel?', type: 'rating', max: 5 },
     { id: 'notes', label: 'Notes for next time', type: 'long_text', placeholder: 'Slow it down with the metronome at 60.' },
+    { id: 'target_minutes', label: 'Planned minutes', type: 'number', min: 1, max: 180, unit: 'min', help: 'The length you picked on the timer: the plan, not the time played.' },
+    { id: 'timed_seconds', label: 'Timed', type: 'number', min: 0, max: 86400, unit: 's', help: 'Measured by the timer; empty when a session was typed in by hand.' },
     { id: 'url', label: 'Link', type: 'url', placeholder: 'https://' },
     { id: 'title', label: 'What is it?', type: 'text', placeholder: 'Song, lesson or riff' },
     { id: 'source_note', label: 'Why it caught your ear', type: 'text', placeholder: 'That fingerpicked intro' },
@@ -140,8 +142,9 @@ export const RIFF_PRACTICE: AppSpecInput = {
   ],
   views: [
     {
-      id: 'practice', type: 'practice', title: 'Practice', filter: { fieldId: 'kind', value: 'session' }, formFieldIds: ['date', 'minutes', 'focus', 'tempo', 'feel', 'notes'], addLabel: 'Save session',
+      id: 'practice', type: 'practice', title: 'Practice', filter: { fieldId: 'kind', value: 'session' }, formFieldIds: ['date', 'minutes', 'target_minutes', 'focus', 'tempo', 'feel', 'notes'], addLabel: 'Save session',
       minutesFieldId: 'minutes', focusFieldId: 'focus', tempoFieldId: 'tempo', feelFieldId: 'feel', notesFieldId: 'notes', dateFieldId: 'date',
+      targetMinutesFieldId: 'target_minutes', timedSecondsFieldId: 'timed_seconds',
       presets: [15, 10, 25], defaultTempo: 72, tempoHelper: true,
     },
     {
@@ -229,6 +232,7 @@ export const PEOPLE_QUEUE: AppSpecInput = {
     { id: 'person', label: 'Who', type: 'text', required: true, placeholder: 'Maya, met at the design meetup' },
     { id: 'action', label: 'Next action', type: 'text', required: true, placeholder: 'Send the demo link' },
     { id: 'due', label: 'By when', type: 'date' },
+    { id: 'due_words', label: 'When, in your words', type: 'text', placeholder: 'Thursday, after the demo' },
     { id: 'done', label: 'Done', type: 'checkbox' },
     { id: 'context', label: 'What we discussed', type: 'long_text', placeholder: 'She asked about pricing for small teams' },
     { id: 'channel', label: 'Channel', type: 'select', options: [
@@ -237,7 +241,7 @@ export const PEOPLE_QUEUE: AppSpecInput = {
     { id: 'draft', label: 'Message draft', type: 'long_text', help: 'A draft you can copy. Nothing is ever sent for you.' },
   ],
   views: [
-    { id: 'queue', type: 'queue', title: 'Next actions', personFieldId: 'person', actionFieldId: 'action', dueFieldId: 'due', doneFieldId: 'done', contextFieldId: 'context', channelFieldId: 'channel', groupBy: 'due', addLabel: 'Add a follow-up' },
+    { id: 'queue', type: 'queue', title: 'Next actions', personFieldId: 'person', actionFieldId: 'action', dueFieldId: 'due', doneFieldId: 'done', contextFieldId: 'context', channelFieldId: 'channel', dueTextFieldId: 'due_words', draftFieldId: 'draft', groupBy: 'due', addLabel: 'Add a follow-up' },
     { id: 'summary', type: 'summary', title: 'At a glance', metrics: [
       { id: 'open', label: 'Open actions', kind: 'count', where: { fieldId: 'done', op: 'falsy' } },
       { id: 'done_week', label: 'Done this week', kind: 'count', period: 'week', where: { fieldId: 'done', op: 'truthy' } },

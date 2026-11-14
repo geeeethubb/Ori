@@ -126,7 +126,10 @@ describe('proposalAction', () => {
     expect(proposalAction({ id: 'r1', kind: 'new_app', status: 'fresh' })).toEqual({ label: 'Make mine', to: '/make/r1', emphasis: 'primary' });
     expect(proposalAction({ id: 'r1', kind: 'new_app', status: 'built', builtAppId: 'app12345' })).toMatchObject({ label: 'Open', to: '/apps/app12345/' });
     expect(proposalAction({ id: 'r2', kind: 'explore', status: 'fresh' })).toMatchObject({ label: 'Explore', to: '/make/r2' });
-    expect(proposalAction({ id: 'r3', kind: 'update_app', status: 'fresh', targetAppId: 'app12345' })).toMatchObject({ label: 'Add to app', to: '/make/r3' });
+    expect(proposalAction({ id: 'r3', kind: 'update_app', status: 'fresh', targetAppId: 'app12345' })).toMatchObject({ label: 'Preview change', to: '/make/r3' });
+    // Using an app you have opens it (with the suggestion, while it is fresh); it never goes through a design change.
+    expect(proposalAction({ id: 'r5', kind: 'use_app', status: 'fresh', targetAppId: 'app12345' })).toMatchObject({ label: 'Open', to: '/apps/app12345/?from=r5' });
+    expect(proposalAction({ id: 'r5', kind: 'use_app', status: 'applied', targetAppId: 'app12345' })).toMatchObject({ label: 'Open', to: '/apps/app12345/' });
     expect(proposalAction({ id: 'r3', kind: 'update_app', status: 'applied', targetAppId: 'app12345' })).toMatchObject({ label: 'Open', to: '/apps/app12345/' });
     expect(proposalAction({ id: 'r4', kind: 'keep', status: 'fresh' })).toMatchObject({ label: 'Keep', emphasis: 'secondary' });
     expect(proposalAction({ id: 'r4', kind: 'keep', status: 'kept' }).label).toBe('Kept');

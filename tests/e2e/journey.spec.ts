@@ -78,8 +78,14 @@ test('share a sound → Make mine → practise → the session survives a change
   await page.getByTestId('rt-practice-start').click();
   await page.waitForTimeout(1500);
   await page.getByTestId('rt-practice-pause').click();
+  // The measured time survives a reload of the page: it is kept on this device, not only in the tab.
+  await page.reload();
+  await expect(page.getByTestId('rt-practice')).toHaveAttribute('data-status', 'paused', { timeout: 30_000 });
+  await expect(page.getByTestId('rt-practice-hint')).toContainText('Timed');
   await page.getByTestId('rt-practice-save').click();
   await expect(page.getByTestId('rt-save-record')).toBeVisible();
+  // The form says what the clock measured; the plan is never saved as time played.
+  await expect(page.getByTestId('rt-form-note')).toContainText('Your timer measured');
   await page.getByTestId('rt-save-record').click();
 
   // A session appears, and it is a real record that belongs to the practice view.
@@ -89,6 +95,9 @@ test('share a sound → Make mine → practise → the session survives a change
   const session = saved[0]!.values;
   if (practiceView?.filter) expect(session[practiceView.filter.fieldId]).toBe(practiceView.filter.value);
   expect(Number(session[practiceView?.minutesFieldId ?? 'minutes'])).toBeGreaterThanOrEqual(1);
+  // Plan and measurement are stored apart when the app binds them (new Riff apps do).
+  if (practiceView?.targetMinutesFieldId) expect(session[practiceView.targetMinutesFieldId]).toBe(15);
+  if (practiceView?.timedSecondsFieldId) expect(Number(session[practiceView.timedSecondsFieldId])).toBeGreaterThanOrEqual(1);
 
   // Reload the stable URL: the session is still there.
   await page.goto(appUrl);
@@ -119,9 +128,11 @@ test('share a sound → Make mine → practise → the session survives a change
   await page.getByTestId('rt-cancel-record').click();
   await expect(page.getByTestId('rt-record-form')).toHaveCount(0);
 
-  // Undo restores the previous definition and keeps the session.
+  // Undo shows what it restores and keeps, then restores the previous definition and keeps the session.
   await page.getByTestId('rt-settings-link').click();
   await page.getByTestId('rt-undo').click();
+  await expect(page.getByTestId('rt-undo-plan')).toContainText('Your entries stay');
+  await page.getByTestId('rt-undo-confirm').click();
   await expect.poll(() => appVersion(page, appId), { timeout: 30_000 }).toBe(3);
   const restored = await appDetail(page.request, appId);
   expect(restored.spec.fields.map((f) => f.id)).toEqual(detail.spec.fields.map((f) => f.id));

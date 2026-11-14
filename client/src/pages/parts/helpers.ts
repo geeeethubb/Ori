@@ -97,7 +97,7 @@ export const PLAN_LABELS: Record<UserDto['plan'], string> = {
 export type ProposalLike = Pick<Recommendation, 'id' | 'kind' | 'status' | 'builtAppId' | 'targetAppId'>;
 
 export interface ProposalAction {
-  label: 'Explore' | 'Make mine' | 'Open' | 'Add to app' | 'Keep' | 'Kept';
+  label: 'Explore' | 'Make mine' | 'Open' | 'Preview change' | 'Keep' | 'Kept';
   to: string;
   emphasis: 'primary' | 'secondary';
 }
@@ -109,7 +109,11 @@ export function proposalAction(p: ProposalLike): ProposalAction {
       return { label: 'Explore', to: `/make/${p.id}`, emphasis: 'primary' };
     case 'update_app':
       if (p.status === 'applied' && p.targetAppId) return { label: 'Open', to: `/apps/${p.targetAppId}/`, emphasis: 'primary' };
-      return { label: 'Add to app', to: `/make/${p.id}`, emphasis: 'primary' };
+      return { label: 'Preview change', to: `/make/${p.id}`, emphasis: 'primary' };
+    case 'use_app':
+      // Opening an app you have is not a change to it: any entry it suggests is confirmed in the app.
+      if (!p.targetAppId) return { label: 'Open', to: '/apps', emphasis: 'primary' };
+      return { label: 'Open', to: p.status === 'fresh' || p.status === 'stale' ? `/apps/${p.targetAppId}/?from=${p.id}` : `/apps/${p.targetAppId}/`, emphasis: 'primary' };
     case 'keep':
       if (p.status === 'kept') return { label: 'Kept', to: '/settings/memory', emphasis: 'secondary' };
       return { label: 'Keep', to: `/make/${p.id}`, emphasis: 'secondary' };
@@ -122,8 +126,9 @@ export function proposalAction(p: ProposalLike): ProposalAction {
 export const PROPOSAL_KIND_LABELS: Record<ProposalKind, string> = {
   new_app: 'Make an app',
   explore: 'Explore',
-  update_app: 'Add to an app',
+  update_app: 'Change an app',
   keep: 'Keep',
+  use_app: 'An app you have',
 };
 
 /** Time budget chips: shown only when the app would actually use a practice timer. */

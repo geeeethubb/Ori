@@ -8,6 +8,7 @@ import { Link } from 'react-router';
 import type { AgentThreadDto, AgentThreadItemDto, CaptureResultDto, ContextOverviewDto, MediaUploadDto } from '@shared/api.ts';
 import { readStatusLabel, type Capture, type ProfileFact, type Recommendation } from '@shared/context.ts';
 import { BRAND } from '@shared/brand.ts';
+import { newId } from '@shared/ids.ts';
 import { api, apiBase, describeError, getToken, usesBearer } from '../api.ts';
 import { useAuth } from '../auth.tsx';
 import { ErrorBanner, Icons, Skeleton, Spinner, useToast } from '../components/ui.tsx';
@@ -63,6 +64,10 @@ export function AgentPage() {
   const textRef = useRef<HTMLTextAreaElement>(null);
 
   const [uploaded, setUploaded] = useState<{ file: File; mediaId: string } | null>(null);
+  // One id per composed share: a retry after a timeout returns the first share instead of a copy.
+  const [shareId, setShareId] = useState(() => newId());
+  const [exampleKey, setExampleKey] = useState<keyof typeof EXAMPLES | null>(null);
+  useEffect(() => setShareId(newId()), [text, url, file]);
   // Sharing waits for the thread to exist so a reply is never dropped into a page that cannot show it.
   const canSend = (text.trim().length > 0 || url.trim().length > 0 || file !== null) && busy === null && !loading && data !== null;
   const items = data?.thread.items ?? [];
@@ -93,13 +98,17 @@ export function AgentPage() {
         }
       }
       setBusy('send');
+      // An unchanged example is stored as an example, never as something personal.
+      const ex = exampleKey ? EXAMPLES[exampleKey] : null;
+      const example = Boolean(ex && ex.text === text.trim() && (ex.url || '') === url.trim());
       const res = await api<CaptureResultDto>('/api/agent/captures', {
         method: 'POST',
-        body: { text: text.trim(), url: url.trim() || undefined, mediaId },
+        body: { id: shareId, text: text.trim(), url: url.trim() || undefined, mediaId, ...(example ? { example: true } : {}) },
         timeoutMs: 120_000,
       });
       const item: AgentThreadItemDto = { capture: res.capture, media: res.media, reply: res.reply };
-      setData((prev) => (prev ? { ...prev, thread: { items: [item, ...prev.thread.items] } } : prev));
+      setData((prev) => (prev ? { ...prev, thread: { items: [item, ...prev.thread.items.filter((i) => i.capture.id !== item.capture.id)] } } : prev));
+      setExampleKey(null);
       setText('');
       setUrl('');
       setFile(null);
@@ -138,6 +147,7 @@ export function AgentPage() {
 
   function useExample(key: keyof typeof EXAMPLES) {
     const ex = EXAMPLES[key];
+    setExampleKey(key);
     setText(ex.text);
     setUrl(ex.url);
     setShowUrl(Boolean(ex.url));
@@ -335,6 +345,16 @@ function ThreadItem({ item, factMap, exampleFactIds, captureMap, retrying, onRet
             <div className="ag-reply-text">
               <p className="ag-message">{reply.message}</p>
               {reply.question && <p className="ag-question">{reply.question}</p>}
+              {reply.unsupported?.length > 0 && (
+                <ul className="ag-unsupported" data-testid="agent-unsupported" aria-label="Not possible here">
+                  {reply.unsupported.map((u) => (
+                    <li key={u.request}>
+                      <strong>{u.request}:</strong> {u.reason}
+                      {u.alternative ? ` ${u.alternative}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              )}
               {reply.generatedBy === 'sample' && (
                 <p className="ag-sample-note">
                   <span className="badge badge-sample">Sample mode</span>

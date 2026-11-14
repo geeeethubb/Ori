@@ -7,7 +7,7 @@
 import { z } from 'zod';
 import {
   AppIconSchema, AppSpecSchema, DesignPatchSchema, DesignSchema, FieldSchema, RuleSchema, SelectOptionSchema, ViewSchema,
-  designFor, fieldTypeLabel, viewTypeLabel, type AppSpec, type FieldSpec,
+  designFor, fieldTypeLabel, recordMatchesView, viewRoles, viewTypeLabel, type AppSpec, type FieldSpec, type FieldType,
 } from './appSpec.ts';
 import { FIELD_ID_PATTERN } from './ids.ts';
 
@@ -73,8 +73,48 @@ const THEME_WORDS: Record<string, string> = {
   bright: 'the bright theme', paper: 'the paper theme', charcoal: 'the charcoal theme', ink: 'the ink theme', mint: 'the mint theme', lilac: 'the lilac theme', sunset: 'the sunset theme',
 };
 
+/**
+ * Field ids a view role, a view filter or a due rule depends on. Hiding one would break the app (a
+ * queue without its person, a timer without its minutes), so every revision refuses it.
+ */
+export function boundFieldIds(spec: AppSpec): Set<string> {
+  const ids = new Set<string>();
+  for (const v of spec.views) {
+    for (const r of viewRoles(v)) if (r.structural) ids.add(r.fieldId);
+    if (v.filter) ids.add(v.filter.fieldId);
+  }
+  for (const r of spec.rules) {
+    if (r.type !== 'due_soon') continue;
+    ids.add(r.dateFieldId);
+    if (r.stageFieldId) ids.add(r.stageFieldId);
+    if (r.doneFieldId) ids.add(r.doneFieldId);
+  }
+  return ids;
+}
+
+/** Bound fields plus those a summary metric measures (the Sample planner also declines to hide these). */
+export function structuralFieldIds(spec: AppSpec): Set<string> {
+  const ids = boundFieldIds(spec);
+  for (const v of spec.views) {
+    if (v.type === 'summary') for (const m of v.metrics) if (m.fieldId && m.kind !== 'count') ids.add(m.fieldId);
+  }
+  return ids;
+}
+
+/** Every field id an app has ever defined, with its type: an id is never reused for a different type. */
+export function reservedFieldTypes(specs: AppSpec[]): Map<string, FieldType> {
+  const out = new Map<string, FieldType>();
+  for (const s of specs) for (const f of s.fields) out.set(f.id, f.type);
+  return out;
+}
+
+export interface ApplyOptions {
+  /** Ids used by earlier versions (see reservedFieldTypes); re-adding one with another type is refused. */
+  reserved?: Map<string, FieldType>;
+}
+
 /** Apply operations in order; returns a validated new spec plus readable change lines. */
-export function applyRevision(current: AppSpec, ops: RevisionOp[]): ApplyResult {
+export function applyRevision(current: AppSpec, ops: RevisionOp[], options: ApplyOptions = {}): ApplyResult {
   const spec: AppSpec = structuredClone(current);
   const changes: string[] = [];
   const errors: string[] = [];
@@ -84,6 +124,11 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[]): ApplyResult 
     switch (op.op) {
       case 'add_field': {
         if (find(op.field.id)) { errors.push(`A field with id "${op.field.id}" already exists`); break; }
+        const usedAs = options.reserved?.get(op.field.id);
+        if (usedAs && usedAs !== op.field.type) {
+          errors.push(`“${op.field.id}” held ${fieldTypeLabel(usedAs)} values in an earlier version; a ${fieldTypeLabel(op.field.type)} field needs another name so saved values are never misread.`);
+          break;
+        }
         const idx = op.afterFieldId ? spec.fields.findIndex((f) => f.id === op.afterFieldId) : -1;
         if (idx >= 0) spec.fields.splice(idx + 1, 0, op.field); else spec.fields.push(op.field);
         // Make the field visible in views that enumerate fields explicitly. Forms: every unfiltered view,
@@ -95,7 +140,7 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[]): ApplyResult 
           const takesForm = !v.filter || v === primaryForm;
           if (takesForm && v.formFieldIds && !v.formFieldIds.includes(op.field.id)) v.formFieldIds.push(op.field.id);
         }
-        changes.push(`Add ${describeField(op.field)}. Existing ${spec.entryNoun.plural} keep their data; this field starts empty for them.`);
+        changes.push(`Add ${describeField(op.field)}. Existing ${spec.entryNoun.plural} keep their data; this field starts empty for them${op.field.required ? ` and stays optional when you edit them (required only for new ${spec.entryNoun.plural})` : ''}.`);
         break;
       }
       case 'update_field': {
@@ -104,12 +149,17 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[]): ApplyResult 
         const before = f.label;
         Object.assign(f, Object.fromEntries(Object.entries(op.patch).filter(([, v]) => v !== undefined)));
         changes.push(op.patch.label && op.patch.label !== before ? `Rename “${before}” to “${op.patch.label}”.` : `Update “${f.label}”.`);
+        if (op.patch.required === true) changes.push(`“${f.label}” becomes required for new ${spec.entryNoun.plural}; existing ones are not changed.`);
         break;
       }
       case 'hide_field': {
         const f = find(op.fieldId);
         if (!f) { errors.push(`Unknown field "${op.fieldId}"`); break; }
         if (f.hidden) break;
+        if (boundFieldIds(spec).has(f.id)) {
+          errors.push(`“${f.label}” is what this app is built around, so it can't be hidden. You can rename it instead.`);
+          break;
+        }
         f.hidden = true;
         f.required = false;
         for (const v of spec.views) {
@@ -221,6 +271,84 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[]): ApplyResult 
     return { ok: false, changes, errors: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`) };
   }
   return { ok: true, spec: parsed.data, changes, errors: [] };
+}
+
+export interface RecordLike {
+  values: Record<string, unknown>;
+}
+
+const hasValue = (v: unknown) => v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && v.length === 0);
+
+/** Entries that some list view of `before` shows but no list view of `after` would show. */
+export function strandedRecords(before: AppSpec, after: AppSpec, records: RecordLike[]): { count: number; views: string[] } {
+  const shownIn = (spec: AppSpec, r: RecordLike) => spec.views.filter((v) => v.type !== 'summary' && recordMatchesView(v, r.values));
+  let count = 0;
+  const views = new Set<string>();
+  for (const r of records) {
+    const was = shownIn(before, r);
+    if (!was.length || shownIn(after, r).length) continue; // already hidden before, or still reachable
+    count++;
+    for (const v of was) views.add(v.title ?? viewTypeLabel(v.type));
+  }
+  return { count, views: [...views] };
+}
+
+/** Plain-language refusal when a change would leave saved entries reachable from no view. */
+export function strandedReason(spec: AppSpec, stranded: { count: number; views: string[] }, what: string): string | null {
+  if (!stranded.count) return null;
+  const noun = stranded.count === 1 ? spec.entryNoun.singular : spec.entryNoun.plural;
+  return `${stranded.count} ${noun} ${stranded.count === 1 ? 'is' : 'are'} only shown in “${stranded.views.join('”, “')}”, which ${what} doesn't have, so nothing was changed.`;
+}
+
+export interface UndoPlan {
+  ok: boolean;
+  spec?: AppSpec;
+  /** What stays saved although the earlier design doesn't show it (shown before and after the undo). */
+  kept: string[];
+  /** Why the undo can't run safely, in plain words. */
+  blocked: string[];
+}
+
+/**
+ * Data-safe design undo. The earlier version's design comes back, but nothing saved since is orphaned:
+ * fields added later that hold values come along hidden (their ids stay reserved, the values stay intact
+ * and can be shown again), and choices that entries use stay available. An undo that would leave entries
+ * reachable from no view, or would read saved values as another type, is refused with the reason.
+ */
+export function planUndo(current: AppSpec, previous: AppSpec, records: RecordLike[]): UndoPlan {
+  const spec: AppSpec = structuredClone(previous);
+  const kept: string[] = [];
+  const blocked: string[] = [];
+  const noun = (n: number) => (n === 1 ? current.entryNoun.singular : current.entryNoun.plural);
+  for (const f of current.fields) {
+    const n = records.filter((r) => hasValue(r.values[f.id])).length;
+    const pf = spec.fields.find((x) => x.id === f.id);
+    if (!pf) {
+      if (!n) continue;
+      spec.fields.push({ ...structuredClone(f), hidden: true, required: false } as FieldSpec);
+      kept.push(`“${f.label}” stays saved in ${n} ${noun(n)}. It is hidden for now; you can show it again any time.`);
+      continue;
+    }
+    if (pf.type !== f.type) {
+      if (n) blocked.push(`“${f.label}” holds ${fieldTypeLabel(f.type)} values that the earlier version would read as ${fieldTypeLabel(pf.type)}.`);
+      continue;
+    }
+    if (pf.type === 'select' && f.type === 'select') {
+      for (const o of f.options) {
+        if (pf.options.some((x) => x.value === o.value)) continue;
+        const used = records.filter((r) => r.values[f.id] === o.value).length;
+        if (!used) continue;
+        pf.options.push(structuredClone(o));
+        kept.push(`The choice “${o.label}” in “${pf.label}” stays, because ${used} ${noun(used)} use${used === 1 ? 's' : ''} it.`);
+      }
+    }
+  }
+  const stranded = strandedReason(current, strandedRecords(current, spec, records), 'the earlier version');
+  if (stranded) blocked.push(stranded);
+  if (blocked.length) return { ok: false, kept, blocked };
+  const parsed = AppSpecSchema.safeParse(spec);
+  if (!parsed.success) return { ok: false, kept, blocked: ['The earlier version cannot hold what you saved since, so nothing was changed.'] };
+  return { ok: true, spec: parsed.data, kept, blocked };
 }
 
 /** Field IDs whose values are affected by a set of ops (for UI hints). */

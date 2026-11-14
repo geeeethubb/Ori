@@ -95,9 +95,9 @@ export function ProposalCard({ proposal: p, facts = [], captures = [], variant, 
       {...(variant === 'featured' && featuredTestId ? { 'data-featured': 'true' } : {})}
     >
       {variant === 'featured' && featuredTestId && <span className="sr-only" data-testid={featuredTestId}>Featured</span>}
-      <div className="pc-media">
+      <Link to={action.to} className="pc-media" tabIndex={-1} aria-hidden="true">
         <MiniPreview pattern={p.pattern} kind={p.kind} theme={theme} lines={p.previewLines} size={variant === 'featured' ? 'featured' : 'card'} />
-      </div>
+      </Link>
       <div className="pc-body">
         <div className="pc-head">
           <AppIcon icon={p.icon} size={variant === 'featured' ? 36 : 28} title={`${p.title} icon`} />

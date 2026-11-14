@@ -144,8 +144,18 @@ describe('hiding and showing a field', () => {
   });
 
   it('a required field that was hidden cannot block saving (required is cleared)', () => {
-    const spec = applied(applyRevision(journal(), [{ op: 'hide_field', fieldId: 'subject' }]));
-    expect(spec.fields.find((f) => f.id === 'subject')?.required).toBe(false);
+    const base = applied(applyRevision(journal(), [{ op: 'add_field', field: { id: 'weather', label: 'Weather', type: 'text', required: true } }]));
+    const spec = applied(applyRevision(base, [{ op: 'hide_field', fieldId: 'weather' }]));
+    expect(spec.fields.find((f) => f.id === 'weather')?.required).toBe(false);
+  });
+
+  it('refuses to hide a field a view is built around, with the reason', () => {
+    // The journal's title field and the board's person are what those views show; hiding them would break the app.
+    const titled = applyRevision(journal(), [{ op: 'hide_field', fieldId: 'subject' }]);
+    expect(titled.ok).toBe(false);
+    expect(titled.errors.join(' ')).toMatch(/built around/);
+    const person = applyRevision(board(), [{ op: 'hide_field', fieldId: 'person' }]);
+    expect(person.ok).toBe(false);
   });
 });
 

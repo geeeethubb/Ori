@@ -232,7 +232,10 @@ describe('recommend', () => {
   it('grounds recommendations in recent captures when there are no facts, citing the capture only', () => {
     const text = 'Street photography walk around the harbour on Saturday morning';
     const recs = recommend({ facts: [], existingApps: [], chosenInterests: [], count: 4, recentCaptures: [{ id: 'cap-walk-1', kind: 'note', text, url: null, linkMeta: null, readStatus: 'read' }] });
-    expect(recs.length).toBe(4);
+    // Only what the capture actually grounds: no "popular starting point" filler citing it.
+    expect(recs.length).toBeGreaterThanOrEqual(2);
+    expect(recs.length).toBeLessThanOrEqual(4);
+    expect(recs.some((r) => /popular starting point/i.test(r.reason))).toBe(false);
     expect(recs[0]?.title).toBe('Light');
     expect(recs.some((r) => r.kind === 'explore')).toBe(true);
     for (const r of recs) {

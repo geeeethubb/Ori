@@ -3,7 +3,7 @@
  * live Anthropic adapter and the deterministic sample adapter are interchangeable. Imported text
  * is always passed as DATA (inside delimited blocks), never as instructions.
  */
-import type { AppSpec, Capability } from '../../shared/appSpec.ts';
+import type { AppIcon, AppSpec, Capability } from '../../shared/appSpec.ts';
 import type { AppRecord } from '../../shared/records.ts';
 import type {
   AgentReplyDraft, BuildChoices, Capture, ContextSource, ExtractionResult, GeneratedApp, ProfileFact, RecommendationDraft, AppEvent,
@@ -25,6 +25,12 @@ export interface ExistingAppSummary {
   pattern: string;
   tagline?: string;
   capabilities: Capability[];
+  /** First timer preset of a practice app (minutes), so a proposal can tell whether a time change is even needed. */
+  defaultMinutes?: number;
+  /** All timer presets of a practice app (minutes). */
+  minutePresets?: number[];
+  /** The app's own icon, shown on "use the app you have" cards. */
+  icon?: AppIcon;
 }
 
 export interface RecommendInput {
@@ -57,6 +63,8 @@ export interface ReviseInput {
   request: string; // untrusted free text
   /** A few recent records so the planner understands real usage (values only). */
   sampleRecords: Pick<AppRecord, 'values' | 'createdAt'>[];
+  /** Field ids earlier versions used (never reuse one for a different type). */
+  reservedFieldIds?: string[];
 }
 
 export interface SuggestInput {
@@ -77,6 +85,8 @@ export interface ImprovementSuggestion {
 /** What the person shared with the Agent, as the model sees it. */
 export interface RespondInput {
   capture: Pick<Capture, 'id' | 'kind' | 'text' | 'url' | 'linkMeta' | 'readStatus' | 'sourceLabel'> & {
+    /** The shared photo's media id (owner-checked); an entry for an existing gallery may reference it. */
+    mediaId?: string | null;
     /** Present when a screenshot was attached; the live adapter reads it, the sample adapter cannot. */
     image?: { mime: string; base64: string } | null;
   };

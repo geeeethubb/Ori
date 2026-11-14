@@ -2,7 +2,7 @@
 import { createHash } from 'node:crypto';
 import { getDb, nowIso, transaction } from '../db/index.ts';
 import { newId } from '../../shared/ids.ts';
-import type { ContextSource, FactCategory, FactStatus, ProfileFact, Recommendation, RecommendationDraft, SourceKind } from '../../shared/context.ts';
+import { RecommendationDraftSchema, type ContextSource, type FactCategory, type FactStatus, type ProfileFact, type Recommendation, type RecommendationDraft, type SourceKind } from '../../shared/context.ts';
 
 type R = Record<string, unknown>;
 
@@ -35,13 +35,26 @@ export function getSource(ownerId: string, id: string): ContextSource | null {
   return r ? rowToSource(r) : null;
 }
 
-export function createSource(ownerId: string, input: { label: string; kind: SourceKind; text: string }): ContextSource {
+export function createSource(ownerId: string, input: { label: string; kind: SourceKind; text: string; captureId?: string | null }): ContextSource {
   const id = newId();
   const now = nowIso();
   getDb()
-    .prepare('INSERT INTO context_sources (id, owner_id, label, kind, text, char_count, approved, imported_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?)')
-    .run(id, ownerId, input.label.slice(0, 80), input.kind, input.text, input.text.length, now);
+    .prepare('INSERT INTO context_sources (id, owner_id, label, kind, text, char_count, approved, imported_at, capture_id) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)')
+    .run(id, ownerId, input.label.slice(0, 80), input.kind, input.text, input.text.length, now, input.captureId ?? null);
   return getSource(ownerId, id) as ContextSource;
+}
+
+/**
+ * "Just keep it" and "Forget" mean the shared item does not become memory: remove what was learned from
+ * it alone (facts also backed by other sources only lose this reference). Returns removed fact ids.
+ */
+export function forgetLearnedFrom(ownerId: string, captureId: string): string[] {
+  return transaction(() => {
+    const rows = getDb().prepare('SELECT id FROM context_sources WHERE owner_id = ? AND capture_id = ?').all(ownerId, captureId) as R[];
+    const removed: string[] = [];
+    for (const r of rows) removed.push(...deleteSource(ownerId, String(r.id)).removedFactIds);
+    return removed;
+  });
 }
 
 /** Delete a source; facts solely backed by it are removed, others lose the reference. */
@@ -157,7 +170,13 @@ export function factsHash(facts: Pick<ProfileFact, 'id' | 'value' | 'status'>[])
 }
 
 function rowToRecommendation(r: R): Recommendation {
-  const data = JSON.parse(String(r.data_json)) as RecommendationDraft;
+  // Rows written by older builds may lack newer fields (kind, citations): the schema fills its defaults.
+  // A row that no longer validates is still shown, with safe defaults, rather than crashing a page.
+  const raw = JSON.parse(String(r.data_json)) as Record<string, unknown>;
+  const parsed = RecommendationDraftSchema.safeParse(raw);
+  const data: RecommendationDraft = parsed.success
+    ? parsed.data
+    : ({ kind: 'new_app', evidenceFactIds: [], sourceCaptureIds: [], capabilities: [], previewLines: [], ...raw } as unknown as RecommendationDraft);
   return {
     ...data,
     id: String(r.id),

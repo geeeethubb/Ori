@@ -4,6 +4,7 @@
  */
 import { useMemo, useState } from 'react';
 import { formFieldsFor, type AppSpec, type ViewSpec } from '@shared/appSpec.ts';
+import { newId } from '@shared/ids.ts';
 import type { AppRecord, RecordValues } from '@shared/records.ts';
 import { ApiError, describeError } from '../api.ts';
 import { Sheet, useToast } from '../components/ui.tsx';
@@ -22,6 +23,12 @@ export type SheetState =
       title?: string;
       /** Keep a saved draft out of the way when the preset carries fresh results. */
       fresh?: boolean;
+      /** The entry's id when the caller has one (a timed session); otherwise one is minted per opened form. */
+      recordId?: string;
+      /** The Agent suggestion this entry comes from. */
+      recommendationId?: string;
+      /** What was prefilled and what to check, shown above the fields. */
+      note?: string;
       /** Called once the record exists. */
       onSaved?: (record: AppRecord) => void;
     }
@@ -44,6 +51,8 @@ export function RecordSheet({ appId, spec, sheet, onClose, actions }: Props) {
   const view = sheet?.view;
   const noun = spec.entryNoun.singular;
   const fields = useMemo(() => (view ? formFieldsFor(spec, view) : undefined), [spec, view]);
+  // One id per opened new-entry form: a retry after a lost response or a second tap saves it once.
+  const newRecordId = useMemo(() => (sheet?.mode === 'new' ? sheet.recordId ?? newId() : undefined), [sheet]);
   const preset = useMemo<RecordValues | undefined>(() => {
     if (!sheet || sheet.mode !== 'new') return undefined;
     const filter = sheet.view.filter ? { [sheet.view.filter.fieldId]: sheet.view.filter.value } : {};
@@ -61,15 +70,19 @@ export function RecordSheet({ appId, spec, sheet, onClose, actions }: Props) {
     try {
       if (record) {
         await actions.updateRecord(record.id, values);
+        toast('Saved');
       } else {
-        const created = await actions.createRecord(values);
-        if (sheet?.mode === 'new') sheet.onSaved?.(created);
+        const created = await actions.createRecord(values, { id: newRecordId, recommendationId: sheet?.mode === 'new' ? sheet.recommendationId : undefined });
+        if (sheet?.mode === 'new') sheet.onSaved?.(created.record);
+        toast(created.duplicate ? 'Already saved' : 'Saved');
       }
-      toast('Saved');
       close();
     } catch (err) {
       if (err instanceof ApiError && err.status === 422 && err.details && typeof err.details === 'object') {
         setServerErrors(err.details as Record<string, string>);
+      } else if (err instanceof ApiError && err.code === 'record_conflict') {
+        toast(err.message, { kind: 'error', durationMs: 8000 });
+        close();
       } else {
         toast(describeError(err), { kind: 'error' });
       }
@@ -115,7 +128,8 @@ export function RecordSheet({ appId, spec, sheet, onClose, actions }: Props) {
           onDelete={remove}
           submitting={submitting}
           serverErrors={serverErrors}
-          submitLabel={sheet.mode === 'new' && sheet.view.type === 'practice' ? 'Save session' : undefined}
+          submitLabel={sheet.mode === 'new' ? sheet.view.addLabel : undefined}
+          note={sheet.mode === 'new' ? sheet.note : undefined}
         />
       )}
     </Sheet>
