@@ -24,6 +24,7 @@ export default defineConfig({
       '^/apps/[^/]+/(manifest\.webmanifest|icon.*)$': serverTarget,
       '/manifest.webmanifest': serverTarget,
       '^/icons/.*': serverTarget,
+      '^/examples/.*': serverTarget,
     },
   },
 });

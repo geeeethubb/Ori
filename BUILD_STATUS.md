@@ -1,6 +1,6 @@
 # BUILD_STATUS — personal AI playground redesign (session 2)
 
-Last updated: 2026-11-14 10:55. **Phase 0 (inspect) done; Phase 1 (foundation) in progress.** Product name undecided: the UI uses the temporary label from `shared/brand.ts` ("Your Playground").
+Last updated: 2026-11-14 11:50. **R1 foundation committed (e525b77); R2/R3 running as four parallel builds (runtime, storefront, sample adapter + seed, tests).** Product name undecided: the UI uses the temporary label from `shared/brand.ts` ("Your Playground").
 
 ## Resume here
 
@@ -36,6 +36,8 @@ Last updated: 2026-11-14 10:55. **Phase 0 (inspect) done; Phase 1 (foundation) i
 - 10:44 Redesign package read (`redesign/*`, brief PDF text extracted with pypdf since pdftoppm is absent). Repo inspected file by file; findings above.
 - 10:47 Baseline checks run (0 type errors, 223 tests). Database backed up before schema work.
 - 10:55 Plan recorded; starting R1.
+- 11:50 R1 committed as `e525b77`: shared contract extended additively (image field; gallery/practice/links/queue views; per-view filter/formFieldIds/addLabel; design block; flat icon themes with Lucide glyphs; `set_design` op); migration `002_playground.sql` (media, captures, agent_replies, `recommendations.capture_id`, `apps.source_capture_id`); media upload/serve (owner-scoped, type sniffed, 6 MB); Agent routes (`/api/agent/*`) with honest read status (allowlisted oEmbed titles only, never page fetches); proposals shared by Playground and Agent (`/draft` returns the real spec + example records, `/build`, `/keep`, `/update-preview`, `/applied`); `respondToCapture` on both adapters; brand config; Electric Playground tokens + self-hosted fonts; Agent/Playground/My apps navigation with redirects from all old URLs; first Agent page; reference fixtures Riff/Light/People; CC0 example photos. Smoke test in Sample mode on a throwaway DB: capture → reply (Riff new_app + explore + keep) → preview (presets start at 15) → make → session saved → manifest/boot carry the ink theme; media cross-user 404; foreign photo in a record 422. Typecheck 0 errors; 226 tests.
+- 11:55 Spawned four parallel builds against `docs/redesign-contract.md`: runtime renderers + theming (client/src/runtime), storefront pages (client/src/pages, shell), sample adapter + seed + asset docs (server/model/sample, seed, docs), tests (tests/**). Integration, screenshots and the live-model run follow.
 
 ## Blockers / founder inputs still pending
 

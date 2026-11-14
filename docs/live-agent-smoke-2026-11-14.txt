@@ -1,0 +1,24 @@
+model: claude-opus-5-5 (configured in .env; key never printed)
+
+[respond: guitar note + unread link] 15711 ms
+  message: I got your Instagram reel link and your note, but I couldn't open the reel itself, so I haven't heard the riff. From your note: it's a fingerpicked acoustic riff you keep returning to, and you have 15 minutes. You can try a quick 15-minute session today, build a small practice app with the reel saved as a source, or just keep the link for later.
+  - new_app | 15-minute fingerpicking riff practice | practice | caps=practice_timer,tempo,source_links,summary,prompts | design={"theme":"ink","accent":"lime","typography":"display","density":"regular","artwork":"waves"} | sources=cap_01 facts=f_int1,f_rout1
+  - explore | Work out the riff in 15 minutes | practice | caps= | design=null | sources=cap_01 facts=f_rout1,f_int1 | steps=5
+  - keep | Save the riff reel for later | practice | caps= | design=null | sources=cap_01 facts=
+  learned: [{"category":"interest","value":"Drawn to fingerpicked acoustic guitar riffs","status":"confirmed","confidence":0.85,"evidence":"It is a fingerpicked acoustic riff I keep coming back to."}]
+  honesty check (does not claim to have read the link): ok
+
+[generateSpec: practice] "Fingerpicking Riff Practice" in 21959 ms; valid=true; pattern=practice; views=practice,links,summary; design={"theme":"ink","accent":"lime","typography":"display","density":"regular","artwork":"waves"}
+  practice presets=15/5/10/20/30; tempo=true; fields=kind[select] session_date[date] minutes[number] focus[text] tempo[number] feel[rating] notes[long_text] source_url[url] source_title[text] source_type[select] source_tags[tags]
+  preview records: 6; description: I built this around the fingerpicked acoustic riff you keep coming back to. Your 15-minute budget is the first timer preset, and the metronome starts at a slow 60 bpm, so it slots into an evening after 7 pm. The Riff sources view is set up for your Instagram reel (instagram.com/reel/abc123). Save it as a Reel, and add any tabs or lessons you find later, with nightly prompts to break the riff down bar by bar.
+
+[respond: photo + note] 14077 ms; imageRead=true
+  message: Got your screenshot and note. I can see a street scene: low side light raking across a brick sidewalk, long tree shadows striping the pavement, sunlit grass, a green kiosk with posters and graffiti, and a yellow van catching the light. I can help you try this light on a walk today, start a light-focused photo gallery, or simply keep this as a reference.
+  - explore | Chase low side light on your next walk | gallery | caps= | design=null
+  - new_app | My light studies | gallery | caps=gallery,photo_upload,summary,prompts | design={"theme":"paper","accent":"charcoal","typography":"editorial","density":"airy","artwork":"none"}
+  - keep | Keep as a light reference | gallery | caps= | design=null
+
+[generateSpec: gallery] "My light studies" in 20074 ms; valid=true; pattern=gallery; views=gallery,gallery,summary; galleryView=true; imageField=true; design={"theme":"paper","accent":"charcoal","typography":"editorial","density":"airy","artwork":"none"}
+  description: Your light studies use the paper look you picked: quiet, editorial and airy, so the photos do the talking. Your own weekend walk frames live in My walks, and images like the one you shared ('This light. I want more of this') go in Light references, tagged by the kind of light. A new light prompt arrives each week to try on your next walk.
+
+DONE
