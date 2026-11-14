@@ -7,8 +7,12 @@
 import type { AppTheme, Pattern } from '@shared/appSpec.ts';
 import type { ProposalKind } from '@shared/context.ts';
 import { Icons } from '../../components/ui.tsx';
+import { apiBase } from '../../api.ts';
 
-export const EXAMPLE_PHOTOS = ['/examples/light-1.jpg', '/examples/light-2.jpg', '/examples/light-3.jpg', '/examples/light-4.jpg'] as const;
+/** Public-domain example photos served by the API (absolute inside the Android shell, whose page origin is the local bundle). */
+export function examplePhotos(): string[] {
+  return [1, 2, 3, 4].map((i) => `${apiBase()}/examples/light-${i}.jpg`);
+}
 
 export interface MiniPreviewProps {
   pattern: Pattern;
@@ -94,7 +98,7 @@ export function MiniPreview({ pattern, kind = 'new_app', theme, lines = [], size
     body = (
       <div className={`mp-sheet mp-sheet-${count === 6 ? 3 : 2}`}>
         {Array.from({ length: count }, (_, i) => {
-          const src = EXAMPLE_PHOTOS[i];
+          const src = examplePhotos()[i];
           return src ? <img key={i} src={src} alt="" loading="lazy" decoding="async" /> : <span key={i} className="mp-tile-empty" aria-hidden="true">{Icons.sun}</span>;
         })}
       </div>

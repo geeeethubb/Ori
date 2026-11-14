@@ -42,7 +42,8 @@ test('share a sound → Make mine → practise → the session survives a change
   await expect(reply).toBeVisible({ timeout: 60_000 });
   const card = reply.locator('[data-testid="proposal-card"][data-kind="new_app"]').first();
   await expect(card).toBeVisible();
-  await expect(reply.locator('[data-testid="proposal-card"][data-kind="keep"]')).toHaveCount(1);
+  // Sample mode always offers "just keep it"; the live model offers it only when the share reads like a passing save.
+  if (!LIVE) await expect(reply.locator('[data-testid="proposal-card"][data-kind="keep"]')).toHaveCount(1);
   await expectNoHorizontalOverflow(page);
 
   // Make mine, with one meaningful choice: the 15-minute preset. The preview is the real renderer,

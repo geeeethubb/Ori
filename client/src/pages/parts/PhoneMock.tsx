@@ -7,7 +7,7 @@ import { BRAND } from '@shared/brand.ts';
 import { AppIcon } from '../../components/AppIcon.tsx';
 import { BrandMark } from '../../components/BrandMark.tsx';
 import { Icons } from '../../components/ui.tsx';
-import { EXAMPLE_PHOTOS } from './MiniPreview.tsx';
+import { examplePhotos } from './MiniPreview.tsx';
 
 export const EXAMPLE_NOTE = 'I like this sound and have 15 minutes to practice.';
 
@@ -93,7 +93,7 @@ export function PlaygroundScreen() {
         <h3>A few things you might be into.</h3>
         <div className="ph-card">
           <div className="ph-card-media ph-sheet">
-            {EXAMPLE_PHOTOS.slice(0, 3).map((src) => <img key={src} src={src} alt="" loading="lazy" decoding="async" />)}
+            {examplePhotos().slice(0, 3).map((src) => <img key={src} src={src} alt="" loading="lazy" decoding="async" />)}
           </div>
           <div className="ph-card-body">
             <small>Make an app</small>
@@ -168,7 +168,7 @@ export function LightScreen() {
           <p>Shoot only shadows and reflections</p>
         </div>
         <div className="ph-contact">
-          {EXAMPLE_PHOTOS.map((src, i) => (
+          {examplePhotos().map((src, i) => (
             <figure key={src}>
               <img src={src} alt="" loading={i < 2 ? 'eager' : 'lazy'} decoding="async" />
               <figcaption>{['Low sun, brick wall', 'Trees on the pavement', 'Shadow of a tree', 'Scaffolding at noon'][i]}</figcaption>

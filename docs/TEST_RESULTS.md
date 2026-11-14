@@ -28,7 +28,7 @@ Script: `npx tsx server/scripts/ai-agent-smoke.ts` (four calls, 11:58). Log with
 | Practice app spec from that proposal with a 15-minute budget: validates; views practice + links + summary; presets 15/5/10/20/30; tempo helper; ink theme; 6 example preview records | ✅ 22.0 s | structured output accepted the proposal schema; the spec uses JSON-in-text + zod |
 | Agent reply to a **photo** (CC0 street photo) + note: the model read the image (`imageRead=true`, describes the raking light and shadows) and proposes a light-walk exploration, a gallery app (paper/airy design) and keep | ✅ 14.1 s | |
 | Gallery app spec from the photo proposal with the paper look: validates; image field present; gallery views + summary | ✅ 20.1 s | |
-| Browser journey in Live AI mode (`E2E_LIVE=1 npx playwright test tests/e2e/journey.spec.ts --project=desktop`) | ⏳ running | result appended below when finished |
+| Browser journey in Live AI mode (`E2E_LIVE=1 npx playwright test tests/e2e/journey.spec.ts --project=desktop`, 13:12): sign up → real agent reply to the guitar note → Make mine with the 15-minute choice → real spec previewed and built → practice timer → session saved and persisted → live revision adds a song field, records intact → undo; plus the two-profile Playground test with live extraction and recommendations | ✅ 2 passed (journey 44.7 s, two profiles 1.9 min, 2.7 min total) | one spec adjustment: the live model offers "keep" only when the share reads like a passing save, so that assertion is Sample-mode-only |
 
 ## 3. Browser (Playwright, production build served by Node, Sample mode, throwaway DB) — `npm run test:e2e`
 
