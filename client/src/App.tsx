@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes, useLocation } from 'react-router';
+import { useEffect, useState } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router';
 import { useAuth } from './auth.tsx';
 import { ToastProvider, Spinner } from './components/ui.tsx';
 import { StoreLayout } from './components/Layout.tsx';
@@ -12,6 +13,9 @@ import { CollectionPage } from './pages/CollectionPage.tsx';
 import { PricingPage } from './pages/PricingPage.tsx';
 import { AccountPage } from './pages/AccountPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
+import { NativeServerSetup } from './components/NativeServerSetup.tsx';
+import { apiBase, isNative } from './api.ts';
+import { wireShortcutLaunches } from './native/shortcuts.ts';
 
 /** Redirects to /login?next=… when signed out; renders children when signed in. */
 function RequireAuth({ children }: { children: React.ReactElement }) {
@@ -29,6 +33,18 @@ function RequireAuth({ children }: { children: React.ReactElement }) {
 }
 
 export function App() {
+  const navigate = useNavigate();
+  const [serverReady, setServerReady] = useState(() => !isNative() || apiBase() !== '');
+
+  // Android shell: pinned shortcuts carry a validated app id (cold and warm launches).
+  useEffect(() => {
+    let off: (() => void) | undefined;
+    void wireShortcutLaunches((path) => navigate(path)).then((f) => { off = f; });
+    return () => off?.();
+  }, [navigate]);
+
+  if (!serverReady) return <NativeServerSetup onDone={() => setServerReady(true)} />;
+
   return (
     <ToastProvider>
       <Routes>

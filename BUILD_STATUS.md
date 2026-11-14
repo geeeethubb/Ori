@@ -46,6 +46,8 @@ Last updated: 2026-11-14, session 1 (foundation + live AI verified; UI modules b
 | Live revision planning ("add a next experiment field") applies cleanly | ✅ 7.8 s, add_field + view updates | same script |
 | Unsupported requests declined with alternatives (type change, email) | ✅ 0 ops, 2 unsupported entries with alternatives | same script |
 | Shared contracts + server typecheck | ✅ `tsc` clean for `shared/`, `server/` (excluding agent modules in progress) | `npx tsc --noEmit` |
+| Android shell compiles (Capacitor 8.6.2, AGP 8.13, Gradle 8.14.3, JDK 21 JBR) | ✅ `android/app/build/outputs/apk/debug/app-debug.apk` (4.0 MB) in 1m12s — with a PLACEHOLDER web bundle, so not the real app yet | PowerShell: `JAVA_HOME`=JBR, `.\gradlew.bat assembleDebug` (sdk.dir needs forward slashes in `local.properties`) |
+| Emulator install + cold launch with a shortcut-style intent | ✅ AVD `Pixel_9_Pro` (Android 17 / API 37) boots headless; `adb install` Success; `am start … --es com.aiappstore.runtime.APP_ID …` → MainActivity displayed, no crash | adb authorization accepted via emulator console `event mouse` taps (no window) |
 
 ## Milestones
 

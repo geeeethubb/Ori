@@ -41,26 +41,37 @@ export function describeModelFailure(err: unknown): string {
 }
 
 /**
- * Run one model task through the live adapter with a sample fallback.
- * `ownerId` is used for usage accounting only.
+ * Pure core: try `primary`, fall back to `fallback` on any failure and label the result.
  */
-export async function withModel<T>(ownerId: string, kind: UsageKind, fn: (adapter: ModelAdapter) => Promise<AdapterResult<T>>): Promise<AdapterResult<T>> {
-  const primary = liveAdapter();
+export async function runWithFallback<T>(
+  primary: ModelAdapter | null,
+  fallback: ModelAdapter,
+  fn: (adapter: ModelAdapter) => Promise<AdapterResult<T>>,
+  onResult?: (provider: ModelMode, ok: boolean) => void,
+): Promise<AdapterResult<T>> {
   if (primary) {
     try {
       const res = await fn(primary);
-      logUsage(ownerId, kind, 'anthropic', true);
+      onResult?.(primary.mode, true);
       return res;
     } catch (err) {
-      logUsage(ownerId, kind, 'anthropic', false);
-      console.warn(`[model] live ${kind} failed, using sample fallback:`, (err as Error).message);
-      const fallback = await fn(sampleAdapter);
-      return { ...fallback, generatedBy: 'sample', fallbackReason: describeModelFailure(err) };
+      onResult?.(primary.mode, false);
+      console.warn(`[model] live call failed, using sample fallback: ${(err as Error).message}`);
+      const res = await fn(fallback);
+      return { ...res, generatedBy: fallback.mode, fallbackReason: describeModelFailure(err) };
     }
   }
-  const res = await fn(sampleAdapter);
-  logUsage(ownerId, kind, 'sample', true);
+  const res = await fn(fallback);
+  onResult?.(fallback.mode, true);
   return res;
+}
+
+/**
+ * Run one model task through the live adapter with a sample fallback.
+ * `ownerId` is used for usage accounting only; failed live attempts never count.
+ */
+export async function withModel<T>(ownerId: string, kind: UsageKind, fn: (adapter: ModelAdapter) => Promise<AdapterResult<T>>): Promise<AdapterResult<T>> {
+  return runWithFallback(liveAdapter(), sampleAdapter, fn, (provider, ok) => logUsage(ownerId, kind, provider, ok));
 }
 
 export { sampleAdapter };
