@@ -58,14 +58,20 @@ export function InstallGuide({ appId, name }: Props) {
     postEvent(appId, 'shortcut_requested');
     if (!bridge?.pin) return;
     Promise.resolve(bridge.pin({ appId, label: name, iconUrl: `${window.location.origin}/apps/${appId}/icon-192.png` }))
-      .then(() => toast('Shortcut requested. Confirm it on your home screen.'))
+      .then((r) => {
+        const res = (r ?? {}) as { requested?: boolean; supported?: boolean; message?: string };
+        if (res.requested) toast('Confirm the shortcut on your home screen.');
+        else toast(res.message ?? 'This launcher does not support pinned shortcuts.', { kind: 'error' });
+      })
       .catch(() => toast('Could not request a shortcut on this device.', { kind: 'error' }));
   };
 
   return (
     <section className="rt-section card card-pad" data-testid="rt-install-guide">
       <h2>On your phone</h2>
-      {standalone ? (
+      {native ? (
+        <p className="muted small">Pin {name} to your home screen. Android asks you to confirm, and the icon then opens {name} directly, signed in, with everything you saved.</p>
+      ) : standalone ? (
         <p>You're using the installed app. Tap its icon on your home screen any time to come straight back here.</p>
       ) : (
         <>
@@ -95,7 +101,7 @@ export function InstallGuide({ appId, name }: Props) {
       )}
       {native && (
         <div className="banner banner-info">
-          <span>In the Android app, use 'Add shortcut' to pin this app.</span>
+          <span>Add {name} to your home screen.</span>
           {bridge?.pin && (
             <button type="button" className="btn btn-sm btn-secondary" onClick={pin} data-testid="rt-android-shortcut">
               Add shortcut

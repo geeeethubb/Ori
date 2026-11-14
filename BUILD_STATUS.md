@@ -1,6 +1,6 @@
 # BUILD_STATUS — AI App Store prototype
 
-Last updated: 2026-11-14 ~03:55 (session 1). Core demo journey verified in Sample mode (browser) and Live AI mode (API); Android emulator pass in progress.
+Last updated: 2026-11-14 ~04:05 (session 1). Core demo journey verified in Sample mode (browser) and Live AI mode (browser + API); Android shell verified on the emulator (pin, warm launch, cold launch via the shortcut intent).
 
 ## Resume here
 
@@ -16,7 +16,7 @@ Last updated: 2026-11-14 ~03:55 (session 1). Core demo journey verified in Sampl
 | --- | --- | --- |
 | Bring context (paste / upload / short profile / labelled sample) → facts with Confirmed vs Inferred, sources, conflicts | ✅ browser (phone + desktop) | ✅ API route (24 facts, 11.7 s) |
 | For You: grounded cards citing fact IDs, work + explore, reasons quote the profile; two profiles differ | ✅ browser | ✅ API route (4 cards, 18.6 s, quotes like "get lost in my notes") |
-| Customize → preview → **Build this for me** → app at `/apps/{id}/` | ✅ browser | ✅ API route (journal with weekly challenge + reflection, 14.6 s; board with due rule + priority, 19.9 s) |
+| Customize → preview → **Build this for me** → app at `/apps/{id}/` | ✅ browser | ✅ browser (`E2E_LIVE=1`, 1.9 min journey) + API route (journal with weekly challenge + reflection, 14.6 s; board with due rule + priority, 19.9 s) |
 | Save an entry, reload the stable URL, entry persists; sign in **inside** the app URL | ✅ browser | ✅ (same runtime) |
 | **Make a change** → readable preview → accept → entries retained → undo | ✅ browser | ✅ API route (13.9 s) |
 | Unsupported requests declined with an alternative | ✅ unit + API | ✅ adapter smoke |
@@ -24,7 +24,7 @@ Last updated: 2026-11-14 ~03:55 (session 1). Core demo journey verified in Sampl
 | Per-app manifest, apple-touch-icon, PNG icons, head injection on a fresh request; cross-user 404 | ✅ browser + API tests | n/a |
 | Export/import JSON with history | ✅ API tests | n/a |
 | Phone layout without clipping, tap targets ≥ 40 px | ✅ screenshots in `test-results/screens/` | n/a |
-| Android shell compiles; installs and cold-launches on the emulator with a shortcut intent | ✅ (placeholder web bundle) | real bundle + shortcut pin/launch: in progress |
+| Android shell: real-bundle APK installs; sign-in inside the shell; pin a shortcut from an app; warm launch by tapping the icon; cold launch via the shortcut's intent; two targets → two apps | ✅ emulator (`docs/ANDROID.md`) | tap-to-cold-launch blocked on this account-less Play image by Play Protect; physical phone pending |
 
 ## Environment found (do not re-derive)
 
@@ -53,8 +53,8 @@ Last updated: 2026-11-14 ~03:55 (session 1). Core demo journey verified in Sampl
 - [x] **M1** Runtime slice: journal at `/apps/{id}/`, persistence across reload/restart, additive revision + undo, export/import, in-place sign-in, ownership 404s. Gate passed (browser + API tests).
 - [x] **M2** Discovery: import → Your Context → For You → Build → My Collection, live adapter + sample mode. Gate passed (two profiles differ; build and save in browser).
 - [x] **M3** Evolution: board + tracker patterns, due-soon rule, NL revision preview/accept/undo, unsupported declines, events + suggestions + feedback. Gate passed.
-- [~] **M4** Home-screen: iOS metadata + guide verified in browser (physical iPhone pending, founder); Android shell compiled + installed on the emulator; real-bundle APK + pinned shortcut cold/warm launch in progress.
-- [~] **M5** Docs (README, DEMO, TEST_RESULTS, ANDROID, Velocity prompts) written; pricing/account pages done; final polish pass + live-mode browser run pending.
+- [x] **M4** Home-screen: iOS metadata + guide verified in browser (physical iPhone pending, founder); Android real-bundle APK installed on the emulator, shortcut pinned, warm launch by tap and cold launch via the shortcut intent verified; details and the one emulator-specific caveat in `docs/ANDROID.md`.
+- [~] **M5** Docs (README, DEMO, TEST_RESULTS, ANDROID, Velocity prompts) written; pricing/account pages done; live-mode browser run passed; remaining: final polish items below.
 
 ## Work log (session 1)
 
@@ -96,4 +96,4 @@ node scripts/build-apk.mjs --api-base http://10.0.2.2:8787   # Android debug APK
 
 ## Next task
 
-Finish M4 on the emulator (real-bundle APK, sign in inside the shell, pin a shortcut, cold + warm launch), record results in `docs/ANDROID.md` + `docs/TEST_RESULTS.md`, then a final polish pass (live-mode browser run, DEMO.md check, README accuracy) and commit.
+Final polish: re-pin a shortcut with the rebuilt APK to confirm the app icon, run the full test suite once more, review DEMO.md against the seeded data, and commit. Founder follow-ups: physical iPhone Add-to-Home-Screen check, Velocity prompts.

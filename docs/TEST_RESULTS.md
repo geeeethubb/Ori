@@ -45,14 +45,18 @@ Bugs found by these tests and fixed before the browser runs: PNG icon routes nev
 | Phone layout: import, collection, journal, board, settings, pricing have no horizontal overflow; visible buttons ≥ 40 px; new-entry sheet usable; screenshots in `test-results/screens/` (`mobile.spec.ts`) | phone | ✅ | skipped on desktop by design |
 | **Total** | | ✅ **9 passed, 1 skipped** (44.6 s) | 2026-11-14 03:46 |
 
-## 4. Emulator (Android, `Pixel_9_Pro`, Android 17)
+## 4. Emulator (Android, `Pixel_9_Pro`, Android 17 / API 37, Google Play image, headless)
 
 | Check | Status | Notes |
 | --- | --- | --- |
-| Android project compiles; debug APK produced | ✅ | 1m12s with a placeholder web bundle; `android/app/build/outputs/apk/debug/app-debug.apk` (4.0 MB) |
-| Install on emulator | ✅ | `adb install -r` → Success |
-| Cold launch with a shortcut-style intent (`am start … -d aiappstore://apps/<id>/ --es com.aiappstore.runtime.APP_ID <id>`) | ✅ | MainActivity displayed, no crash (placeholder bundle, so no navigation check yet) |
-| APK with the real web bundle, sign in inside the shell, pin a shortcut, cold + warm launch into the intended app | ⏳ | next step |
+| Debug APK with the real web bundle builds | ✅ | `node scripts/build-apk.mjs --api-base http://10.0.2.2:8787` → `android/app/build/outputs/apk/debug/app-debug.apk` (4.2 MB) |
+| Install on emulator; shell loads the storefront against the host server; demo sign-in inside the shell; session survives force-stop | ✅ | bearer token in the WebView |
+| Pin a shortcut from an app's settings; launcher confirmation; shortcut registered with id `app-<appId>` and the app's label | ✅ | `dumpsys shortcut` |
+| Warm launch: tapping the pinned icon switches the running shell to that app with its records | ✅ | home-screen tap |
+| Cold launch with the shortcut's intent opens the intended app with its records after authenticating | ✅ | `am start … APP_ID` (what the launcher sends); `LaunchState: COLD` |
+| Two targets → two apps (board cold, journal warm) | ✅ | intent-level |
+| Cold launch by tapping the icon | ⚠️ | Play Protect on this account-less Play image intercepts the first open of a sideloaded app and hands off to Google sign-in; not an app defect, see `docs/ANDROID.md`. Verify on a physical phone |
+| Shortcut shows the app's own icon | ⚠️ → fixed | bridge now fetches the icon from the API server; re-pin with the rebuilt APK |
 
 ## 5. Physical devices
 

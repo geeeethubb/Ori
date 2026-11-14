@@ -56,11 +56,21 @@ Emulator available on this machine: AVD `Pixel_9_Pro` (`%LOCALAPPDATA%\Android\S
 
 ## Verification
 
-| Check | Status | Environment / notes |
+Environment: Windows 11 host, Android Studio JBR (JDK 21), Android SDK 36/37, emulator AVD `Pixel_9_Pro` (Android 17 / API 37, Google Play image, x86_64, headless), server `npm start` on the host with the real `.env`, APK built with `--api-base http://10.0.2.2:8787`. Date: 2026-11-14.
+
+| Check | Status | Notes |
 | --- | --- | --- |
-| Android source project present (`android/`) | ✅ | Generated with `npx cap add android` (Capacitor 8.6.2) |
-| Shortcut plugin + MainActivity intent handling written | ✅ | Compiles only once Gradle runs (see next rows) |
-| Debug APK compiled | ⚠️ compiled with a placeholder web bundle (2026-11-14, Gradle 8.14.3 / AGP 8.13 / JDK 21 JBR, 1m12s) → `android/app/build/outputs/apk/debug/app-debug.apk` (4.0 MB). Shortcut plugin compiles. Rebuild with the real bundle: `node scripts/build-apk.mjs --api-base …` | |
-| Installed on emulator/device | ⏳ pending | |
-| Pinned shortcut cold launch opens the intended app | ⏳ pending | |
-| Pinned shortcut warm launch opens the intended app | ⏳ pending | |
+| Android source project present (`android/`) | ✅ | Capacitor 8.6.2 |
+| Shortcut plugin + MainActivity intent handling compile | ✅ | Gradle 8.14.3 / AGP 8.13, `BUILD SUCCESSFUL` |
+| Debug APK with the real web bundle | ✅ | `node scripts/build-apk.mjs --api-base http://10.0.2.2:8787` → `android/app/build/outputs/apk/debug/app-debug.apk` (4.2 MB) |
+| Install on emulator | ✅ | `adb install -r` → Success |
+| Shell loads the storefront, sign-in with the demo account inside the shell, session persists across restarts (bearer token) | ✅ | screenshots in the session log |
+| **Add shortcut** from the journal's settings → launcher pin dialog → confirmed | ✅ | `dumpsys shortcut` lists pinned `app-<appId>` with label "Photo Walk Journal" |
+| **Warm launch**: tap the pinned icon while the shell is running → navigates to that app | ✅ | tapped on the home screen; shell switched from settings to the journal with its entries |
+| **Cold launch** via the shortcut's intent (`am start -a VIEW -d aiappstore://apps/<id>/ --es …APP_ID <id>`) → shell starts, reads the pending id, authenticates, opens the app | ✅ | `LaunchState: COLD`; board opened with "1 overdue · 1 due today · 1 due soon" |
+| Two different shortcut targets → two different apps (board cold, then journal warm) | ✅ | intent-level on the emulator |
+| Cold launch by **tapping** the pinned icon | ⚠️ blocked by the emulator image | On this Google Play image with no Google account, tapping a sideloaded app's icon triggers Play Protect ("Checking info…") which hands off to a Google sign-in; the same intent sent by the launcher works (row above). On a signed-in device, or an image without Play, the tap path is the launcher path. Verify on a physical phone |
+| Shortcut icon shows the app's own icon | ⚠️ fixed after the run | the first pin used the launcher icon because the shell fetched the icon from its local origin; the bridge now fetches from the API server (`client/src/native/shortcuts.ts`). Re-pin after installing the rebuilt APK |
+| Physical Android device | ⏳ not run | none connected |
+
+Emulator notes: adb authorization was accepted through the emulator console (`event mouse` taps) because the emulator ran headless; `local.properties` must use forward slashes; the Gradle wrapper must be invoked by absolute path from Node on this machine.
