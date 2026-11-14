@@ -146,7 +146,7 @@ export function computeMetric(records: AppRecord[], metric: MetricSpec, now: Dat
     case 'latest': {
       const sorted = [...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       const v = sorted[0]?.values[metric.fieldId as string];
-      const display = v === undefined || v === null || v === '' ? '—' : Array.isArray(v) ? v.join(', ') : String(v);
+      const display = v === undefined || v === null || v === '' ? '–' : Array.isArray(v) ? v.join(', ') : String(v);
       return { id: metric.id, label: metric.label, value: typeof v === 'number' ? v : display, display };
     }
     case 'streak': {

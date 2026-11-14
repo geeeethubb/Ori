@@ -139,13 +139,13 @@ describe('metrics', () => {
   it('avg shows one decimal only when needed and a dash when empty', () => {
     expect(computeMetric(sessions, metric({ kind: 'avg', fieldId: 'quality' }), NOW)).toMatchObject({ value: 4, display: '4' });
     expect(computeMetric(sessions.slice(0, 2), metric({ kind: 'avg', fieldId: 'quality' }), NOW).display).toBe('3.5');
-    expect(computeMetric([sessions[3]!], metric({ kind: 'avg', fieldId: 'quality' }), NOW)).toMatchObject({ value: null, display: '—' });
+    expect(computeMetric([sessions[3]!], metric({ kind: 'avg', fieldId: 'quality' }), NOW)).toMatchObject({ value: null, display: '–' });
   });
 
   it('min and max', () => {
     expect(computeMetric(sessions, metric({ kind: 'min', fieldId: 'minutes', unit: 'min' }), NOW).display).toBe('15 min');
     expect(computeMetric(sessions, metric({ kind: 'max', fieldId: 'minutes' }), NOW)).toMatchObject({ value: 45, display: '45' });
-    expect(computeMetric([], metric({ kind: 'max', fieldId: 'minutes' }), NOW)).toMatchObject({ value: null, display: '—' });
+    expect(computeMetric([], metric({ kind: 'max', fieldId: 'minutes' }), NOW)).toMatchObject({ value: null, display: '–' });
   });
 
   it('latest takes the most recently created entry', () => {
@@ -154,7 +154,7 @@ describe('metrics', () => {
     expect(computeMetric(shuffled, metric({ kind: 'latest', fieldId: 'minutes' }), NOW)).toMatchObject({ value: 30, display: '30' });
     const tagged = [rec({ tags: ['light', 'shadow'] }, '2026-11-14T12:00:00.000Z')];
     expect(computeMetric(tagged, metric({ kind: 'latest', fieldId: 'tags' }), NOW).display).toBe('light, shadow');
-    expect(computeMetric([], metric({ kind: 'latest', fieldId: 'focus' }), NOW).display).toBe('—');
+    expect(computeMetric([], metric({ kind: 'latest', fieldId: 'focus' }), NOW).display).toBe('–');
   });
 
   describe('where filters', () => {
