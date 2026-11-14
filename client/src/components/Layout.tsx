@@ -10,7 +10,7 @@ const STORE_ICON = { symbol: 'sparkle', color: 'plum' } as const;
 export function StoreLayout() {
   const { user } = useAuth();
   const location = useLocation();
-  useInstallMeta({ appId: null, name: 'AI App Store', icon: STORE_ICON });
+  useInstallMeta({ appId: null, name: 'AI App Store', icon: STORE_ICON }, { title: false });
   const tabs = [
     { to: '/for-you', label: 'For You', icon: Icons.sparkle },
     { to: '/collection', label: 'My Collection', icon: Icons.grid },

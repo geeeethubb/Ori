@@ -3,7 +3,7 @@
  * Values for hidden or unknown field IDs are preserved untouched so revisions never lose data.
  */
 import type { AppSpec, FieldSpec } from './appSpec.ts';
-import { ISO_DATE, todayIso } from './time.ts';
+import { parseIsoDate, todayIso } from './time.ts';
 
 export type FieldValue = string | number | boolean | string[] | null;
 export type RecordValues = Record<string, unknown>;
@@ -75,7 +75,7 @@ function coerceField(f: FieldSpec, raw: unknown): { value: FieldValue; error?: s
     }
     case 'date': {
       const s = typeof raw === 'string' ? raw.trim() : '';
-      if (!ISO_DATE.test(s)) return { value: null, error: 'Use a date like 2026-11-14' };
+      if (!parseIsoDate(s)) return { value: null, error: 'Use a date like 2026-11-14' };
       return { value: s };
     }
     case 'number':

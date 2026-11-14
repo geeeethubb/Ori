@@ -151,7 +151,7 @@ export function computeMetric(records: AppRecord[], metric: MetricSpec, now: Dat
     }
     case 'streak': {
       const days = new Set<string>();
-      for (const r of records) {
+      for (const r of records.filter((x) => passesWhere(x, metric))) {
         const raw = metric.fieldId ? r.values[metric.fieldId] : undefined;
         const iso = typeof raw === 'string' && parseIsoDate(raw) ? raw : toIsoDate(new Date(r.createdAt));
         days.add(iso);

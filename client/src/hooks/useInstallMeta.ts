@@ -7,17 +7,18 @@ import { ICON_GRADIENTS } from '@shared/icons.ts';
  * navigations. The server injects the same tags on a fresh request to /apps/{id}/, which is
  * what iOS reads at install time; this hook covers the dev server and in-app navigation.
  */
-export function useInstallMeta(target: { appId: string | null; name: string; icon: AppIconSpec } | null): void {
+export function useInstallMeta(target: { appId: string | null; name: string; icon: AppIconSpec } | null, opts: { title?: boolean } = {}): void {
+  const setTitle = opts.title ?? true;
   useEffect(() => {
     if (!target) return;
     const base = target.appId ? `/apps/${target.appId}/` : '/';
-    document.title = target.name;
+    if (setTitle) document.title = target.name;
     setLink('manifest', target.appId ? `${base}manifest.webmanifest` : '/manifest.webmanifest');
     setLink('apple-touch-icon', target.appId ? `${base}icon-180.png` : '/icons/store-180.png');
     setLink('icon', target.appId ? `${base}icon.svg` : '/icons/store.svg');
     setMeta('apple-mobile-web-app-title', target.name);
     setMeta('theme-color', ICON_GRADIENTS[target.icon.color]?.[1] ?? '#5E2E78');
-  }, [target?.appId, target?.name, target?.icon.color, target?.icon.symbol]);
+  }, [target?.appId, target?.name, target?.icon.color, target?.icon.symbol, setTitle]);
 }
 
 function setLink(rel: string, href: string): void {

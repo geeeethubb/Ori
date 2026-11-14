@@ -39,7 +39,7 @@ export function createServer(): Hono {
   );
   app.use('/api/*', bodyLimit({ maxSize: 1024 * 1024, onError: (c) => c.json({ error: 'That upload is too large (1 MB max).', code: 'too_large' }, 413) }));
 
-  app.get('/api/health', (c) => c.json({ ok: true, modelMode: resolveModelMode(), time: new Date().toISOString() }));
+  app.get('/api/health', (c) => c.json({ ok: true, modelMode: resolveModelMode(), aiGenerationAllowance: config.aiGenerationAllowance, trialDays: config.trialDays, time: new Date().toISOString() }));
   app.route('/api/auth', authRoutes);
   app.route('/api/apps', appRoutes);
   mountExtraRoutes(app);
