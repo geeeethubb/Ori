@@ -1,6 +1,6 @@
 # Test results (redesign, session 2)
 
-Updated: 2026-11-14 13:15. Status values: ✅ passed · ❌ failed · ⏳ not run yet · ⚠️ partial. Every row names the environment it ran in. A check that did not run is listed as not run, never as passed. Session-1 totals are history; this file only reports what ran after the redesign started.
+Updated: 2026-11-14 13:25. Status values: ✅ passed · ❌ failed · ⏳ not run yet · ⚠️ partial. Every row names the environment it ran in. A check that did not run is listed as not run, never as passed. Session-1 totals are history; this file only reports what ran after the redesign started.
 
 Machine: Windows 11, Node 24.14.1, Playwright Chromium 1255, Android emulator `Pixel_9_Pro` (Android 17 / API 37).
 
@@ -49,8 +49,13 @@ Screenshots inspected (not just saved): the four builds reviewed their own (runt
 
 | Check | Status | Notes |
 | --- | --- | --- |
-| Debug APK with the redesigned bundle builds | ⏳ running | `node scripts/build-apk.mjs --api-base http://10.0.2.2:8787` |
-| Install; pinned shortcut opens Riff in the shell | ⏳ | after the build; session-1 verification of the shell itself is in `docs/ANDROID.md` |
+| Debug APK with the redesigned bundle builds (13:02) | ✅ | `node scripts/build-apk.mjs --api-base http://10.0.2.2:8787` → 4.4 MB |
+| Install over the session-1 build; signed-in session survives; redesigned Playground renders in the shell | ✅ | `docs/screenshots/after/android-shell-playground.jpg` |
+| Cold launch of Riff through the shortcut intent after force-stop | ✅ | practice room with timer, tempo and sessions (`android-riff-cold-launch.jpg`) |
+| Pin a shortcut for Riff from its settings; launcher dialog shows Riff's own icon; `dumpsys shortcut` lists `app-K2FQ9RsuGXzUVBi7` | ✅ | `android-pin-dialog-riff.jpg`, `android-home-riff-shortcut.jpg` |
+| Warm launch by tapping the home-screen icon → Riff resumed | ✅ | `android-riff-warm-tap.jpg` |
+| Cold launch by tapping the icon | ⚠️ | Play Protect intercept on this account-less Play image, unchanged from session 1; physical phone pending |
+| Example photos inside the shell | ✅ after fix | URLs now resolve against the API base; APK rebuilt |
 
 ## 5. Physical devices
 

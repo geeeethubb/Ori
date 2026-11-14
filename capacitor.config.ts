@@ -8,7 +8,8 @@ import type { CapacitorConfig } from '@capacitor/cli';
  */
 const config: CapacitorConfig = {
   appId: 'com.aiappstore.runtime',
-  appName: 'AI App Store',
+  // Temporary label until the product name is chosen (shared/brand.ts); the package id stays stable.
+  appName: 'Your Playground',
   // scripts/build-apk.mjs builds a separate bundle (with the API base baked in) into dist/android so
   // the browser bundle in dist/client never carries a phone-only API address.
   webDir: process.env.AAS_ANDROID_WEBDIR ?? 'dist/client',

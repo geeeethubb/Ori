@@ -1,4 +1,6 @@
-# Android: shared runtime APK with per-app pinned shortcuts
+# Android: one shared shell APK with per-app pinned shortcuts
+
+**Precisely:** there is ONE Android package (`com.aiappstore.runtime`, launcher label "Your Playground", a temporary name) that contains the web runtime. Each personal app is reached through a pinned launcher shortcut carrying that app's id. There is no APK per generated app.
 
 **Design (weekend scope):** one APK packages the same web runtime. From inside any personal app, the user taps **Add shortcut**; the launcher asks them to confirm a pinned shortcut whose intent carries that app's ID. Tapping the icon opens the shell directly in `/apps/{id}/`. Separate APKs per generated app and Play Store distribution are later work.
 
@@ -8,7 +10,7 @@
 
 | Piece | Where |
 | --- | --- |
-| Capacitor config (`appId com.aiappstore.runtime`, `webDir dist/client`, https scheme) | `capacitor.config.ts` |
+| Capacitor config (`appId com.aiappstore.runtime`, `appName` = temporary brand label, `webDir dist/client`, http scheme + cleartext for LAN/emulator during the prototype) | `capacitor.config.ts` |
 | Native plugin: `isSupported`, `pin`, `getLaunchAppId`, `appLaunch` event; validates the app ID with `^[A-Za-z0-9_-]{8,32}$`; distinct intent data URI per app | `android/app/src/main/java/com/aiappstore/runtime/AppShortcutsPlugin.java` |
 | Cold start (`onCreate`) and warm start (`onNewIntent`, `launchMode=singleTask`) | `android/app/src/main/java/com/aiappstore/runtime/MainActivity.java` |
 | Web bridge (no-ops in browsers) + navigation to validated internal routes only | `client/src/native/shortcuts.ts`, wired in `client/src/App.tsx` |
@@ -74,3 +76,20 @@ Environment: Windows 11 host, Android Studio JBR (JDK 21), Android SDK 36/37, em
 | Physical Android device | ⏳ not run | none connected |
 
 Emulator notes: adb authorization was accepted through the emulator console (`event mouse` taps) because the emulator ran headless; `local.properties` must use forward slashes; the Gradle wrapper must be invoked by absolute path from Node on this machine.
+
+## Re-verification with the redesigned bundle (session 2, 2026-11-14 13:02–13:10)
+
+Same environment (headless `Pixel_9_Pro`, Android 17, Google Play image without an account), host server `npm start` on :8787 with the real `.env` (Live AI mode) and the additive seed applied to the demo account. APK built with the redesign: `node scripts/build-apk.mjs --api-base http://10.0.2.2:8787` → 4.4 MB.
+
+| Check | Status | Notes |
+| --- | --- | --- |
+| APK with the redesigned bundle builds and installs over the session-1 build | ✅ | `adb install -r` → Success; the stored session (bearer token) survived |
+| Shell opens the redesigned Playground signed in (Sample-mode badge on seeded recommendations) | ✅ | `docs/screenshots/after/android-shell-playground.jpg` |
+| **Cold launch** of Riff via the shortcut's intent after `force-stop` → the practice room with its timer, tempo helper and sessions | ✅ | `docs/screenshots/after/android-riff-cold-launch.jpg` |
+| **Add shortcut** from Riff → Settings → On your phone → launcher dialog shows Riff with its own ink/lime icon → Add | ✅ | `dumpsys shortcut`: `Pinned: app-K2FQ9RsuGXzUVBi7` with icon flags; `docs/screenshots/after/android-pin-dialog-riff.jpg` |
+| Home screen shows the Riff shortcut next to the session-1 shortcuts (legacy apps still open in the new bundle) | ✅ | `docs/screenshots/after/android-home-riff-shortcut.jpg` |
+| **Warm launch**: tap the Riff icon while the shell runs → Riff is the resumed activity with the timer on screen | ✅ | `docs/screenshots/after/android-riff-warm-tap.jpg`; `topResumedActivity … MainActivity` |
+| Cold launch by **tapping** the icon | ⚠️ unchanged | still intercepted by Play Protect on this account-less image (see above); verify on a physical phone |
+| Example photographs and the landing's phone mock inside the shell | ✅ after fix | the shell's page origin is the local bundle, so `/examples/*.jpg` had to be resolved against the API base (`client/src/pages/parts/MiniPreview.tsx`, `client/src/runtime/media.ts`); rebuilt APK after the fix |
+| Launcher label | changed | `android/app/src/main/res/values/strings.xml` and `capacitor.config.ts` now use the temporary brand label; the package id is unchanged so existing installs and shortcuts keep working |
+| Physical Android device | ⏳ not run | none connected |
