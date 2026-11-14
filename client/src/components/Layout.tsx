@@ -8,27 +8,33 @@ import { useInstallMeta } from '../hooks/useInstallMeta.ts';
 
 const STORE_ICON = { symbol: 'compass', color: 'blue' } as const;
 const NAV_ICONS = { agent: Icons.agent, playground: Icons.playground, apps: Icons.grid } as const;
+const PUBLIC_PAGES = new Set(['/', '/login', '/signup']);
 
-/** Parent shell: top bar with Agent / Playground / My apps on desktop, three-tab bottom nav on phones, avatar menu for settings. Not used by /apps/{id}/. */
+/**
+ * Parent shell (Electric Playground): a quiet top bar with the brand and, on desktop, the three
+ * destinations; a three-tab bottom nav on phones; settings behind the avatar. Not used by /apps/{id}/.
+ */
 export function StoreLayout() {
   const { user } = useAuth();
   const location = useLocation();
   useInstallMeta({ appId: null, name: BRAND.name, icon: STORE_ICON }, { title: false });
-  const publicPage = ['/login', '/signup', '/'].includes(location.pathname);
+  const publicPage = PUBLIC_PAGES.has(location.pathname);
   const showTabs = Boolean(user) && !publicPage;
+  const signedOut = !user;
   return (
     <>
-      <header className="topbar">
+      <header className={`topbar${signedOut ? ' topbar-public' : ''}`}>
         <div className="topbar-inner">
           <Link to={user ? '/playground' : '/'} className="brand" aria-label={`${BRAND.name} home`} data-testid="brand-home">
-            <BrandMark size={28} />
-            <span>{BRAND.name}</span>
+            <BrandMark size={28} decorative />
+            <span className="brand-name">{BRAND.name}</span>
           </Link>
           {user && (
             <nav className="topnav" aria-label="Primary">
               {NAV.map((t) => (
                 <NavLink key={t.key} to={t.path} className={({ isActive }) => (isActive ? 'active' : '')} data-testid={`nav-${t.key}`}>
-                  {t.label}
+                  {NAV_ICONS[t.key]}
+                  <span>{t.label}</span>
                 </NavLink>
               ))}
             </nav>
@@ -37,7 +43,7 @@ export function StoreLayout() {
           {user ? (
             <AvatarMenu name={user.displayName} email={user.email} />
           ) : (
-            <div className="row" style={{ gap: 6 }}>
+            <div className="topbar-actions">
               <Link to={`/login?next=${encodeURIComponent(location.pathname === '/' ? '/playground' : location.pathname)}`} className="btn btn-ghost btn-sm" data-testid="nav-signin">
                 Sign in
               </Link>
@@ -50,7 +56,7 @@ export function StoreLayout() {
           )}
         </div>
       </header>
-      <main className="page">
+      <main className={`page${showTabs ? '' : ' page-no-tabs'}`}>
         <Outlet />
       </main>
       {showTabs && (
@@ -88,6 +94,7 @@ function AvatarMenu({ name, email }: { name: string; email: string }) {
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
+  const close = () => setOpen(false);
   return (
     <div className="menu-anchor" ref={ref}>
       <button type="button" className="avatar-btn" aria-haspopup="menu" aria-expanded={open} aria-label="Account menu" data-testid="avatar-menu" onClick={() => setOpen((o) => !o)}>
@@ -96,20 +103,21 @@ function AvatarMenu({ name, email }: { name: string; email: string }) {
       {open && (
         <div className="menu" role="menu">
           <div className="menu-head">
-            <strong style={{ color: 'var(--ink)' }}>{name}</strong>
-            <br />
-            {email}
+            <strong>{name || 'You'}</strong>
+            <span>{email}</span>
           </div>
-          <Link to="/settings" role="menuitem" onClick={() => setOpen(false)} data-testid="menu-settings">{Icons.gear} Settings</Link>
-          <Link to="/settings/memory" role="menuitem" onClick={() => setOpen(false)} data-testid="menu-memory">{Icons.person} What you've shared</Link>
-          <Link to="/pricing" role="menuitem" onClick={() => setOpen(false)}>{Icons.tag} Plan and pricing</Link>
+          <div className="menu-sep" />
+          <Link to="/settings" role="menuitem" onClick={close} data-testid="menu-settings">{Icons.gear} Settings</Link>
+          <Link to="/settings/memory" role="menuitem" onClick={close} data-testid="menu-memory">{Icons.bookmark} What you've shared</Link>
+          <Link to="/settings/import" role="menuitem" onClick={close} data-testid="menu-import">{Icons.upload} Bring more context</Link>
+          <Link to="/pricing" role="menuitem" onClick={close}>{Icons.tag} Plan and pricing</Link>
           <div className="menu-sep" />
           <button
             type="button"
             role="menuitem"
             data-testid="menu-signout"
             onClick={async () => {
-              setOpen(false);
+              close();
               try {
                 await logout();
               } finally {

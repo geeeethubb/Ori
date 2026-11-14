@@ -1,24 +1,33 @@
 /**
  * Agent: "What caught your attention?" A composer for a thought, a link or a screenshot, then a
- * thread of what was shared and the agent's concise, honest reply with proposal cards.
- * First working version (foundation); the storefront pass refines layout and cards.
+ * thread of what was shared and the agent's concise, honest reply with proposal cards inside the
+ * conversation. Newest first, directly under the composer, so a reply appears where you just typed.
  */
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import type { AgentThreadDto, AgentThreadItemDto, CaptureResultDto, MediaUploadDto } from '@shared/api.ts';
-import { READ_STATUS_LABELS, type Recommendation } from '@shared/context.ts';
+import type { AgentThreadDto, AgentThreadItemDto, CaptureResultDto, ContextOverviewDto, MediaUploadDto } from '@shared/api.ts';
+import { READ_STATUS_LABELS, type Capture, type ProfileFact, type Recommendation } from '@shared/context.ts';
 import { BRAND } from '@shared/brand.ts';
 import { api, apiBase, describeError, getToken, usesBearer } from '../api.ts';
 import { useAuth } from '../auth.tsx';
-import { AppIcon } from '../components/AppIcon.tsx';
 import { ErrorBanner, Icons, Skeleton, Spinner, useToast } from '../components/ui.tsx';
-import { ModeBadge } from './parts/badges.tsx';
+import { ExampleTag, ModeBadge } from './parts/badges.tsx';
 import { relativeTime } from './parts/helpers.ts';
+import { EXAMPLE_NOTE } from './parts/PhoneMock.tsx';
+import { ProposalCard } from './parts/ProposalBits.tsx';
 import { useLoad } from './parts/useLoad.ts';
 import { usePageTitle } from './parts/usePageTitle.ts';
 import './pages.css';
 
-const EXAMPLE_NOTE = 'I like this sound and have 15 minutes to practice.';
+const EXAMPLES = {
+  guitar: { text: `${EXAMPLE_NOTE} It is a fingerpicked acoustic riff I keep coming back to.`, url: 'https://www.youtube.com/watch?v=example' },
+  photo: { text: 'I keep stopping for long shadows on brick walls in the late afternoon. I want to get better at noticing light on my walks.', url: '' },
+} as const;
+
+interface AgentData {
+  thread: AgentThreadDto;
+  context: ContextOverviewDto;
+}
 
 async function uploadImage(file: File): Promise<MediaUploadDto> {
   const form = new FormData();
@@ -39,19 +48,31 @@ export function AgentPage() {
   usePageTitle(`Agent · ${BRAND.name}`);
   const { user } = useAuth();
   const { toast } = useToast();
-  const { data, error, loading, reload, setData } = useLoad(() => api<AgentThreadDto>('/api/agent/thread'));
+  const { data, error, loading, reload, setData } = useLoad<AgentData>(async () => {
+    const [thread, context] = await Promise.all([api<AgentThreadDto>('/api/agent/thread'), api<ContextOverviewDto>('/api/context')]);
+    return { thread, context };
+  });
   const [text, setText] = useState('');
   const [url, setUrl] = useState('');
   const [showUrl, setShowUrl] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState<'upload' | 'send' | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
 
   const canSend = (text.trim().length > 0 || url.trim().length > 0 || file !== null) && busy === null;
+  const items = data?.thread.items ?? [];
+  const factMap = useMemo(() => new Map((data?.context.facts ?? []).map((f) => [f.id, f])), [data]);
+  const captureMap = useMemo(() => {
+    const m = new Map((data?.context.captures ?? []).map((c) => [c.id, c]));
+    for (const it of items) m.set(it.capture.id, it.capture);
+    return m;
+  }, [data, items]);
 
-  async function send(e: FormEvent) {
-    e.preventDefault();
+  async function send(e?: FormEvent) {
+    e?.preventDefault();
     if (!canSend) return;
     setSendError(null);
     try {
@@ -67,7 +88,7 @@ export function AgentPage() {
         timeoutMs: 120_000,
       });
       const item: AgentThreadItemDto = { capture: res.capture, media: res.media, reply: res.reply };
-      setData((prev) => ({ items: [item, ...(prev?.items ?? [])] }));
+      setData((prev) => (prev ? { ...prev, thread: { items: [item, ...prev.thread.items] } } : prev));
       setText('');
       setUrl('');
       setFile(null);
@@ -82,11 +103,14 @@ export function AgentPage() {
   }
 
   async function retry(captureId: string) {
+    setRetrying(captureId);
     try {
       const res = await api<CaptureResultDto>(`/api/agent/captures/${captureId}/respond`, { method: 'POST', timeoutMs: 120_000 });
-      setData((prev) => (prev ? { items: prev.items.map((i) => (i.capture.id === captureId ? { ...i, capture: res.capture, reply: res.reply } : i)) } : prev));
+      setData((prev) => (prev ? { ...prev, thread: { items: prev.thread.items.map((i) => (i.capture.id === captureId ? { ...i, capture: res.capture, reply: res.reply } : i)) } } : prev));
     } catch (err) {
       toast(describeError(err), { kind: 'error' });
+    } finally {
+      setRetrying(null);
     }
   }
 
@@ -94,29 +118,36 @@ export function AgentPage() {
     if (!window.confirm('Forget this? Its suggestions go too. Apps you made from it keep their own data.')) return;
     try {
       await api(`/api/agent/captures/${captureId}`, { method: 'DELETE' });
-      setData((prev) => (prev ? { items: prev.items.filter((i) => i.capture.id !== captureId) } : prev));
-      toast('Forgotten');
+      setData((prev) => (prev ? { ...prev, thread: { items: prev.thread.items.filter((i) => i.capture.id !== captureId) } } : prev));
+      toast('Forgotten. Apps you made keep their own records.');
     } catch (err) {
       toast(describeError(err), { kind: 'error' });
     }
   }
 
-  const items = data?.items ?? [];
+  function useExample(key: keyof typeof EXAMPLES) {
+    const ex = EXAMPLES[key];
+    setText(ex.text);
+    setUrl(ex.url);
+    setShowUrl(Boolean(ex.url));
+    textRef.current?.focus();
+  }
+
+  const sampleMode = user?.modelMode === 'sample';
 
   return (
-    <div className="container-narrow stack-l ag-page">
-      <header className="st-page-head">
-        <div className="st-head-row">
-          <div>
-            <h1 className="ag-title">What caught your attention?</h1>
-            <p className="lede">A thought, a link or a screenshot. The agent says what it read, then offers a direction: explore it, make something, add to an app you have, or just keep it.</p>
-          </div>
-          <ModeBadge mode={user?.modelMode} />
+    <div className="container-narrow ag">
+      <header className="ag-head">
+        <div className="ag-head-text">
+          <h1 className="ag-title">What caught your attention?</h1>
+          <p className="ag-sub">A thought, a link or a screenshot. {BRAND.shortName} says what it read, then offers a direction.</p>
         </div>
+        <ModeBadge mode={user?.modelMode} testId="agent-sample-badge" />
       </header>
 
-      <form className="card ag-composer" onSubmit={(e) => void send(e)} data-testid="agent-composer">
+      <form className="ag-composer card" onSubmit={(e) => void send(e)} data-testid="agent-composer">
         <textarea
+          ref={textRef}
           className="textarea ag-input"
           data-testid="agent-text"
           aria-label="What caught your attention?"
@@ -128,35 +159,39 @@ export function AgentPage() {
           disabled={busy !== null}
         />
         {showUrl && (
-          <input
-            className="input"
-            type="url"
-            inputMode="url"
-            data-testid="agent-url"
-            aria-label="Link"
-            placeholder="https://… (saved as a link; we do not read pages you did not describe)"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            disabled={busy !== null}
-          />
-        )}
-        {file && (
-          <div className="banner" data-testid="agent-file">
-            <span>
-              {Icons.image} {file.name} ({Math.max(1, Math.round(file.size / 1024))} KB)
-            </span>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFile(null)}>
-              Remove
+          <div className="ag-url-row">
+            <span className="ag-url-icon" aria-hidden="true">{Icons.link}</span>
+            <input
+              className="input ag-url"
+              type="url"
+              inputMode="url"
+              data-testid="agent-url"
+              aria-label="Link"
+              placeholder="https://… saved as a link; pages are not read unless you describe them"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              disabled={busy !== null}
+            />
+            <button type="button" className="btn btn-ghost btn-icon" aria-label="Remove link" onClick={() => { setUrl(''); setShowUrl(false); }} disabled={busy !== null}>
+              {Icons.close}
             </button>
           </div>
         )}
-        {sendError && <ErrorBanner message={sendError} onRetry={() => void send(new Event('submit') as unknown as FormEvent)} retryLabel="Try again" />}
+        {file && (
+          <div className="ag-file" data-testid="agent-file">
+            <span className="ag-file-icon" aria-hidden="true">{Icons.image}</span>
+            <span className="ag-file-name">{file.name}</span>
+            <span className="faint small">{Math.max(1, Math.round(file.size / 1024))} KB</span>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFile(null)} disabled={busy !== null}>Remove</button>
+          </div>
+        )}
+        {sendError && <ErrorBanner message={sendError} onRetry={() => void send()} retryLabel="Try again" />}
         <div className="ag-composer-row">
-          <div className="row" style={{ gap: 4 }}>
-            <button type="button" className={`btn btn-ghost btn-sm${showUrl ? ' is-on' : ''}`} onClick={() => setShowUrl((v) => !v)} data-testid="agent-add-link" aria-pressed={showUrl}>
+          <div className="ag-attach" role="group" aria-label="Attach">
+            <button type="button" className={`btn btn-ghost btn-sm${showUrl ? ' is-on' : ''}`} onClick={() => setShowUrl((v) => !v)} data-testid="agent-add-link" aria-pressed={showUrl} disabled={busy !== null}>
               {Icons.link} Link
             </button>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => fileRef.current?.click()} data-testid="agent-add-image">
+            <button type="button" className={`btn btn-ghost btn-sm${file ? ' is-on' : ''}`} onClick={() => fileRef.current?.click()} data-testid="agent-add-image" disabled={busy !== null}>
               {Icons.image} Screenshot
             </button>
             <input
@@ -164,6 +199,7 @@ export function AgentPage() {
               type="file"
               accept="image/jpeg,image/png,image/webp,image/gif"
               className="sr-only"
+              tabIndex={-1}
               data-testid="agent-file-input"
               onChange={(e) => {
                 const f = e.target.files?.[0] ?? null;
@@ -177,27 +213,38 @@ export function AgentPage() {
             />
           </div>
           <button type="submit" className="btn btn-primary" data-testid="agent-send" disabled={!canSend}>
-            {busy === 'upload' ? 'Uploading…' : busy === 'send' ? 'Thinking…' : 'Share'}
+            {busy === 'upload' ? 'Uploading…' : busy === 'send' ? 'Thinking…' : <>{Icons.send} Share</>}
           </button>
         </div>
         {busy === 'send' && (
-          <div className="st-status muted" role="status" aria-live="polite" data-testid="agent-thinking">
+          <div className="ag-thinking" role="status" aria-live="polite" data-testid="agent-thinking">
             <Spinner />
-            <span>Reading what you shared… {user?.modelMode === 'anthropic' ? 'usually 10 to 30 seconds.' : ''}</span>
+            <span>Reading what you shared{sampleMode ? '' : ', usually 10 to 30 seconds'}…</span>
           </div>
         )}
       </form>
 
       {items.length === 0 && !loading && (
-        <section className="card card-pad stack ag-examples" data-testid="agent-empty">
-          <h2 className="st-h2-sm">Try an example</h2>
-          <p className="small muted">Clearly an example, not your data. It shows how a saved sound becomes a practice room.</p>
-          <div className="row">
-            <button type="button" className="btn btn-secondary" data-testid="agent-example-guitar" onClick={() => { setText(EXAMPLE_NOTE + ' It is a fingerpicked acoustic riff I keep coming back to.'); setShowUrl(true); setUrl('https://www.youtube.com/watch?v=example'); }}>
-              {Icons.playground} A guitar riff I like
+        <section className="ag-examples" data-testid="agent-empty" aria-labelledby="ag-examples-title">
+          <div className="ag-examples-head">
+            <ExampleTag />
+            <h2 id="ag-examples-title">Try one to see how it works</h2>
+          </div>
+          <p className="small muted">These fill the composer with example text, clearly not your data. Edit them or press Share.</p>
+          <div className="ag-example-row">
+            <button type="button" className="ag-example" data-testid="agent-example-guitar" onClick={() => useExample('guitar')}>
+              <span className="ag-example-icon ag-example-ink" aria-hidden="true">{Icons.play}</span>
+              <span>
+                <strong>A guitar riff I like</strong>
+                <span className="small muted">A saved reel and fifteen minutes to practise</span>
+              </span>
             </button>
-            <button type="button" className="btn btn-secondary" data-testid="agent-example-photo" onClick={() => setText('I keep stopping for long shadows on brick walls in the late afternoon. I want to get better at noticing light on my walks.')}>
-              {Icons.camera} Light on my walks
+            <button type="button" className="ag-example" data-testid="agent-example-photo" onClick={() => useExample('photo')}>
+              <span className="ag-example-icon ag-example-paper" aria-hidden="true">{Icons.camera}</span>
+              <span>
+                <strong>Light on my walks</strong>
+                <span className="small muted">Noticing shadows, no app in mind yet</span>
+              </span>
             </button>
           </div>
           <p className="small muted">
@@ -214,78 +261,139 @@ export function AgentPage() {
       )}
       {error && !data && <ErrorBanner message={error} onRetry={reload} />}
 
-      <div className="stack-l" data-testid="agent-thread">
+      <div className="ag-thread" data-testid="agent-thread">
         {items.map((item) => (
-          <ThreadItem key={item.capture.id} item={item} onRetry={() => void retry(item.capture.id)} onForget={() => void forget(item.capture.id)} />
+          <ThreadItem
+            key={item.capture.id}
+            item={item}
+            factMap={factMap}
+            captureMap={captureMap}
+            retrying={retrying === item.capture.id}
+            onRetry={() => void retry(item.capture.id)}
+            onForget={() => void forget(item.capture.id)}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function ThreadItem({ item, onRetry, onForget }: { item: AgentThreadItemDto; onRetry: () => void; onForget: () => void }) {
+interface ThreadItemProps {
+  item: AgentThreadItemDto;
+  factMap: Map<string, ProfileFact>;
+  captureMap: Map<string, Capture>;
+  retrying: boolean;
+  onRetry: () => void;
+  onForget: () => void;
+}
+
+function ThreadItem({ item, factMap, captureMap, retrying, onRetry, onForget }: ThreadItemProps) {
   const { capture, reply } = item;
+  const kindIcon = capture.kind === 'image' ? Icons.image : capture.kind === 'link' ? Icons.link : Icons.pencil;
   return (
     <section className="ag-item" data-testid="agent-item" data-capture-id={capture.id}>
-      <article className="card ag-capture">
-        <div className="row-between">
-          <span className="eyebrow">{capture.sourceLabel}</span>
-          <span className="tiny faint">{relativeTime(capture.createdAt)}</span>
-        </div>
+      <article className="ag-capture">
+        <header className="ag-capture-head">
+          <span className="ag-capture-kind">
+            {kindIcon}
+            {capture.sourceLabel}
+          </span>
+          {capture.isExample && <ExampleTag />}
+          <time className="ag-time" dateTime={capture.createdAt}>{relativeTime(capture.createdAt)}</time>
+        </header>
         {capture.text && <p className="ag-note">{capture.text}</p>}
-        {capture.url && (
-          <a className="ag-link" href={capture.url} target="_blank" rel="noopener noreferrer" data-testid="agent-link">
-            {capture.linkMeta?.thumbnailUrl && <img src={capture.linkMeta.thumbnailUrl} alt="" className="ag-thumb" loading="lazy" />}
-            <span className="ag-link-body">
-              <strong>{capture.linkMeta?.title ?? new URL(capture.url).hostname.replace(/^www\./, '')}</strong>
-              {capture.linkMeta?.author && <span className="small muted">{capture.linkMeta.author}</span>}
-              <span className="small muted ag-link-url">{capture.url}</span>
-            </span>
-          </a>
-        )}
+        {capture.url && <LinkCard capture={capture} />}
         {capture.mediaId && <AgentImage mediaId={capture.mediaId} />}
-        <div className="row" style={{ gap: 6 }}>
-          <span className={`badge ${capture.readStatus === 'read' ? 'badge-ok' : capture.readStatus === 'metadata_only' ? 'badge-warn' : ''}`} data-testid="agent-read-status" data-status={capture.readStatus}>
+        <footer className="ag-capture-foot">
+          <span className={`ag-status ag-status-${capture.readStatus}`} data-testid="agent-read-status" data-status={capture.readStatus}>
+            {capture.readStatus === 'read' ? Icons.check2 : Icons.help}
             {READ_STATUS_LABELS[capture.readStatus]}
           </span>
           <button type="button" className="btn btn-ghost btn-sm" onClick={onForget} data-testid="agent-forget">
             Forget
           </button>
-        </div>
+        </footer>
       </article>
 
       {reply ? (
         <div className="ag-reply" data-testid="agent-reply">
           <div className="ag-reply-head">
             <span className="ag-avatar" aria-hidden="true">{Icons.agent}</span>
-            <p className="ag-message">{reply.message}</p>
+            <div className="ag-reply-text">
+              <p className="ag-message">{reply.message}</p>
+              {reply.question && <p className="ag-question">{reply.question}</p>}
+              {reply.generatedBy === 'sample' && (
+                <p className="ag-sample-note">
+                  <span className="badge badge-sample">Sample mode</span>
+                  <span className="tiny faint">This reply came from the built-in catalog{reply.fallbackReason ? ` (${reply.fallbackReason})` : ''}.</span>
+                </p>
+              )}
+            </div>
           </div>
-          {reply.question && <p className="ag-question">{reply.question}</p>}
-          {reply.generatedBy === 'sample' && (
-            <p className="tiny faint">Sample mode: this reply came from the built-in catalog{reply.fallbackReason ? ` (${reply.fallbackReason})` : ''}.</p>
-          )}
           <div className="ag-proposals">
-            {reply.proposals.map((p) => (
-              <ProposalCard key={p.id} proposal={p} />
+            {reply.proposals.map((p: Recommendation) => (
+              <ProposalCard
+                key={p.id}
+                proposal={p}
+                variant="thread"
+                facts={p.evidenceFactIds.map((id) => factMap.get(id)).filter((f): f is ProfileFact => Boolean(f))}
+                captures={p.sourceCaptureIds.map((id) => captureMap.get(id)).filter((c): c is Capture => Boolean(c))}
+                testIds={{ card: 'proposal-card', action: 'proposal-action', why: 'proposal-why' }}
+              />
             ))}
           </div>
         </div>
       ) : (
-        <div className="banner banner-warn" data-testid="agent-no-reply">
-          <span>Saved. The agent has not replied yet.</span>
-          <button type="button" className="btn btn-sm btn-secondary" onClick={onRetry}>
-            Ask again
-          </button>
+        <div className="ag-reply ag-reply-missing" data-testid="agent-no-reply">
+          <span className="ag-avatar ag-avatar-quiet" aria-hidden="true">{Icons.agent}</span>
+          <div className="ag-reply-text">
+            <p className="ag-message">Saved. The agent has not answered this one yet.</p>
+            <button type="button" className="btn btn-sm btn-secondary" onClick={onRetry} disabled={retrying} data-testid="agent-retry">
+              {retrying ? 'Asking…' : 'Ask again'}
+            </button>
+          </div>
         </div>
       )}
     </section>
   );
 }
 
+function LinkCard({ capture }: { capture: Capture }) {
+  const url = capture.url ?? '';
+  let host = url;
+  try {
+    host = new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    /* keep the raw url */
+  }
+  return (
+    <a className="ag-link" href={url} target="_blank" rel="noopener noreferrer" data-testid="agent-link">
+      {capture.linkMeta?.thumbnailUrl ? (
+        <img src={capture.linkMeta.thumbnailUrl} alt="" className="ag-thumb" loading="lazy" />
+      ) : (
+        <span className="ag-thumb ag-thumb-empty" aria-hidden="true">{Icons.link}</span>
+      )}
+      <span className="ag-link-body">
+        <strong>{capture.linkMeta?.title ?? host}</strong>
+        {capture.linkMeta?.title && (
+          <span className="small muted">
+            {capture.linkMeta.provider}
+            {capture.linkMeta.author ? ` · ${capture.linkMeta.author}` : ''}
+          </span>
+        )}
+        <span className="tiny faint ag-link-url">{url}</span>
+      </span>
+      <span className="ag-link-open" aria-hidden="true">{Icons.external}</span>
+    </a>
+  );
+}
+
 function AgentImage({ mediaId }: { mediaId: string }) {
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
-  useState(() => {
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
     const headers: Record<string, string> = {};
     if (usesBearer()) {
       headers['X-Client'] = 'native';
@@ -294,41 +402,19 @@ function AgentImage({ mediaId }: { mediaId: string }) {
     }
     fetch(`${apiBase()}/api/media/${mediaId}`, { headers, credentials: 'include' })
       .then(async (r) => {
-        if (!r.ok) throw new Error('nope');
-        setSrc(URL.createObjectURL(await r.blob()));
+        if (!r.ok) throw new Error('unavailable');
+        objectUrl = URL.createObjectURL(await r.blob());
+        if (!cancelled) setSrc(objectUrl);
       })
-      .catch(() => setFailed(true));
-  });
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [mediaId]);
   if (failed) return <p className="tiny faint">Screenshot unavailable.</p>;
   if (!src) return <Skeleton h={160} />;
   return <img src={src} alt="Your screenshot" className="ag-screenshot" />;
-}
-
-function ProposalCard({ proposal }: { proposal: Recommendation }) {
-  const action =
-    proposal.kind === 'explore'
-      ? { label: 'Explore', to: `/make/${proposal.id}` }
-      : proposal.kind === 'update_app'
-        ? { label: 'Add to app', to: `/make/${proposal.id}` }
-        : proposal.kind === 'keep'
-          ? { label: 'Keep', to: `/make/${proposal.id}` }
-          : proposal.status === 'built' && proposal.builtAppId
-            ? { label: 'Open', to: `/apps/${proposal.builtAppId}/` }
-            : { label: 'Make mine', to: `/make/${proposal.id}` };
-  return (
-    <article className="card ag-proposal" data-testid="proposal-card" data-kind={proposal.kind} data-rec-id={proposal.id}>
-      <div className="ag-proposal-head">
-        <AppIcon icon={proposal.icon} size={40} title={proposal.title} />
-        <div style={{ minWidth: 0 }}>
-          <span className="eyebrow">{proposal.kind === 'explore' ? 'Explore' : proposal.kind === 'update_app' ? 'Update an app' : proposal.kind === 'keep' ? 'Keep' : 'Make an app'}</span>
-          <h3>{proposal.title}</h3>
-        </div>
-      </div>
-      <p className="small muted">{proposal.description}</p>
-      <p className="small">{proposal.reason}</p>
-      <Link to={action.to} className={`btn ${proposal.kind === 'keep' ? 'btn-secondary' : 'btn-primary'} btn-sm`} data-testid="proposal-action">
-        {action.label}
-      </Link>
-    </article>
-  );
 }

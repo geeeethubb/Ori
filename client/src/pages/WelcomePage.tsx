@@ -1,11 +1,21 @@
+/**
+ * Landing: the promise, one sentence, two actions, and a product composition that occupies real
+ * space (Agent, Playground, two visibly different apps). Below: one transformation story, three
+ * steps, and the trial line. No testimonials, counts or logos. Signed-in people go to the Playground.
+ */
 import { BRAND } from '@shared/brand.ts';
 import { Link, Navigate } from 'react-router';
 import { useAuth } from '../auth.tsx';
-import { Skeleton } from '../components/ui.tsx';
+import { Icons, Skeleton } from '../components/ui.tsx';
+import { AgentScreen, InspirationNote, LightScreen, PlaygroundScreen, RiffScreen } from './parts/PhoneMock.tsx';
 import { usePageTitle } from './parts/usePageTitle.ts';
 import './pages.css';
 
-const STEPS = ['Bring context', 'Discover apps', 'Make it yours', 'Build and use', 'Grow together'];
+const STEPS = [
+  { title: 'Share', body: 'A thought, a link or a screenshot. The agent says exactly what it read, and what it only saved.' },
+  { title: 'Choose', body: 'Explore it, make a small app, add it to an app you already have, or just keep it.' },
+  { title: 'Make it yours', body: 'Pick the one thing that matters, preview the real app, then use it from your home screen.' },
+];
 
 export function WelcomePage() {
   usePageTitle(BRAND.name);
@@ -14,75 +24,83 @@ export function WelcomePage() {
   if (loading) {
     return (
       <div className="container stack-l" aria-busy="true">
-        <div className="hero stack">
-          <Skeleton h={14} w="30%" />
-          <Skeleton h={48} w="70%" />
-          <Skeleton h={20} w="90%" />
-          <Skeleton h={20} w="80%" />
+        <div className="ld-hero stack" style={{ alignItems: 'center' }}>
+          <Skeleton h={14} w="20%" />
+          <Skeleton h={56} w="70%" />
+          <Skeleton h={20} w="60%" />
         </div>
-        <div className="purpose-row">
-          <Skeleton h={140} />
-          <Skeleton h={140} />
-        </div>
+        <Skeleton h={420} />
       </div>
     );
   }
   if (user) return <Navigate to="/playground" replace />;
 
   return (
-    <div className="container stack-l">
-      <section className="hero">
-        <p className="eyebrow">A personal AI app store</p>
-        <h1>A collection that grows with you.</h1>
-        <p className="lede">
-          Bring the context you've already shared with your AI. Discover apps made for your workflows, your goals and your curiosity.
-          Build one, add it to your home screen, and use it every day.
-        </p>
-        <div className="row st-hero-actions">
+    <div className="ld">
+      <section className="ld-hero container">
+        <p className="eyebrow ld-eyebrow">{BRAND.name}</p>
+        <h1 className="ld-h1">{BRAND.tagline}</h1>
+        <p className="ld-lede">{BRAND.description}</p>
+        <div className="ld-cta">
           <Link to="/signup" className="btn btn-primary btn-lg" data-testid="welcome-signup">
-            Create your account
+            Make it yours
           </Link>
-          <Link to="/login" className="btn btn-secondary btn-lg" data-testid="welcome-login">
-            Sign in
+          <Link to="/signup?next=/agent" className="btn btn-secondary btn-lg" data-testid="welcome-example">
+            Try an example
           </Link>
         </div>
       </section>
 
-      <section className="purpose-row" aria-label="Two kinds of apps">
-        <div className="purpose-card work">
-          <span className="badge badge-work">Get things done</span>
-          <h3>Tools for the work in front of you</h3>
-          <p className="muted small">Small apps shaped around your real commitments, with the fields and reminders you actually need.</p>
-          <div className="chips st-examples">
-            <span className="chip">Follow-up board</span>
-            <span className="chip">Study planner</span>
-          </div>
+      <section className="ld-stage" aria-label="What it looks like: the Agent, the Playground, and two apps">
+        <div className="ld-stage-scroll">
+          <AgentScreen />
+          <PlaygroundScreen />
+          <RiffScreen />
+          <LightScreen />
         </div>
-        <div className="purpose-card explore">
-          <span className="badge badge-explore">Explore life</span>
-          <h3>Companions for your curiosity</h3>
-          <p className="muted small">Journals and trackers that make a hobby stick, with a gentle prompt when you want one.</p>
-          <div className="chips st-examples">
-            <span className="chip">Photo walk journal</span>
-            <span className="chip">Music practice companion</span>
-          </div>
+        <p className="ld-stage-note tiny faint">
+          Example content, not a real account. Photographs are public-domain (CC0) examples.
+        </p>
+      </section>
+
+      <section className="ld-story" aria-labelledby="ld-story-title">
+        <div className="ld-story-copy">
+          <p className="eyebrow">One real example</p>
+          <h2 id="ld-story-title">A reel you liked becomes a practice room.</h2>
+          <p className="muted">
+            You save a fingerpicked riff and type one line. The agent reads the line, says it did not watch the video, and offers two
+            directions. You pick fifteen minutes. Riff arrives with that timer, a metronome, the link you saved, and a place to write
+            what got easier. Tonight you actually play.
+          </p>
+        </div>
+        <div className="ld-story-flow">
+          <InspirationNote />
+          <span className="ld-arrow" aria-hidden="true">{Icons.arrowRight}</span>
+          <RiffScreen minutes={15} />
         </div>
       </section>
 
-      <section className="st-section">
-        <h2>How it works</h2>
-        <ol className="st-steps">
-          {STEPS.map((step, i) => (
-            <li key={step}>
-              <span className="st-step-num" aria-hidden="true">{i + 1}</span>
-              <span>{step}</span>
+      <section className="ld-steps container-mid" aria-labelledby="ld-steps-title">
+        <h2 id="ld-steps-title">Three steps, no questionnaire.</h2>
+        <ol className="ld-steps-list">
+          {STEPS.map((s, i) => (
+            <li key={s.title}>
+              <span className="ld-step-num" aria-hidden="true">{i + 1}</span>
+              <div>
+                <h3>{s.title}</h3>
+                <p className="muted small">{s.body}</p>
+              </div>
             </li>
           ))}
         </ol>
+        <div className="ld-cta ld-cta-bottom">
+          <Link to="/signup" className="btn btn-primary btn-lg">Make it yours</Link>
+          <Link to="/signup?next=/agent" className="btn btn-ghost btn-lg">Try an example</Link>
+        </div>
       </section>
 
-      <p className="small muted st-footer-note">
-        <Link to="/pricing">14 days free, then $7.50/month for two months, then $15/month. No payment needed now.</Link>
+      <p className="ld-trial small muted">
+        <Link to="/pricing">14 days free, then $7.50 a month for two months, then $15 a month. Nothing to pay now.</Link>
       </p>
     </div>
   );

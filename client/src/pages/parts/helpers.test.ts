@@ -116,3 +116,74 @@ describe('draft descriptions', () => {
     ]);
   });
 });
+
+// ---------- redesign helpers (proposals, memory grouping, Make-mine choices) ----------
+import type { ProfileFact } from '@shared/context.ts';
+import { defaultLook, firstSentence, groupFactsForMemory, pickFeatured, proposalAction, wantsTimeBudget } from './helpers.ts';
+
+describe('proposalAction', () => {
+  it('offers one action per kind and status', () => {
+    expect(proposalAction({ id: 'r1', kind: 'new_app', status: 'fresh' })).toEqual({ label: 'Make mine', to: '/make/r1', emphasis: 'primary' });
+    expect(proposalAction({ id: 'r1', kind: 'new_app', status: 'built', builtAppId: 'app12345' })).toMatchObject({ label: 'Open', to: '/apps/app12345/' });
+    expect(proposalAction({ id: 'r2', kind: 'explore', status: 'fresh' })).toMatchObject({ label: 'Explore', to: '/make/r2' });
+    expect(proposalAction({ id: 'r3', kind: 'update_app', status: 'fresh', targetAppId: 'app12345' })).toMatchObject({ label: 'Add to app', to: '/make/r3' });
+    expect(proposalAction({ id: 'r3', kind: 'update_app', status: 'applied', targetAppId: 'app12345' })).toMatchObject({ label: 'Open', to: '/apps/app12345/' });
+    expect(proposalAction({ id: 'r4', kind: 'keep', status: 'fresh' })).toMatchObject({ label: 'Keep', emphasis: 'secondary' });
+    expect(proposalAction({ id: 'r4', kind: 'keep', status: 'kept' }).label).toBe('Kept');
+  });
+});
+
+describe('firstSentence', () => {
+  it('returns the first sentence and leaves unpunctuated text alone', () => {
+    expect(firstSentence('You said “15 minutes”. A timer turns it into a session.')).toBe('You said “15 minutes”.');
+    expect(firstSentence('No punctuation here')).toBe('No punctuation here');
+    expect(firstSentence('Try it at 7.30 tonight. Then stop.')).toBe('Try it at 7.30 tonight.');
+  });
+});
+
+describe('groupFactsForMemory', () => {
+  const fact = (id: string, category: ProfileFact['category'], status: ProfileFact['status'] = 'confirmed', conflictGroup: string | null = null): ProfileFact => ({
+    id, ownerId: 'u1', category, value: `${id} value text`, sourceIds: [], confidence: 1, status, conflictGroup, createdAt: '2026-11-14T00:00:00Z', updatedAt: '2026-11-14T00:00:00Z',
+  });
+  it('groups into the memory sections, drops removed facts and pulls conflicts out', () => {
+    const r = groupFactsForMemory([
+      fact('a', 'interest'), fact('b', 'goal'), fact('c', 'project'), fact('d', 'routine'), fact('e', 'tool'), fact('f', 'change'), fact('g', 'uncertainty'),
+      fact('h', 'interest', 'removed'), fact('i', 'goal', 'conflict', 'g1'), fact('j', 'goal', 'conflict', 'g1'), fact('k', 'goal', 'conflict', 'lonely'),
+    ]);
+    expect(r.total).toBe(10);
+    expect(r.groups.map((g) => [g.key, g.facts.map((f) => f.id)])).toEqual([
+      ['interests', ['a']], ['needs', ['b', 'c', 'k']], ['routines', ['d', 'e']], ['changes', ['f']], ['questions', ['g']],
+    ]);
+    expect(r.conflicts.map((g) => g.map((f) => f.id))).toEqual([['i', 'j']]);
+  });
+  it('keeps every section present when there is nothing yet', () => {
+    const r = groupFactsForMemory([]);
+    expect(r.groups.map((g) => g.key)).toEqual(['interests', 'needs', 'routines', 'changes', 'questions']);
+    expect(r.total).toBe(0);
+  });
+});
+
+describe('Make-mine choices', () => {
+  it('asks for a time budget only when the app would use a timer', () => {
+    expect(wantsTimeBudget({ pattern: 'practice', capabilities: [] })).toBe(true);
+    expect(wantsTimeBudget({ pattern: 'journal', capabilities: ['practice_timer'] })).toBe(true);
+    expect(wantsTimeBudget({ pattern: 'gallery', capabilities: ['gallery', 'photo_upload'] })).toBe(false);
+  });
+  it('defaults the look to the proposal design, else the pattern default', () => {
+    const icon = { symbol: 'guitar', color: 'ink' } as const;
+    expect(defaultLook({ pattern: 'practice', icon, purpose: 'explore' })).toBe('ink');
+    expect(defaultLook({ pattern: 'gallery', icon, purpose: 'explore' })).toBe('paper');
+    expect(defaultLook({ pattern: 'journal', icon, purpose: 'explore' })).toBe('bright');
+    expect(defaultLook({ pattern: 'journal', icon, purpose: 'explore', design: { theme: 'sunset', typography: 'editorial', density: 'regular', artwork: 'none' } })).toBe('sunset');
+  });
+  it('features a fresh app-shaped proposal over explorations and keeps', () => {
+    const recs = [
+      { id: 'k', kind: 'keep', status: 'fresh', pattern: 'journal' },
+      { id: 'e', kind: 'explore', status: 'fresh', pattern: 'practice' },
+      { id: 'g', kind: 'new_app', status: 'fresh', pattern: 'gallery' },
+    ] as const;
+    expect(pickFeatured([...recs])?.id).toBe('g');
+    expect(pickFeatured([recs[0], recs[1]])?.id).toBe('e');
+    expect(pickFeatured([])).toBeNull();
+  });
+});

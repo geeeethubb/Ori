@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent } from 'react';
 import { MAX_SOURCE_CHARS, MAX_UPLOAD_BYTES } from '@shared/context.ts';
-import { useToast } from '../../components/ui.tsx';
+import { Disclosure, Icons, useToast } from '../../components/ui.tsx';
+import { ExampleTag } from './badges.tsx';
 import { EXPORT_PROMPT } from './exportPrompt.ts';
 import { composeManualProfile, flattenJsonText, looksLikeText } from './helpers.ts';
 
@@ -15,7 +16,7 @@ export type SampleProfile = 'founder-photographer' | 'student-musician';
 /** Fewer characters than this is not enough for the reader to learn anything. */
 const MIN_CHARS = 20;
 
-// ---------- the export prompt ----------
+// ---------- the export prompt: copy first, read if you want ----------
 
 export function PromptBox() {
   const { toast } = useToast();
@@ -36,22 +37,24 @@ export function PromptBox() {
       }
       toast('Prompt copied. Paste it into your AI, then bring the answer back here.');
     } catch {
-      toast('Copy did not work here. Select the text and copy it yourself.', { kind: 'error' });
+      toast('Copy did not work here. Open the prompt below and copy it yourself.', { kind: 'error' });
     }
   }
   return (
-    <details className="st-prompt-box">
-      <summary>Copy the export prompt</summary>
-      <p className="small muted" style={{ marginBottom: 10 }}>
-        Paste this into ChatGPT, Claude, Gemini or any assistant you use. Review the answer, then paste it below.
-      </p>
-      <pre className="code" data-testid="store-export-prompt">{EXPORT_PROMPT}</pre>
-      <div className="st-prompt-actions">
-        <button type="button" className="btn btn-secondary" onClick={() => void copy()}>
-          Copy prompt
+    <div className="im-prompt">
+      <div className="im-prompt-row">
+        <div>
+          <strong>Ask your AI to write your profile</strong>
+          <span className="small muted">Copy the prompt, paste it into ChatGPT, Claude, Gemini or any assistant you use, review the answer, then paste it below.</span>
+        </div>
+        <button type="button" className="btn btn-secondary" onClick={() => void copy()} data-testid="store-copy-prompt">
+          {Icons.paperclip} Copy the prompt
         </button>
       </div>
-    </details>
+      <Disclosure summary="Show the prompt">
+        <pre className="code" data-testid="store-export-prompt">{EXPORT_PROMPT}</pre>
+      </Disclosure>
+    </div>
   );
 }
 
@@ -93,24 +96,11 @@ export function PasteImport({ busy, onImport }: ImportProps) {
         <label className="field-label" htmlFor="st-paste-label">
           Where it came from <span className="faint">(optional)</span>
         </label>
-        <input
-          id="st-paste-label"
-          className="input"
-          placeholder="e.g. ChatGPT, Claude, Gemini"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          maxLength={60}
-        />
+        <input id="st-paste-label" className="input" placeholder="e.g. ChatGPT, Claude, Gemini" value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60} />
       </div>
       <div>
-        <button
-          type="button"
-          className="btn btn-primary"
-          data-testid="store-import-submit"
-          disabled={busy || tooShort || over}
-          onClick={() => onImport(text, label.trim() || undefined)}
-        >
-          Import
+        <button type="button" className="btn btn-primary" data-testid="store-import-submit" disabled={busy || tooShort || over} onClick={() => onImport(text, label.trim() || undefined)}>
+          Add it
         </button>
       </div>
     </>
@@ -202,7 +192,7 @@ export function UploadImport({ busy, onImport }: ImportProps) {
           </div>
           <div>
             <button type="button" className="btn btn-primary" data-testid="store-upload-submit" disabled={busy} onClick={() => onImport(prepared.text, prepared.name)}>
-              Import this file
+              Add this file
             </button>
           </div>
         </div>
@@ -225,7 +215,7 @@ export function ManualImport({ busy, onImport }: { busy: boolean; onImport: (tex
   const composed = composeManualProfile(values);
   return (
     <>
-      <p className="small muted">A few honest lines beat a long essay. You can edit everything afterwards.</p>
+      <p className="small muted">A few honest lines beat a long essay. Skip anything; you can edit everything afterwards.</p>
       {MANUAL_FIELDS.map((f) => (
         <div className="field" key={f.key}>
           <label className="field-label" htmlFor={`st-manual-${f.key}`}>{f.label}</label>
@@ -244,32 +234,31 @@ export function ManualImport({ busy, onImport }: { busy: boolean; onImport: (tex
       ))}
       <div>
         <button type="button" className="btn btn-primary" data-testid="store-manual-submit" disabled={busy || composed.length === 0} onClick={() => onImport(composed)}>
-          Import
+          Add it
         </button>
       </div>
     </>
   );
 }
 
-// ---------- sample context ----------
+// ---------- labelled example profiles ----------
 
 export function SampleCard({ busy, onPick }: { busy: boolean; onPick: (profile: SampleProfile) => void }) {
   return (
-    <section className="card card-pad stack st-sample-card" aria-labelledby="st-sample-title">
+    <section className="card card-pad im-sample" aria-labelledby="st-sample-title">
       <div className="row">
-        <span className="badge badge-sample">Sample</span>
-        <h2 id="st-sample-title" className="st-h2-sm">Try it with sample context</h2>
+        <ExampleTag />
+        <h2 id="st-sample-title" className="st-h2-sm">Try it with an example profile</h2>
       </div>
       <p className="small muted">
-        No profile handy? Start with one of ours to see how the store responds. Sample context is marked as sample everywhere it appears.
-        Remove it any time from Your Context.
+        No profile handy? Start with a fictional one to see how the Playground responds. Example context is labelled everywhere it appears and can be removed from What you've shared.
       </p>
       <div className="row">
-        <button type="button" className="btn btn-secondary" data-testid="store-sample-founder" disabled={busy} onClick={() => onPick('founder-photographer')}>
-          Founder who loves photography
+        <button type="button" className="btn btn-secondary btn-wrap" data-testid="store-sample-founder" disabled={busy} onClick={() => onPick('founder-photographer')}>
+          {Icons.camera} Founder who loves photography
         </button>
-        <button type="button" className="btn btn-secondary" data-testid="store-sample-student" disabled={busy} onClick={() => onPick('student-musician')}>
-          Student learning guitar
+        <button type="button" className="btn btn-secondary btn-wrap" data-testid="store-sample-student" disabled={busy} onClick={() => onPick('student-musician')}>
+          {Icons.play} Student learning guitar
         </button>
       </div>
     </section>

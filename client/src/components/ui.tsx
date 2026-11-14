@@ -1,5 +1,7 @@
-/** Small shared UI primitives: sheet (modal), toasts, spinner, empty/error states. */
+/** Small shared UI primitives: sheet (modal), toasts, spinner, empty/error states, disclosure, action menu, icons. */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Link } from 'react-router';
+import { ICON_PATHS, type IconSymbol } from '@shared/icons.ts';
 
 // ---------- Sheet ----------
 
@@ -116,12 +118,12 @@ export function EmptyState({ title, body, action }: { title: string; body?: Reac
   );
 }
 
-export function ErrorBanner({ message, onRetry, retryLabel = 'Try again' }: { message: string; onRetry?: () => void; retryLabel?: string }) {
+export function ErrorBanner({ message, onRetry, retryLabel = 'Try again', retryTestId }: { message: string; onRetry?: () => void; retryLabel?: string; retryTestId?: string }) {
   return (
     <div className="banner banner-error" role="alert">
       <span>{message}</span>
       {onRetry && (
-        <button type="button" className="btn btn-sm btn-secondary" onClick={onRetry}>
+        <button type="button" className="btn btn-sm btn-secondary" onClick={onRetry} data-testid={retryTestId}>
           {retryLabel}
         </button>
       )}
@@ -133,7 +135,126 @@ export function Skeleton({ h = 18, w = '100%', style }: { h?: number; w?: string
   return <div className="skeleton" style={{ height: h, width: w, ...style }} aria-hidden="true" />;
 }
 
-/** Icons used in navigation (inline so no icon font is needed). */
+// ---------- Disclosure ("Why this?", "Sources") ----------
+
+interface DisclosureProps {
+  summary: ReactNode;
+  children: ReactNode;
+  testId?: string;
+  className?: string;
+  defaultOpen?: boolean;
+  summaryTestId?: string;
+}
+
+/** Native details/summary with a quiet toggle: keyboard accessible, no JS state, 44px target. */
+export function Disclosure({ summary, children, testId, className, defaultOpen, summaryTestId }: DisclosureProps) {
+  return (
+    <details className={`disclosure${className ? ` ${className}` : ''}`} data-testid={testId} open={defaultOpen}>
+      <summary data-testid={summaryTestId}>
+        <span className="disclosure-chevron" aria-hidden="true">{Icons.chevronRight}</span>
+        <span>{summary}</span>
+      </summary>
+      <div className="disclosure-body">{children}</div>
+    </details>
+  );
+}
+
+// ---------- Action menu (small popover with menu items) ----------
+
+export interface MenuItem {
+  key: string;
+  label: string;
+  icon?: ReactNode;
+  to?: string;
+  onSelect?: () => void;
+  danger?: boolean;
+  testId?: string;
+}
+
+interface ActionMenuProps {
+  items: MenuItem[];
+  label: string;
+  testId?: string;
+  /** Which side the popover aligns to; "auto" (default) opens towards the wider side of the viewport. */
+  align?: 'left' | 'right' | 'auto';
+  className?: string;
+  children?: ReactNode;
+}
+
+/** A "more" button that opens a small menu. Closes on outside click, Escape and selection. */
+export function ActionMenu({ items, label, testId, align = 'auto', className, children }: ActionMenuProps) {
+  const [open, setOpen] = useState(false);
+  const [side, setSide] = useState<'left' | 'right'>(align === 'left' ? 'left' : 'right');
+  const ref = useRef<HTMLDivElement>(null);
+  const toggle = () => {
+    if (!open && align === 'auto' && ref.current) {
+      const r = ref.current.getBoundingClientRect();
+      setSide(r.left + r.width / 2 < window.innerWidth / 2 ? 'left' : 'right');
+    }
+    setOpen((o) => !o);
+  };
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+  return (
+    <div className={`menu-anchor${className ? ` ${className}` : ''}`} ref={ref}>
+      <button type="button" className="btn btn-ghost btn-icon menu-trigger" aria-haspopup="menu" aria-expanded={open} aria-label={label} data-testid={testId} onClick={toggle}>
+        {children ?? Icons.more}
+      </button>
+      {open && (
+        <div className={`menu${side === 'left' ? ' menu-left' : ''}`} role="menu">
+          {items.map((item) =>
+            item.to ? (
+              <Link key={item.key} to={item.to} role="menuitem" onClick={() => setOpen(false)} data-testid={item.testId} className={item.danger ? 'menu-danger' : undefined}>
+                {item.icon}
+                {item.label}
+              </Link>
+            ) : (
+              <button
+                key={item.key}
+                type="button"
+                role="menuitem"
+                data-testid={item.testId}
+                className={item.danger ? 'menu-danger' : undefined}
+                onClick={() => {
+                  setOpen(false);
+                  item.onSelect?.();
+                }}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            ),
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Glyph: any app-icon symbol as a plain stroke icon ----------
+
+export function Glyph({ symbol, size = 18, className }: { symbol: IconSymbol; size?: number; className?: string }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={ICON_PATHS[symbol]} />
+    </svg>
+  );
+}
+
+/** Icons used in navigation and controls (inline so no icon font is needed). Lucide (ISC) paths. */
 export const Icons = {
   sparkle: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4L12 3z" /><path d="M19 17l.8 2.2L22 20l-2.2.8L19 23l-.8-2.2L16 20l2.2-.8L19 17z" /></svg>
@@ -162,7 +283,6 @@ export const Icons = {
   close: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
   ),
-  // Lucide (ISC): message-circle, shapes, tag, log-out, image, link, paperclip, send, play, pause, rotate-ccw, timer, camera, upload, external-link, trash, more-horizontal
   agent: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></svg>
   ),
@@ -216,6 +336,57 @@ export const Icons = {
   ),
   check2: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>
+  ),
+  pin: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 17v5" /><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" /></svg>
+  ),
+  pinOff: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 17v5" /><path d="M15 9.34V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H7.89" /><path d="m2 2 20 20" /><path d="M9 9v1.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h11" /></svg>
+  ),
+  archive: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect width="20" height="5" x="2" y="3" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /><path d="M10 12h4" /></svg>
+  ),
+  refresh: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></svg>
+  ),
+  chevronDown: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+  ),
+  chevronRight: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+  ),
+  arrowRight: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+  ),
+  download: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /></svg>
+  ),
+  bookmark: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" /></svg>
+  ),
+  sun: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" /></svg>
+  ),
+  pencil: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" /></svg>
+  ),
+  compass: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z" /><circle cx="12" cy="12" r="10" /></svg>
+  ),
+  sliders: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4" /><line x1="10" x2="3" y1="4" y2="4" /><line x1="21" x2="12" y1="12" y2="12" /><line x1="8" x2="3" y1="12" y2="12" /><line x1="21" x2="16" y1="20" y2="20" /><line x1="12" x2="3" y1="20" y2="20" /><line x1="14" x2="14" y1="2" y2="6" /><line x1="8" x2="8" y1="10" y2="14" /><line x1="16" x2="16" y1="18" y2="22" /></svg>
+  ),
+  help: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
+  ),
+  clock: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+  ),
+  open: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 7h10v10" /><path d="M7 17 17 7" /></svg>
+  ),
+  inbox: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12" /><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></svg>
   ),
 };
 

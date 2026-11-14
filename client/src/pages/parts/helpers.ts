@@ -1,9 +1,9 @@
 /**
  * Pure helpers for the storefront pages. No React and no DOM so they are unit-testable.
  */
-import { fieldTypeLabel, type AppSpec, type Purpose, type RuleSpec, type ViewSpec } from '@shared/appSpec.ts';
+import { designFor, fieldTypeLabel, type AppSpec, type AppTheme, type Pattern, type Purpose, type RuleSpec, type ViewSpec } from '@shared/appSpec.ts';
 import type { UserDto } from '@shared/api.ts';
-import type { FactStatus, SourceKind } from '@shared/context.ts';
+import type { FactCategory, FactStatus, ProfileFact, ProposalKind, Recommendation, SourceKind } from '@shared/context.ts';
 
 /**
  * Only same-site paths may be used as a post-login destination: a single leading slash, no
@@ -26,6 +26,13 @@ export function truncate(text: string, max = 60): string {
   const t = text.trim();
   if (t.length <= max) return t;
   return `${t.slice(0, Math.max(1, max - 1)).trimEnd()}…`;
+}
+
+/** The first sentence of a short text (used where a card shows one reason and the rest sits in a disclosure). */
+export function firstSentence(text: string): string {
+  const t = text.trim();
+  const m = /^[\s\S]*?[.!?](?=\s|$)/.exec(t);
+  return m ? m[0].trim() : t;
 }
 
 export function pluralize(n: number, singular: string, plural = `${singular}s`): string {
@@ -84,6 +91,124 @@ export const PLAN_LABELS: Record<UserDto['plan'], string> = {
   personal: 'Personal plan, $15 a month',
   paused: 'Paused: view and export only',
 };
+
+// ---------- proposals (shared by the Agent thread, the Playground and Make mine) ----------
+
+export type ProposalLike = Pick<Recommendation, 'id' | 'kind' | 'status' | 'builtAppId' | 'targetAppId'>;
+
+export interface ProposalAction {
+  label: 'Explore' | 'Make mine' | 'Open' | 'Add to app' | 'Keep' | 'Kept';
+  to: string;
+  emphasis: 'primary' | 'secondary';
+}
+
+/** The one primary action a proposal card offers, by kind and status. */
+export function proposalAction(p: ProposalLike): ProposalAction {
+  switch (p.kind) {
+    case 'explore':
+      return { label: 'Explore', to: `/make/${p.id}`, emphasis: 'primary' };
+    case 'update_app':
+      if (p.status === 'applied' && p.targetAppId) return { label: 'Open', to: `/apps/${p.targetAppId}/`, emphasis: 'primary' };
+      return { label: 'Add to app', to: `/make/${p.id}`, emphasis: 'primary' };
+    case 'keep':
+      if (p.status === 'kept') return { label: 'Kept', to: '/settings/memory', emphasis: 'secondary' };
+      return { label: 'Keep', to: `/make/${p.id}`, emphasis: 'secondary' };
+    default:
+      if (p.status === 'built' && p.builtAppId) return { label: 'Open', to: `/apps/${p.builtAppId}/`, emphasis: 'primary' };
+      return { label: 'Make mine', to: `/make/${p.id}`, emphasis: 'primary' };
+  }
+}
+
+export const PROPOSAL_KIND_LABELS: Record<ProposalKind, string> = {
+  new_app: 'Make an app',
+  explore: 'Explore',
+  update_app: 'Add to an app',
+  keep: 'Keep',
+};
+
+/** Time budget chips: shown only when the app would actually use a practice timer. */
+export const MINUTE_CHOICES = [10, 15, 25] as const;
+export const DEFAULT_MINUTES = 15;
+
+export function wantsTimeBudget(rec: Pick<Recommendation, 'capabilities' | 'pattern'>): boolean {
+  return rec.pattern === 'practice' || rec.capabilities.includes('practice_timer');
+}
+
+export interface LookOption {
+  id: AppTheme;
+  label: string;
+  /** Swatch colours: background, accent. */
+  swatch: [string, string];
+}
+
+/** The seven app looks the runtime knows (runtime owns the exact variables; these are swatches). */
+export const LOOKS: LookOption[] = [
+  { id: 'bright', label: 'Bright', swatch: ['#F7F8FC', '#3147F2'] },
+  { id: 'paper', label: 'Paper', swatch: ['#FAF8F4', '#FF6A3D'] },
+  { id: 'charcoal', label: 'Charcoal', swatch: ['#181A1F', '#DBCBFF'] },
+  { id: 'ink', label: 'Ink', swatch: ['#162039', '#DFFF76'] },
+  { id: 'mint', label: 'Mint', swatch: ['#F3FBF7', '#BCEED6'] },
+  { id: 'lilac', label: 'Lilac', swatch: ['#F1EAFF', '#DBCBFF'] },
+  { id: 'sunset', label: 'Sunset', swatch: ['#FFF1EA', '#FF6A3D'] },
+];
+
+/** The look a proposal would get by default (its design, else the pattern's compatibility default). */
+export function defaultLook(rec: Pick<Recommendation, 'design' | 'pattern' | 'icon' | 'purpose'>): AppTheme {
+  return designFor({ design: rec.design, pattern: rec.pattern, icon: rec.icon, purpose: rec.purpose }).theme;
+}
+
+/** Pick the proposal that leads the Playground grid: the first fresh app-shaped proposal, else the first card. */
+export function pickFeatured<T extends Pick<Recommendation, 'kind' | 'status' | 'pattern'>>(recs: T[]): T | null {
+  if (recs.length === 0) return null;
+  const rich: Pattern[] = ['practice', 'gallery', 'queue'];
+  return (
+    recs.find((r) => r.status === 'fresh' && r.kind === 'new_app' && rich.includes(r.pattern)) ??
+    recs.find((r) => r.status === 'fresh' && (r.kind === 'new_app' || r.kind === 'update_app')) ??
+    recs.find((r) => r.kind !== 'keep') ??
+    recs[0] ??
+    null
+  );
+}
+
+// ---------- memory ("What you've shared") ----------
+
+export type MemoryGroupKey = 'interests' | 'needs' | 'routines' | 'changes' | 'questions';
+
+export interface MemoryGroup {
+  key: MemoryGroupKey;
+  title: string;
+  hint: string;
+  categories: FactCategory[];
+  facts: ProfileFact[];
+}
+
+export interface MemoryGroups {
+  groups: MemoryGroup[];
+  /** Facts that contradict each other, grouped; the person keeps one. */
+  conflicts: ProfileFact[][];
+  total: number;
+}
+
+const MEMORY_GROUPS: Omit<MemoryGroup, 'facts'>[] = [
+  { key: 'interests', title: 'Interests', hint: 'What you are curious about or want to get better at.', categories: ['interest'] },
+  { key: 'needs', title: 'Current needs', hint: 'Goals, projects and responsibilities right now.', categories: ['goal', 'project'] },
+  { key: 'routines', title: 'Routines & tools', hint: 'How your days run and what you already use.', categories: ['routine', 'tool'] },
+  { key: 'changes', title: 'Recent changes', hint: 'Things that may make older notes stale.', categories: ['change'] },
+  { key: 'questions', title: 'Open questions', hint: 'Uncertain or contradictory notes to settle.', categories: ['uncertainty'] },
+];
+
+/** Group editable facts the way the memory page shows them; removed facts and resolved conflicts drop out. */
+export function groupFactsForMemory(facts: ProfileFact[]): MemoryGroups {
+  const live = facts.filter((f) => f.status !== 'removed');
+  const byConflict = new Map<string, ProfileFact[]>();
+  for (const f of live) {
+    if (f.status === 'conflict' && f.conflictGroup) byConflict.set(f.conflictGroup, [...(byConflict.get(f.conflictGroup) ?? []), f]);
+  }
+  const conflicts = [...byConflict.values()].filter((g) => g.length > 1);
+  const inConflict = new Set(conflicts.flat().map((f) => f.id));
+  const groups = MEMORY_GROUPS.map((g) => ({ ...g, facts: live.filter((f) => g.categories.includes(f.category) && !inConflict.has(f.id)) }));
+  return { groups, conflicts, total: live.length };
+}
 
 /** Heuristic: text files have few control characters and no NUL / replacement characters. */
 export function looksLikeText(text: string): boolean {

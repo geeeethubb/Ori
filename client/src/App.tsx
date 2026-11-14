@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
+// Base tokens and components first, so page and runtime stylesheets (imported below) override them.
+import './styles.css';
 import { useAuth } from './auth.tsx';
 import { ToastProvider, Spinner } from './components/ui.tsx';
 import { StoreLayout } from './components/Layout.tsx';
 import { AppRuntimePage } from './runtime/AppRuntimePage.tsx';
 import { WelcomePage } from './pages/WelcomePage.tsx';
 import { ImportPage } from './pages/ImportPage.tsx';
-import { ContextPage } from './pages/ContextPage.tsx';
-import { ForYouPage } from './pages/ForYouPage.tsx';
-import { RecommendationPage } from './pages/RecommendationPage.tsx';
-import { CollectionPage } from './pages/CollectionPage.tsx';
+import { MemoryPage } from './pages/MemoryPage.tsx';
+import { PlaygroundPage } from './pages/PlaygroundPage.tsx';
+import { MakePage } from './pages/MakePage.tsx';
+import { MyAppsPage } from './pages/MyAppsPage.tsx';
 import { PricingPage } from './pages/PricingPage.tsx';
-import { AccountPage } from './pages/AccountPage.tsx';
+import { SettingsPage } from './pages/SettingsPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { AgentPage } from './pages/AgentPage.tsx';
 import { NativeServerSetup } from './components/NativeServerSetup.tsx';
@@ -66,13 +68,13 @@ export function App() {
 
           {/* Agent / Playground / My apps */}
           <Route path="/agent" element={<RequireAuth><AgentPage /></RequireAuth>} />
-          <Route path="/playground" element={<RequireAuth><ForYouPage /></RequireAuth>} />
-          <Route path="/apps" element={<RequireAuth><CollectionPage /></RequireAuth>} />
-          <Route path="/make/:recId" element={<RequireAuth><RecommendationPage /></RequireAuth>} />
+          <Route path="/playground" element={<RequireAuth><PlaygroundPage /></RequireAuth>} />
+          <Route path="/apps" element={<RequireAuth><MyAppsPage /></RequireAuth>} />
+          <Route path="/make/:recId" element={<RequireAuth><MakePage /></RequireAuth>} />
 
           {/* Settings: account, memory ("what you've shared"), bring more context */}
-          <Route path="/settings" element={<RequireAuth><AccountPage /></RequireAuth>} />
-          <Route path="/settings/memory" element={<RequireAuth><ContextPage /></RequireAuth>} />
+          <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
+          <Route path="/settings/memory" element={<RequireAuth><MemoryPage /></RequireAuth>} />
           <Route path="/settings/import" element={<RequireAuth><ImportPage /></RequireAuth>} />
 
           {/* Previous prototype URLs */}
