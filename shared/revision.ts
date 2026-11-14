@@ -6,8 +6,8 @@
  */
 import { z } from 'zod';
 import {
-  AppIconSchema, AppSpecSchema, DesignSchema, FieldSchema, RuleSchema, SelectOptionSchema, ViewSchema,
-  fieldTypeLabel, viewTypeLabel, type AppSpec, type FieldSpec,
+  AppIconSchema, AppSpecSchema, DesignPatchSchema, DesignSchema, FieldSchema, RuleSchema, SelectOptionSchema, ViewSchema,
+  designFor, fieldTypeLabel, viewTypeLabel, type AppSpec, type FieldSpec,
 } from './appSpec.ts';
 import { FIELD_ID_PATTERN } from './ids.ts';
 
@@ -31,8 +31,8 @@ export const RevisionOpSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('add_select_option'), fieldId, option: SelectOptionSchema }),
   z.object({ op: z.literal('rename_app'), name: label, tagline: z.string().trim().max(120).optional() }),
   z.object({ op: z.literal('set_icon'), icon: AppIconSchema }),
-  /** Change the app's look (theme, accent, typography, density, artwork); any subset. */
-  z.object({ op: z.literal('set_design'), design: DesignSchema.partial() }),
+  /** Change the app's look (theme, accent, typography, density, artwork); any subset, the rest is kept. */
+  z.object({ op: z.literal('set_design'), design: DesignPatchSchema }),
   z.object({ op: z.literal('add_view'), view: ViewSchema }),
   z.object({ op: z.literal('replace_view'), viewId: fieldId, view: ViewSchema }),
   z.object({ op: z.literal('remove_view'), viewId: fieldId }),
@@ -86,12 +86,15 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[]): ApplyResult 
         if (find(op.field.id)) { errors.push(`A field with id "${op.field.id}" already exists`); break; }
         const idx = op.afterFieldId ? spec.fields.findIndex((f) => f.id === op.afterFieldId) : -1;
         if (idx >= 0) spec.fields.splice(idx + 1, 0, op.field); else spec.fields.push(op.field);
-        // Make the field visible in views that enumerate fields explicitly.
-        for (const v of spec.views) {
+        // Make the field visible in views that enumerate fields explicitly. Forms: every unfiltered view,
+        // plus the primary view when all views are filtered (so the new field is reachable somewhere).
+        const unfiltered = spec.views.filter((v) => !v.filter);
+        spec.views.forEach((v, i) => {
           if (v.type === 'journal' && v.showFieldIds) v.showFieldIds.push(op.field.id);
           if (v.type === 'list' && v.columnFieldIds && v.columnFieldIds.length < 8) v.columnFieldIds.push(op.field.id);
-          if (v.formFieldIds && !v.formFieldIds.includes(op.field.id) && !v.filter) v.formFieldIds.push(op.field.id);
-        }
+          const takesForm = !v.filter || (unfiltered.length === 0 && i === 0);
+          if (takesForm && v.formFieldIds && !v.formFieldIds.includes(op.field.id)) v.formFieldIds.push(op.field.id);
+        });
         changes.push(`Add ${describeField(op.field)}. Existing ${spec.entryNoun.plural} keep their data; this field starts empty for them.`);
         break;
       }
@@ -149,7 +152,8 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[]): ApplyResult 
         changes.push('Change the app icon.');
         break;
       case 'set_design': {
-        const merged = { ...(spec.design ?? {}), ...Object.fromEntries(Object.entries(op.design).filter(([, v]) => v !== undefined)) };
+        // Start from the resolved look (compatibility defaults included) so a theme-only change keeps the rest.
+        const merged = { ...designFor(spec), ...Object.fromEntries(Object.entries(op.design).filter(([, v]) => v !== undefined)) };
         spec.design = DesignSchema.parse(merged);
         const bits: string[] = [];
         if (op.design.theme) bits.push(THEME_WORDS[op.design.theme] ?? op.design.theme);

@@ -249,6 +249,16 @@ export const DesignSchema = z.object({
 });
 export type AppDesign = z.infer<typeof DesignSchema>;
 
+/** A partial look change (every field optional, no defaults), merged over the current design. */
+export const DesignPatchSchema = z.object({
+  theme: z.enum(APP_THEMES).optional(),
+  accent: z.enum(ICON_COLORS).optional(),
+  typography: z.enum(APP_TYPOGRAPHY).optional(),
+  density: z.enum(APP_DENSITY).optional(),
+  artwork: z.enum(APP_ARTWORK).optional(),
+});
+export type AppDesignPatch = z.infer<typeof DesignPatchSchema>;
+
 // ---------- spec ----------
 
 export const AppIconSchema = z.object({ symbol: z.enum(ICON_SYMBOLS), color: z.enum(ICON_COLORS) });
