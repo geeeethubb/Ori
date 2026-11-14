@@ -40,6 +40,8 @@ export function getProposal(ownerId: string, proposalId: string): StoredProposal
   };
 }
 
-export function setProposalStatus(proposalId: string, status: string): void {
-  getDb().prepare('UPDATE revision_proposals SET status = ? WHERE id = ?').run(status, proposalId);
+/** Owner- and app-scoped: a proposal id from someone else (or another app) changes nothing. */
+export function setProposalStatus(ownerId: string, appId: string, proposalId: string, status: string): boolean {
+  const r = getDb().prepare('UPDATE revision_proposals SET status = ? WHERE id = ? AND owner_id = ? AND app_id = ?').run(status, proposalId, ownerId, appId);
+  return Number(r.changes) > 0;
 }

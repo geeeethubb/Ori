@@ -2,7 +2,7 @@
  * AppRecord values: a stable field-id → value map validated against the current spec.
  * Values for hidden or unknown field IDs are preserved untouched so revisions never lose data.
  */
-import type { AppSpec, FieldSpec } from './appSpec.ts';
+import { recordMatchesView, type AppSpec, type FieldSpec } from './appSpec.ts';
 import { SHORT_ID_PATTERN } from './ids.ts';
 import { parseIsoDate, todayIso } from './time.ts';
 
@@ -133,6 +133,11 @@ export function validateValues(spec: AppSpec, input: unknown, opts: { partial?: 
   if (keys.length > MAX_VALUE_KEYS) return { ok: false, values: {}, errors: { _: `Too many fields (max ${MAX_VALUE_KEYS})` } };
   const out: RecordValues = {};
   const known = new Map(spec.fields.map((f) => [f.id, f]));
+  // A record that belongs to a filtered view (e.g. a saved source in a practice app) is only required
+  // to fill that view's own form; required fields of the other record kinds do not apply to it.
+  const ownForms = spec.views.filter((v) => v.filter && v.formFieldIds && recordMatchesView(v, raw));
+  const inOwnForm = ownForms.length ? new Set(ownForms.flatMap((v) => v.formFieldIds ?? [])) : null;
+  const requiredApplies = (id: string) => !inOwnForm || inOwnForm.has(id);
   for (const key of keys) {
     const f = known.get(key);
     const v = raw[key];
@@ -142,12 +147,13 @@ export function validateValues(spec: AppSpec, input: unknown, opts: { partial?: 
       continue;
     }
     const { value, error } = coerceField(f, v);
-    if (error) errors[key] = error;
+    if (error && !(error === 'Required' && !requiredApplies(key))) errors[key] = error;
     out[key] = value;
   }
   if (!opts.partial) {
     for (const f of spec.fields) {
       if (f.hidden || !f.required || f.type === 'checkbox') continue;
+      if (!requiredApplies(f.id)) continue;
       if (!(f.id in raw)) errors[f.id] = 'Required';
     }
   }

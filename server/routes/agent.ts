@@ -11,6 +11,8 @@ import { SHORT_ID_PATTERN } from '../../shared/ids.ts';
 import type { AgentThreadDto, AgentThreadItemDto, CaptureResultDto } from '../../shared/api.ts';
 import type { Capture, RecommendationDraft } from '../../shared/context.ts';
 import { capabilitiesOf } from '../../shared/appSpec.ts';
+import { config } from '../config.ts';
+import { groundExplorations } from '../services/grounding.ts';
 import * as captures from '../repos/captures.ts';
 import * as ctx from '../repos/context.ts';
 import * as apps from '../repos/apps.ts';
@@ -47,7 +49,7 @@ async function respond(ownerId: string, capture: Capture): Promise<CaptureResult
   let image: { mime: string; base64: string } | null = null;
   if (capture.mediaId) {
     const found = media.readMediaFile(ownerId, capture.mediaId);
-    if (found && found.media.size <= 5 * 1024 * 1024 && /^image\/(jpeg|png|webp|gif)$/.test(found.media.mime)) {
+    if (found && found.media.size <= config.maxImageBytes && /^image\/(jpeg|png|webp|gif)$/.test(found.media.mime)) {
       image = { mime: found.media.mime, base64: fs.readFileSync(found.path).toString('base64') };
     }
   }
@@ -75,6 +77,9 @@ async function respond(ownerId: string, capture: Capture): Promise<CaptureResult
     }))
     // An update proposal must point at one of the person's own apps.
     .filter((p) => p.kind !== 'update_app' || (p.targetAppId && appIds.has(p.targetAppId)))
+    // Explorations may only link to pages the person shared.
+    .map((p) => groundExplorations(p, [capture.url, ...recent.map((r) => r.url)]))
+    .filter((p): p is RecommendationDraft => p !== null)
     .slice(0, 4);
   // Context learned from the note is stored as editable, clearly sourced memory.
   if (draft.learned.length) {

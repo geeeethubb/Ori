@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import type { AgentThreadDto, AgentThreadItemDto, CaptureResultDto, ContextOverviewDto, MediaUploadDto } from '@shared/api.ts';
-import { READ_STATUS_LABELS, type Capture, type ProfileFact, type Recommendation } from '@shared/context.ts';
+import { readStatusLabel, type Capture, type ProfileFact, type Recommendation } from '@shared/context.ts';
 import { BRAND } from '@shared/brand.ts';
 import { api, apiBase, describeError, getToken, usesBearer } from '../api.ts';
 import { useAuth } from '../auth.tsx';
@@ -62,9 +62,15 @@ export function AgentPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
 
-  const canSend = (text.trim().length > 0 || url.trim().length > 0 || file !== null) && busy === null;
+  const [uploaded, setUploaded] = useState<{ file: File; mediaId: string } | null>(null);
+  // Sharing waits for the thread to exist so a reply is never dropped into a page that cannot show it.
+  const canSend = (text.trim().length > 0 || url.trim().length > 0 || file !== null) && busy === null && !loading && data !== null;
   const items = data?.thread.items ?? [];
   const factMap = useMemo(() => new Map((data?.context.facts ?? []).map((f) => [f.id, f])), [data]);
+  const exampleFactIds = useMemo(() => {
+    const exampleSources = new Set((data?.context.sources ?? []).filter((s) => s.kind === 'sample').map((s) => s.id));
+    return new Set((data?.context.facts ?? []).filter((f) => f.sourceIds.some((id) => exampleSources.has(id))).map((f) => f.id));
+  }, [data]);
   const captureMap = useMemo(() => {
     const m = new Map((data?.context.captures ?? []).map((c) => [c.id, c]));
     for (const it of items) m.set(it.capture.id, it.capture);
@@ -78,11 +84,16 @@ export function AgentPage() {
     try {
       let mediaId: string | undefined;
       if (file) {
-        setBusy('upload');
-        mediaId = (await uploadImage(file)).media.id;
+        // A retry after a failed share reuses the upload instead of filling the library with copies.
+        if (uploaded && uploaded.file === file) mediaId = uploaded.mediaId;
+        else {
+          setBusy('upload');
+          mediaId = (await uploadImage(file)).media.id;
+          setUploaded({ file, mediaId });
+        }
       }
       setBusy('send');
-      const res = await api<CaptureResultDto & { linkNote?: string }>('/api/agent/captures', {
+      const res = await api<CaptureResultDto>('/api/agent/captures', {
         method: 'POST',
         body: { text: text.trim(), url: url.trim() || undefined, mediaId },
         timeoutMs: 120_000,
@@ -167,7 +178,7 @@ export function AgentPage() {
               inputMode="url"
               data-testid="agent-url"
               aria-label="Link"
-              placeholder="https://… saved as a link; pages are not read unless you describe them"
+              placeholder="https://… saved as a link; the page itself is never read, so say what matters in it"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               disabled={busy !== null}
@@ -219,7 +230,7 @@ export function AgentPage() {
         {busy === 'send' && (
           <div className="ag-thinking" role="status" aria-live="polite" data-testid="agent-thinking">
             <Spinner />
-            <span>Reading what you shared{sampleMode ? '' : ', usually 10 to 30 seconds'}…</span>
+            <span>{text.trim() || (file && !sampleMode) ? 'Reading what you shared' : file ? 'Saving your screenshot and thinking' : 'Saving the link and thinking'}{sampleMode ? '' : ', usually 10 to 30 seconds'}…</span>
           </div>
         )}
       </form>
@@ -267,6 +278,7 @@ export function AgentPage() {
             key={item.capture.id}
             item={item}
             factMap={factMap}
+            exampleFactIds={exampleFactIds}
             captureMap={captureMap}
             retrying={retrying === item.capture.id}
             onRetry={() => void retry(item.capture.id)}
@@ -281,13 +293,14 @@ export function AgentPage() {
 interface ThreadItemProps {
   item: AgentThreadItemDto;
   factMap: Map<string, ProfileFact>;
+  exampleFactIds: ReadonlySet<string>;
   captureMap: Map<string, Capture>;
   retrying: boolean;
   onRetry: () => void;
   onForget: () => void;
 }
 
-function ThreadItem({ item, factMap, captureMap, retrying, onRetry, onForget }: ThreadItemProps) {
+function ThreadItem({ item, factMap, exampleFactIds, captureMap, retrying, onRetry, onForget }: ThreadItemProps) {
   const { capture, reply } = item;
   const kindIcon = capture.kind === 'image' ? Icons.image : capture.kind === 'link' ? Icons.link : Icons.pencil;
   return (
@@ -307,7 +320,7 @@ function ThreadItem({ item, factMap, captureMap, retrying, onRetry, onForget }: 
         <footer className="ag-capture-foot">
           <span className={`ag-status ag-status-${capture.readStatus}`} data-testid="agent-read-status" data-status={capture.readStatus}>
             {capture.readStatus === 'read' ? Icons.check2 : Icons.help}
-            {READ_STATUS_LABELS[capture.readStatus]}
+            {readStatusLabel(capture)}
           </span>
           <button type="button" className="btn btn-ghost btn-sm" onClick={onForget} data-testid="agent-forget">
             Forget
@@ -339,6 +352,7 @@ function ThreadItem({ item, factMap, captureMap, retrying, onRetry, onForget }: 
                 facts={p.evidenceFactIds.map((id) => factMap.get(id)).filter((f): f is ProfileFact => Boolean(f))}
                 captures={p.sourceCaptureIds.map((id) => captureMap.get(id)).filter((c): c is Capture => Boolean(c))}
                 testIds={{ card: 'proposal-card', action: 'proposal-action', why: 'proposal-why' }}
+                exampleFactIds={exampleFactIds}
               />
             ))}
           </div>

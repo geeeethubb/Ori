@@ -108,6 +108,17 @@ test('share a sound → Make mine → practise → the session survives a change
   await expect(page.getByTestId('rt-session')).toHaveCount(1);
   expect(await listRecords(page.request, appId)).toEqual(saved);
 
+  // The new field is reachable: it is in the practice view's form and shows up in Save session.
+  const songField = revised.spec.fields.find((f) => /song/i.test(f.label));
+  expect(songField, 'the revision added a song field').toBeDefined();
+  expect(revised.spec.views.find((v) => v.type === 'practice')?.formFieldIds ?? []).toContain(songField!.id);
+  await page.getByTestId('rt-practice-save').click();
+  await expect(page.getByTestId('rt-record-form')).toBeVisible();
+  const songLabel = new RegExp(songField!.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  await expect(page.getByTestId('rt-record-form').getByLabel(songLabel).first()).toBeVisible();
+  await page.getByTestId('rt-cancel-record').click();
+  await expect(page.getByTestId('rt-record-form')).toHaveCount(0);
+
   // Undo restores the previous definition and keeps the session.
   await page.getByTestId('rt-settings-link').click();
   await page.getByTestId('rt-undo').click();

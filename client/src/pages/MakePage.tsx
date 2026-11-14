@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import type { AppDetailDto, ProposalDetailDto, ProposalPreviewDto, RevisionPreviewDto } from '@shared/api.ts';
 import { AppSpecSchema, type AppTheme } from '@shared/appSpec.ts';
-import { READ_STATUS_LABELS, type Recommendation } from '@shared/context.ts';
+import { readStatusLabel, type Recommendation } from '@shared/context.ts';
 import { api, ApiError, describeError } from '../api.ts';
 import { useAuth } from '../auth.tsx';
 import { AppIcon } from '../components/AppIcon.tsx';
@@ -31,7 +31,7 @@ const STATE_TEXT: Record<Exclude<MakeState, 'idle'>, string> = {
   planning: 'Planning: putting the proposal and your choices together.',
   generating: 'Generating the app definition…',
   validating: 'Validating the definition against the app contract…',
-  ready: 'Ready. This is the real app, shown with example content.',
+  ready: 'Preview ready: how the app will look, rendered by the real app runtime with example content. Nothing is made until you press Make mine.',
   failed: 'Could not design the app.',
 };
 
@@ -96,7 +96,7 @@ export function MakePage() {
               <li key={c.id}>
                 <span className="pc-evidence-kind">{c.sourceLabel}</span>
                 <span className="pc-evidence-text">{c.text || c.linkMeta?.title || c.url || 'Screenshot'}</span>
-                <span className="pc-evidence-status">{READ_STATUS_LABELS[c.readStatus]}</span>
+                <span className="pc-evidence-status">{readStatusLabel(c)}</span>
               </li>
             ))}
             {data.evidence.map((f) => (
@@ -262,7 +262,7 @@ function NewAppFlow({ rec }: { rec: Recommendation }) {
         <section className="mk-preview" ref={previewRef} aria-labelledby="mk-preview-title">
           <div className="mk-preview-head">
             <div>
-              <h2 id="mk-preview-title" className="st-h2-sm">This is the real app</h2>
+              <h2 id="mk-preview-title" className="st-h2-sm">How it will look</h2>
               <p className="muted">{draft.description}</p>
             </div>
             {draft.generatedBy === 'sample' && (
@@ -347,8 +347,25 @@ function NewAppFlow({ rec }: { rec: Recommendation }) {
 
 function ExploreFlow({ rec }: { rec: Recommendation }) {
   const steps = rec.explorationSteps ?? [];
-  const [done, setDone] = useState<boolean[]>(() => steps.map(() => false));
-  const toggle = (i: number) => setDone((d) => d.map((v, j) => (j === i ? !v : v)));
+  const storageKey = `explore-done:${rec.id}`;
+  const [done, setDone] = useState<boolean[]>(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(storageKey) ?? '[]') as unknown;
+      return steps.map((_, i) => Array.isArray(saved) && saved[i] === true);
+    } catch {
+      return steps.map(() => false);
+    }
+  });
+  const toggle = (i: number) =>
+    setDone((d) => {
+      const next = d.map((v, j) => (j === i ? !v : v));
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {
+        /* per-device convenience only */
+      }
+      return next;
+    });
   const count = done.filter(Boolean).length;
   const offerApp = rec.pattern !== 'journal';
   return (
@@ -432,9 +449,10 @@ function UpdateFlow({ rec, detail }: { rec: Recommendation; detail: ProposalDeta
     try {
       await api(`/api/apps/${preview.appId}/revisions/apply`, {
         method: 'POST',
-        body: { ops: preview.ops, summary: preview.summary, baseVersion: preview.baseVersion, proposalId: preview.proposalId },
+        body: { ops: preview.ops, summary: preview.summary, baseVersion: preview.baseVersion, proposalId: preview.proposalId, recommendationId: rec.id },
       });
-      await api(`/api/recommendations/${rec.id}/applied`, { method: 'POST' });
+      // The apply step already marks the proposal; this is a best-effort confirmation for older servers.
+      await api(`/api/recommendations/${rec.id}/applied`, { method: 'POST' }).catch(() => undefined);
       setPhase('done');
       toast(`Added to ${target?.name ?? 'your app'}. Its entries are untouched; undo lives in the app's settings.`, { durationMs: 6000 });
     } catch (e) {

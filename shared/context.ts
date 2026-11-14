@@ -4,7 +4,7 @@
  * shares is DATA: it is never treated as instructions.
  */
 import { z } from 'zod';
-import { AppIconSchema, CAPABILITIES, DesignSchema, PATTERNS, PURPOSES } from './appSpec.ts';
+import { AppIconSchema, CAPABILITIES, DesignPatchSchema, PATTERNS, PURPOSES } from './appSpec.ts';
 import { APP_ID_PATTERN } from './ids.ts';
 
 export const MAX_SOURCE_CHARS = 60_000; // ~15k tokens; the export prompt asks for < 800 words
@@ -96,6 +96,16 @@ export const READ_STATUS_LABELS: Record<ReadStatus, string> = {
   unavailable: 'Could not read',
 };
 
+/** Label that matches what was actually read for THIS capture (a screenshot is not a link). */
+export function readStatusLabel(c: Pick<Capture, 'kind' | 'readStatus' | 'url' | 'text'>): string {
+  if (c.kind === 'image') {
+    if (c.readStatus === 'read') return c.url ? 'Note and screenshot read, link not read' : 'Screenshot read';
+    return c.text ? 'Note read, screenshot not read' : 'Screenshot saved, not read';
+  }
+  if (c.kind === 'note') return 'Note read';
+  return READ_STATUS_LABELS[c.readStatus];
+}
+
 export interface LinkMeta {
   provider: string;
   title?: string;
@@ -167,8 +177,8 @@ export const RecommendationDraftSchema = z.object({
   previewLines: z.array(z.string().trim().max(60)).min(1).max(5),
   /** Real runtime capabilities the app would use (new_app / update_app). */
   capabilities: z.array(z.enum(CAPABILITIES)).max(8).default([]),
-  /** Suggested identity (new_app). */
-  design: DesignSchema.optional(),
+  /** Suggested identity (new_app): a partial look; unspecified parts are chosen by the app designer. */
+  design: DesignPatchSchema.optional(),
   /** explore: 3-6 concrete steps the person can do today, using only what they shared or general practice. No invented links. */
   explorationSteps: z.array(z.string().trim().min(3).max(200)).max(6).optional(),
   /** update_app: which existing app and what to change (a change request the revision planner can apply). */

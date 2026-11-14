@@ -263,6 +263,8 @@ class Metronome {
   private timer: number | null = null;
   private nextTime = 0;
   private beat = 0;
+  private running = false;
+  private pending = new Set<number>();
   constructor(
     private ctx: AudioContext,
     private bpm: () => number,
@@ -270,6 +272,7 @@ class Metronome {
   ) {}
 
   start(): void {
+    this.running = true;
     this.nextTime = this.ctx.currentTime + 0.05;
     this.beat = 0;
     this.schedule();
@@ -277,8 +280,11 @@ class Metronome {
   }
 
   stop(): void {
+    this.running = false;
     if (this.timer !== null) window.clearInterval(this.timer);
     this.timer = null;
+    for (const id of this.pending) window.clearTimeout(id);
+    this.pending.clear();
   }
 
   private schedule(): void {
@@ -287,7 +293,11 @@ class Metronome {
       click(this.ctx, this.nextTime, accent);
       const b = this.beat % 4;
       const delay = Math.max(0, (this.nextTime - this.ctx.currentTime) * 1000);
-      window.setTimeout(() => this.onBeat(b), delay);
+      const id = window.setTimeout(() => {
+        this.pending.delete(id);
+        if (this.running) this.onBeat(b);
+      }, delay);
+      this.pending.add(id);
       this.nextTime += 60 / Math.max(TEMPO_MIN, Math.min(TEMPO_MAX, this.bpm()));
       this.beat += 1;
     }

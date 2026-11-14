@@ -69,7 +69,7 @@ export function WelcomePage() {
           <h2 id="ld-story-title">A reel you liked becomes a practice room.</h2>
           <p className="muted">
             You save a fingerpicked riff and type one line. The agent reads the line, says it did not watch the video, and offers two
-            directions. You pick fifteen minutes. Riff arrives with that timer, a metronome, the link you saved, and a place to write
+            directions. You pick fifteen minutes. Riff arrives with that timer, a metronome, a place for the link you saved, and a place to write
             what got easier. Tonight you actually play.
           </p>
         </div>

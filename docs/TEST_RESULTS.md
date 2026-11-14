@@ -1,6 +1,6 @@
 # Test results (redesign, session 2)
 
-Updated: 2026-11-14 13:25. Status values: ✅ passed · ❌ failed · ⏳ not run yet · ⚠️ partial. Every row names the environment it ran in. A check that did not run is listed as not run, never as passed. Session-1 totals are history; this file only reports what ran after the redesign started.
+Updated: 2026-11-14 14:10. Status values: ✅ passed · ❌ failed · ⏳ not run yet · ⚠️ partial. Every row names the environment it ran in. A check that did not run is listed as not run, never as passed. Session-1 totals are history; this file only reports what ran after the redesign started.
 
 Machine: Windows 11, Node 24.14.1, Playwright Chromium 1255, Android emulator `Pixel_9_Pro` (Android 17 / API 37).
 
@@ -10,7 +10,9 @@ Machine: Windows 11, Node 24.14.1, Playwright Chromium 1255, Android emulator `P
 | --- | --- | --- | --- |
 | Baseline before any redesign change (10:47) | ✅ | 223 tests, 10 files | 0 type errors |
 | Typecheck after integration (13:00) | ✅ | 0 errors | whole repo incl. tests |
-| Full suite after integration (13:00) | ✅ | **371 passed, 17 files** | `npx vitest run` |
+| Full suite after integration (13:00) | ✅ | 371 passed, 17 files | `npx vitest run` |
+| Typecheck and full suite after the review fixes (14:03) | ✅ | **387 passed, 18 files**, 0 type errors | `npm run typecheck`, `npx vitest run` |
+| Review follow-ups (`tests/unit/review-followups.test.ts`) | ✅ | 16 | added/restored fields reach the primary form on Riff-shaped apps; required fields scoped to the record's own form; explorations may only link to shared pages; proposal status owner/app-scoped (another user's apply cannot mark my proposal); event metadata bounds; import drops foreign photos and non-web links; read-status labels per capture kind; `user_data` delimiter escaping; idle practice timer follows a changed default |
 | Redesign API (`tests/unit/redesign-api.test.ts`) | ✅ | 37 | captures → honest read status (note `read`, Instagram link `not_read` with a note, screenshot `not_read` in Sample mode); bad URLs 400; media upload sniffed (text disguised as .jpg → 415), owner-only GET (404 for others), delete; photo records with another user's media → 422; proposal detail cites the capture; `/draft` with a 15-minute budget → valid spec, presets start at 15, example records match their views and never carry real media ids; `/build` → app with design + capabilities; `/keep`; `/generate` keeps capture-born proposals; update flow preview → apply → applied; cross-user 404s |
 | App contract additions (`appSpec-redesign.test.ts`) | ✅ | 25 | new fixtures validate; filter/form errors with paths; `designFor` compatibility defaults; `capabilitiesOf`; gallery/queue type checks; `set_design`; image values |
 | Preview content, link metadata (`previewContent.test.ts`, `linkMeta.test.ts`) | ✅ | 8 + 5 | deterministic examples, `example:` images only, mixed open/done checkboxes; no network for non-allowlisted hosts |
@@ -32,11 +34,11 @@ Script: `npx tsx server/scripts/ai-agent-smoke.ts` (four calls, 11:58). Log with
 
 ## 3. Browser (Playwright, production build served by Node, Sample mode, throwaway DB) — `npm run test:e2e`
 
-Projects: phone (Pixel 7), phone-small (320×568), desktop. Final run 13:05: **14 passed, 4 skipped (by design: the layout/tap-target spec runs on the phone project only), 52.8 s**; an earlier full run with the layout screenshots took 5.2 min.
+Projects: phone (Pixel 7), phone-small (320×568), desktop. Run after integration (13:05): 14 passed, 4 skipped (by design: the layout/tap-target spec runs on the phone project only), 52.8 s. **Final run after the review fixes (14:05): 14 passed, 4 skipped, 1.0 min**, with the journey now opening Save session after the revision and asserting that the added song field is in the form. An earlier full run with the layout screenshots took 5.2 min.
 
 | Check | Projects | Status | Notes |
 | --- | --- | --- | --- |
-| Guitar slice: sign up → Agent note → read status `read` → reply with a new-app and a keep proposal → Make mine (15 min) → explicit Preview → real renderer with the example banner → Make mine → `/apps/{id}/` with presets starting at 15 → timer start/pause → Save session (prefilled) → session listed and persisted with the view's kind → reload → "Make this more me" adds a song field → records unchanged → undo restores field ids → My apps lists it | phone, phone-small, desktop | ✅ ✅ ✅ | ~4 s each in Sample mode |
+| Guitar slice: sign up → Agent note → read status `read` → reply with a new-app and a keep proposal → Make mine (15 min) → explicit Preview → real renderer with the example banner → Make mine → `/apps/{id}/` with presets starting at 15 → timer start/pause → Save session (prefilled) → session listed and persisted with the view's kind → reload → "Make this more me" adds a song field → records unchanged → the song field is in the Save-session form → undo restores field ids → My apps lists it | phone, phone-small, desktop | ✅ ✅ ✅ | ~4 s each in Sample mode |
 | Two sample profiles → ≥ 3 Playground cards each, visibly grounded reasons, ≤ 1 overlap | phone, phone-small, desktop | ✅ ✅ ✅ | |
 | Direct URL: app-specific title/manifest/icon on a cookie-less request; Riff and Light manifests differ (background color per theme); in-place sign-in; gallery image loads for the owner; other user → 404 API and not-found UI | phone, phone-small, desktop | ✅ ✅ ✅ | |
 | Legacy board app: due rule, attention filter, completion, reload | phone, phone-small, desktop | ✅ ✅ ✅ | compatibility path |
@@ -66,4 +68,19 @@ Screenshots inspected (not just saved): the four builds reviewed their own (runt
 
 ## 6. Review pass
 
-An adversarial multi-agent review (seven dimensions: security and ownership, data preservation, honesty, contract conformance, accessibility, demo path, live-model path; three skeptics per finding) ran after integration; confirmed findings and their fixes are listed in `BUILD_STATUS.md` when complete.
+An adversarial multi-agent review ran after integration (13:05–13:50): seven dimensions (security and ownership, data preservation, honesty, contract conformance, accessibility, demo path, live-model path), every finding handed to three independent skeptics told to refute it; 151 agents in all. **36 findings survived, two rated high.** The accessibility verifiers did not run (the account ran out of usage credits mid-review), so that dimension is **unverified**, not passed; the layout/tap-target browser spec and the AA-checked runtime accents remain the only accessibility evidence.
+
+All 36 were fixed at 14:03 and pinned by the 16 tests above where a test could hold them:
+
+| Area | Fixed |
+| --- | --- |
+| High: field reachability | `add_field` / `unhide_field` on an app whose views are all filtered (Riff: practice + sources + summary) put the field in no form, so an accepted "add a field for the song" never reached Save session. The primary form-bearing view now takes it; the browser journey opens Save session after the revision and asserts the song field is there. |
+| High: required fields across record kinds | A saved source was asked for the session's required fields. Required now applies only to the fields in the record's own form (the matching filtered view); records outside every filtered view keep every required field. |
+| Ownership and bounds | Proposal status updates are owner- and app-scoped (`setProposalStatus(ownerId, appId, …)`); event metadata is bounded (≤ 10 keys, scalars, strings ≤ 500); imported records drop photos that are not in the importer's library and links that are not web addresses (the record is kept); revision preview and feedback use the shared premium/allowance gate; the agent's image gate follows `MAX_IMAGE_BYTES`. |
+| Prompt data boundary | Every piece of user text interpolated into a live-model prompt (facts, app names, captures, titles, choices, instructions, record values, feedback) is escaped so it can neither open nor close the `<user_data>` block. |
+| Honesty | Read-status labels follow the kind of capture (a screenshot is never "Saved link"); the Make page says "How it will look … nothing is made until you press Make mine"; the URL field and busy state say the page itself is never read; welcome copy promises "a place for the link you saved", not the link's content; exploration steps may only link to pages the person shared (`server/services/grounding.ts`, applied to Agent and Playground proposals); a Sample badge appears per card when a grid mixes live and sample proposals; facts from the example profile are tagged "Example" in Why this. |
+| Live path | `recommend` retries merge with the first batch instead of discarding grounded proposals; `suggestImprovement` output budget 1500 → 6000 tokens; a proposal's `design` is a partial patch (unspecified parts chosen by the designer, not defaulted). |
+| Runtime | Metronome beat indicator cannot fire after Stop (pending timeouts cleared); an untouched idle practice timer follows a changed default preset after a revision; exploration checkboxes persist per device; Make mine marks the recommendation applied in the same request (the separate call is best-effort). |
+| Composer and contrast | A retried share reuses the uploaded screenshot; Send waits for the thread to load; `--ink-3` darkened to `#646C88` (about 5:1 on the paper background for small muted text). |
+
+Known and not fixed (see `BUILD_STATUS.md`): live-mode retry chains can exceed the client timeout on slow responses; the seed matches the demo apps by name; sample-mode filler proposals can cite loosely related facts; renaming a select option does not remap `where.value` in summary metrics; the live journey was not re-run after these fixes (Sample-mode browser run only, to avoid spending on the model).

@@ -451,7 +451,7 @@ export function recordMatchesView(view: ViewSpec, values: Record<string, unknown
  * Design with compatibility defaults. Apps built before the redesign have no design block; they get
  * a sensible identity from their pattern so old apps keep working without looking identical.
  */
-export function designFor(spec: Pick<AppSpec, 'design' | 'pattern' | 'icon' | 'purpose'>): Required<AppDesign> {
+export function designFor(spec: { design?: Partial<AppDesign> | null; pattern: Pattern; icon: AppIcon; purpose: Purpose }): Required<AppDesign> {
   const d = spec.design;
   const fallbackTheme: AppTheme = spec.pattern === 'gallery' ? 'paper' : spec.pattern === 'practice' ? 'ink' : spec.pattern === 'queue' ? 'mint' : 'bright';
   const accent: IconColor = d?.accent ?? spec.icon.color;

@@ -5,10 +5,10 @@
  */
 import { Link } from 'react-router';
 import type { Capture, ProfileFact, Recommendation } from '@shared/context.ts';
-import { READ_STATUS_LABELS } from '@shared/context.ts';
+import { readStatusLabel } from '@shared/context.ts';
 import { AppIcon } from '../../components/AppIcon.tsx';
 import { Disclosure } from '../../components/ui.tsx';
-import { FactStatusChip } from './badges.tsx';
+import { ExampleTag, FactStatusChip } from './badges.tsx';
 import { PROPOSAL_KIND_LABELS, defaultLook, firstSentence, proposalAction, truncate } from './helpers.ts';
 import { MiniPreview } from './MiniPreview.tsx';
 
@@ -20,10 +20,12 @@ interface WhyThisProps {
   summaryTestId?: string;
   /** Hide the full reason when the card already shows all of it. */
   showReason?: boolean;
+  /** Facts that came from the example profile, never from the person: labelled as such. */
+  exampleFactIds?: ReadonlySet<string>;
 }
 
 /** Low-emphasis disclosure: the full reason and what it is grounded in (facts you approved, things you shared). */
-export function WhyThis({ reason, facts, captures, testId, summaryTestId, showReason = true }: WhyThisProps) {
+export function WhyThis({ reason, facts, captures, testId, summaryTestId, showReason = true, exampleFactIds }: WhyThisProps) {
   return (
     <Disclosure summary="Why this?" testId={testId} summaryTestId={summaryTestId} className="pc-why-details">
       {showReason && <p>{reason}</p>}
@@ -35,16 +37,20 @@ export function WhyThis({ reason, facts, captures, testId, summaryTestId, showRe
             <li key={c.id}>
               <span className="pc-evidence-kind">{c.sourceLabel}</span>
               <span className="pc-evidence-text">{c.text ? truncate(c.text, 120) : c.linkMeta?.title ?? c.url ?? 'Screenshot'}</span>
-              <span className="pc-evidence-status">{READ_STATUS_LABELS[c.readStatus]}</span>
+              <span className="pc-evidence-status">{readStatusLabel(c)}</span>
             </li>
           ))}
-          {facts.map((f) => (
-            <li key={f.id}>
-              <span className="pc-evidence-kind">From your memory</span>
-              <span className="pc-evidence-text">{f.value}</span>
-              <FactStatusChip status={f.status} />
-            </li>
-          ))}
+          {facts.map((f) => {
+            const example = exampleFactIds?.has(f.id) ?? false;
+            return (
+              <li key={f.id}>
+                <span className="pc-evidence-kind">{example ? 'From the example profile' : 'From your memory'}</span>
+                <span className="pc-evidence-text">{f.value}</span>
+                {example && <ExampleTag />}
+                <FactStatusChip status={f.status} />
+              </li>
+            );
+          })}
         </ul>
       )}
     </Disclosure>
@@ -68,9 +74,12 @@ interface ProposalCardProps {
   dismissing?: boolean;
   /** Extra test id for the featured card. */
   featuredTestId?: string;
+  /** Show which adapter made this card (set when the list mixes live and sample proposals). */
+  showProvenance?: boolean;
+  exampleFactIds?: ReadonlySet<string>;
 }
 
-export function ProposalCard({ proposal: p, facts = [], captures = [], variant, testIds, onDismiss, dismissing, featuredTestId }: ProposalCardProps) {
+export function ProposalCard({ proposal: p, facts = [], captures = [], variant, testIds, onDismiss, dismissing, featuredTestId, showProvenance, exampleFactIds }: ProposalCardProps) {
   const action = proposalAction(p);
   const theme = p.kind === 'explore' ? 'lilac' : p.kind === 'keep' ? 'paper' : defaultLook(p);
   const canDismiss = onDismiss && p.status === 'fresh';
@@ -96,6 +105,9 @@ export function ProposalCard({ proposal: p, facts = [], captures = [], variant, 
           {p.status === 'built' && <span className="badge badge-ok">Made</span>}
           {p.status === 'applied' && <span className="badge badge-ok">Added</span>}
           {p.status === 'kept' && <span className="badge">Kept</span>}
+          {showProvenance && p.generatedBy === 'sample' && (
+            <span className="badge badge-sample" title="Designed from the built-in catalog, not by the model" data-testid="pc-sample">Sample</span>
+          )}
         </div>
         <h3 className="pc-title">{p.title}</h3>
         <p className="pc-reason">{sentence}</p>
@@ -110,7 +122,7 @@ export function ProposalCard({ proposal: p, facts = [], captures = [], variant, 
           <Link to={action.to} className={`btn ${action.emphasis === 'primary' ? 'btn-primary' : 'btn-secondary'}`} data-testid={testIds.action} data-action={action.label}>
             {action.label}
           </Link>
-          <WhyThis reason={p.reason} facts={facts} captures={captures} testId={testIds.why} showReason={hasMore} />
+          <WhyThis reason={p.reason} facts={facts} captures={captures} testId={testIds.why} showReason={hasMore} exampleFactIds={exampleFactIds} />
           {canDismiss && (
             <button type="button" className="btn btn-ghost btn-sm pc-dismiss" onClick={() => onDismiss(p)} disabled={dismissing} data-testid={testIds.dismiss}>
               Not for me

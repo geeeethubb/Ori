@@ -126,6 +126,8 @@ export interface CaptureResultDto {
   reply: AgentReply | null;
   /** Set when the agent failed; the capture is kept and can be retried. */
   error?: string;
+  /** Honest note about how a link was handled (saved, title read, or not readable); shown once. */
+  linkNote?: string;
 }
 
 export interface MediaUploadDto {

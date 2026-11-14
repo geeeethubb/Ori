@@ -76,6 +76,10 @@ export function PlaygroundPage() {
     return featured ? [featured, ...visible.filter((r) => r.id !== featured.id)] : visible;
   }, [visible]);
   const factMap = useMemo(() => new Map(facts.map((f) => [f.id, f])), [facts]);
+  const exampleFactIds = useMemo(() => {
+    const exampleSources = new Set((data?.context.sources ?? []).filter((s) => s.kind === 'sample').map((s) => s.id));
+    return new Set(facts.filter((f) => f.sourceIds.some((id) => exampleSources.has(id))).map((f) => f.id));
+  }, [data, facts]);
   const captureMap = useMemo(() => new Map(captures.map((c) => [c.id, c])), [captures]);
 
   // First visit with context but no proposals yet: start without a click.
@@ -200,6 +204,8 @@ export function PlaygroundPage() {
             testIds={{ card: 'pg-card', action: 'pg-action', why: 'pg-why', dismiss: 'pg-dismiss' }}
             onDismiss={(r) => void dismiss(r)}
             dismissing={dismissing === rec.id}
+            showProvenance={new Set(ordered.map((r) => r.generatedBy)).size > 1}
+            exampleFactIds={exampleFactIds}
           />
         ))}
       </div>

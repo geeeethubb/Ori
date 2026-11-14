@@ -75,7 +75,7 @@ All `/api/*` routes require the session (cookie or `Authorization: Bearer` + `X-
 - `POST /:id/draft` `{ instructions?, choices?: { timeBudgetMinutes?, goal?, look? } }` → `ProposalPreviewDto { spec, description, unsupported, generatedBy, fallbackReason?, previewRecords }`. Render the preview with the REAL runtime renderer and the preview records, labelled "Example content".
 - `POST /:id/build` `{ spec, description?, instructions? }` → 201 `AppDetailDto` ("Make mine"). Then navigate to `/apps/{id}/`.
 - `POST /:id/dismiss`, `POST /:id/keep` (status `kept`: a save stays a save).
-- `POST /:id/update-preview` `{ extra? }` (kind `update_app`) → `RevisionPreviewDto & { appId }`; accept with the existing `POST /api/apps/:appId/revisions/apply` (`ops, summary, baseVersion, proposalId`), then `POST /:id/applied`.
+- `POST /:id/update-preview` `{ extra? }` (kind `update_app`) → `RevisionPreviewDto & { appId }`; accept with the existing `POST /api/apps/:appId/revisions/apply` (`ops, summary, baseVersion, proposalId, recommendationId`); the apply marks the proposal accepted and the recommendation applied in one step, and `POST /:id/applied` remains as a best-effort confirmation for older clients.
 
 ### Apps (unchanged, plus)
 - Records with `image` fields must reference the owner's media (422 otherwise).

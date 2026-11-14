@@ -17,6 +17,8 @@ export interface TimerState {
 }
 
 const timers = new Map<string, TimerState>();
+/** The default preset each timer was created from, so a changed default can be told apart from a choice. */
+const seededFrom = new Map<string, number>();
 const listeners = new Map<string, Set<() => void>>();
 
 function emit(key: string): void {
@@ -32,6 +34,18 @@ export function readTimer(key: string, preset: number): TimerState {
   if (!t) {
     t = initial(preset);
     timers.set(key, t);
+    seededFrom.set(key, preset);
+    return t;
+  }
+  const seeded = seededFrom.get(key);
+  if (seeded !== preset) {
+    // The app's default changed (e.g. a revision altered the presets): an untouched idle timer follows
+    // the new default; anything the person chose or started is left alone.
+    if (t.status === 'idle' && t.accumulatedMs === 0 && t.presetMinutes === seeded) {
+      t = initial(preset);
+      timers.set(key, t);
+    }
+    seededFrom.set(key, preset);
   }
   return t;
 }

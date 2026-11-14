@@ -1,7 +1,7 @@
 /** Rows for "What you've shared": editable facts, conflicts, sources, captures, and the add-an-interest form. */
 import { useState, type FormEvent } from 'react';
 import type { Capture, ContextSource, ProfileFact } from '@shared/context.ts';
-import { READ_STATUS_LABELS } from '@shared/context.ts';
+import { readStatusLabel } from '@shared/context.ts';
 import { Icons } from '../../components/ui.tsx';
 import { ExampleTag, FactStatusChip } from './badges.tsx';
 import { SOURCE_KIND_LABELS, formatDate, relativeTime, truncate } from './helpers.ts';
@@ -158,7 +158,7 @@ export function CaptureRow({ capture, onForget }: { capture: Capture; onForget: 
       <div className="me-capture-main">
         <span className="me-capture-text">{headline}</span>
         <span className="me-capture-meta">
-          {capture.sourceLabel} · {READ_STATUS_LABELS[capture.readStatus]} · {relativeTime(capture.createdAt)}
+          {capture.sourceLabel} · {readStatusLabel(capture)} · {relativeTime(capture.createdAt)}
           {capture.isExample && <ExampleTag />}
         </span>
       </div>

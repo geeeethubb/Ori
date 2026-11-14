@@ -1,7 +1,8 @@
 /** Natural-language revision preview, improvement suggestions, and feedback. */
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { premiumActive, requireAuth, type AuthEnv } from '../auth.ts';
+import { requireAuth, type AuthEnv } from '../auth.ts';
+import { premiumGate } from './gate.ts';
 import { APP_ID_PATTERN } from '../../shared/ids.ts';
 import { applyRevision } from '../../shared/revision.ts';
 import type { RevisionPreviewDto } from '../../shared/api.ts';
@@ -21,7 +22,8 @@ revisionRoutes.post('/:appId/revisions/preview', async (c) => {
   if (!id.success) return c.json(notFound, 404);
   const current = apps.getSpec(user.id, id.data);
   if (!current) return c.json(notFound, 404);
-  if (!premiumActive(user)) return c.json({ error: 'Your trial has ended. You can still use and export this app; subscribe to keep changing it.', code: 'premium_paused' }, 403);
+  const gate = premiumGate(c);
+  if (gate) return gate;
   const body = z.object({ request: z.string().trim().min(3).max(2000) }).safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: 'Describe the change you want in a sentence.', code: 'invalid' }, 400);
   const records = (apps.listRecords(user.id, id.data) ?? []).slice(0, 5).map((r) => ({ values: r.values, createdAt: r.createdAt }));
@@ -69,6 +71,8 @@ revisionRoutes.post('/:appId/feedback', async (c) => {
   const body = z.object({ text: z.string().trim().min(3).max(2000) }).safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: 'Tell us a little more.', code: 'invalid' }, 400);
   apps.recordEvent(id.data, 'feedback_given', { text: body.data.text.slice(0, 500) });
+  const gate = premiumGate(c);
+  if (gate) return c.json({ suggestion: null, generatedBy: 'sample', note: 'Thanks, noted. Suggestions from the model are paused on this plan.' });
   const events = apps.listEvents(user.id, id.data, 500).map((e) => ({ type: e.type, at: e.at }));
   const records = (apps.listRecords(user.id, id.data) ?? []).map((r) => ({ values: r.values, createdAt: r.createdAt }));
   const result = await withModel(user.id, 'suggest', (a) => a.suggestImprovement({ spec: current.spec, events, records, feedback: body.data.text }));

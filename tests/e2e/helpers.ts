@@ -40,7 +40,7 @@ export async function listRecords(request: APIRequestContext, appId: string) {
 
 export interface AppDetail {
   version: number;
-  spec: { fields: { id: string; label: string; type: string }[]; views: { id: string; type: string; filter?: { fieldId: string; value: string }; minutesFieldId?: string; presets?: number[] }[] };
+  spec: { fields: { id: string; label: string; type: string }[]; views: { id: string; type: string; filter?: { fieldId: string; value: string }; minutesFieldId?: string; presets?: number[]; formFieldIds?: string[] }[] };
 }
 
 export async function appDetail(request: APIRequestContext, appId: string): Promise<AppDetail> {

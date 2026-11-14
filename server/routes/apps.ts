@@ -181,6 +181,8 @@ appRoutes.post('/:appId/revisions/apply', async (c) => {
     summary: z.string().trim().min(1).max(300).optional(),
     baseVersion: z.number().int().optional(),
     proposalId: z.string().max(40).optional(),
+    /** The Playground/Agent proposal this change came from, marked applied in the same step. */
+    recommendationId: z.string().max(40).optional(),
   }).safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: 'Those changes are not valid.', code: 'invalid', details: body.error.issues.slice(0, 5) }, 400);
   if (body.data.baseVersion !== undefined && body.data.baseVersion !== current.version) {
@@ -191,7 +193,8 @@ appRoutes.post('/:appId/revisions/apply', async (c) => {
   const summary = body.data.summary ?? result.changes.join(' ');
   const { version } = repo.appendVersion(c.get('user').id, id.data, result.spec, summary, 'revision');
   repo.recordEvent(id.data, 'revision_accepted', { version, proposalId: body.data.proposalId ?? null });
-  if (body.data.proposalId) markProposal(body.data.proposalId, 'accepted');
+  if (body.data.proposalId) markProposal(c.get('user').id, id.data, body.data.proposalId, 'accepted');
+  if (body.data.recommendationId && SHORT_ID_PATTERN.test(body.data.recommendationId)) markRecommendationApplied(c.get('user').id, body.data.recommendationId, id.data);
   return c.json({ ...detail(c.get('user').id, id.data), changes: result.changes });
 });
 
@@ -212,9 +215,13 @@ appRoutes.post('/:appId/revisions/undo', (c) => {
   return c.json(detail(c.get('user').id, id.data));
 });
 
-function markProposal(proposalId: string, status: string): void {
+function markProposal(ownerId: string, appId: string, proposalId: string, status: string): void {
   // Lazy import avoids a cycle with the revisions module which owns proposals.
-  import('../repos/proposals.ts').then((m) => m.setProposalStatus(proposalId, status)).catch(() => undefined);
+  import('../repos/proposals.ts').then((m) => m.setProposalStatus(ownerId, appId, proposalId, status)).catch(() => undefined);
+}
+
+function markRecommendationApplied(ownerId: string, recommendationId: string, appId: string): void {
+  import('../repos/context.ts').then((m) => m.setRecommendationStatus(ownerId, recommendationId, 'applied', appId)).catch(() => undefined);
 }
 
 // ---------- export / import ----------
@@ -259,6 +266,11 @@ appRoutes.post('/import', async (c) => {
     const latest = versions[versions.length - 1]!.spec;
     for (const r of body.data.records) {
       const v = validateValues(latest, r.values, { partial: true });
+      // Imported files can come from anyone: photos that are not in this library and links that are not
+      // web addresses are dropped (the record survives and stays editable), never stored as given.
+      const photos = foreignPhotos(ownerId, latest, v.values);
+      if (photos) for (const k of Object.keys(photos)) v.values[k] = null;
+      for (const [k, msg] of Object.entries(v.errors)) if (/^Links should start/.test(msg)) v.values[k] = null;
       repo.createRecord(ownerId, app.id, v.values, { createdAt: r.createdAt });
     }
     return app.id;
@@ -279,7 +291,8 @@ appRoutes.post('/:appId/events', async (c) => {
   const id = appIdParam.safeParse(c.req.param('appId'));
   if (!id.success) return c.json(notFound, 404);
   if (!repo.getApp(c.get('user').id, id.data)) return c.json(notFound, 404);
-  const body = z.object({ type: z.enum(EVENT_TYPES), meta: z.record(z.string(), z.unknown()).optional() }).safeParse(await c.req.json().catch(() => null));
+  const EventMeta = z.record(z.string().max(40), z.union([z.string().max(500), z.number(), z.boolean(), z.null()])).refine((m) => Object.keys(m).length <= 10, 'too many keys');
+  const body = z.object({ type: z.enum(EVENT_TYPES), meta: EventMeta.optional() }).safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: 'Invalid event.', code: 'invalid' }, 400);
   // Only client-originated event types are accepted here; server-owned ones are derived.
   if (!['app_opened', 'install_guide_viewed', 'shortcut_requested', 'feedback_given', 'revision_declined', 'first_action_completed'].includes(body.data.type)) {

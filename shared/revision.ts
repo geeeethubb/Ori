@@ -87,14 +87,14 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[]): ApplyResult 
         const idx = op.afterFieldId ? spec.fields.findIndex((f) => f.id === op.afterFieldId) : -1;
         if (idx >= 0) spec.fields.splice(idx + 1, 0, op.field); else spec.fields.push(op.field);
         // Make the field visible in views that enumerate fields explicitly. Forms: every unfiltered view,
-        // plus the primary view when all views are filtered (so the new field is reachable somewhere).
-        const unfiltered = spec.views.filter((v) => !v.filter);
-        spec.views.forEach((v, i) => {
+        // plus the primary form-bearing view (summaries have no form) so the field is always reachable.
+        const primaryForm = spec.views.find((v) => v.type !== 'summary');
+        for (const v of spec.views) {
           if (v.type === 'journal' && v.showFieldIds) v.showFieldIds.push(op.field.id);
           if (v.type === 'list' && v.columnFieldIds && v.columnFieldIds.length < 8) v.columnFieldIds.push(op.field.id);
-          const takesForm = !v.filter || (unfiltered.length === 0 && i === 0);
+          const takesForm = !v.filter || v === primaryForm;
           if (takesForm && v.formFieldIds && !v.formFieldIds.includes(op.field.id)) v.formFieldIds.push(op.field.id);
-        });
+        }
         changes.push(`Add ${describeField(op.field)}. Existing ${spec.entryNoun.plural} keep their data; this field starts empty for them.`);
         break;
       }
@@ -125,9 +125,10 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[]): ApplyResult 
         const f = find(op.fieldId);
         if (!f) { errors.push(`Unknown field "${op.fieldId}"`); break; }
         f.hidden = false;
+        const primaryForm = spec.views.find((v) => v.type !== 'summary');
         for (const v of spec.views) {
           if (v.type === 'journal' && v.showFieldIds && !v.showFieldIds.includes(f.id)) v.showFieldIds.push(f.id);
-          if (v.formFieldIds && !v.formFieldIds.includes(f.id) && !v.filter) v.formFieldIds.push(f.id);
+          if (v.formFieldIds && !v.formFieldIds.includes(f.id) && (!v.filter || v === primaryForm)) v.formFieldIds.push(f.id);
         }
         changes.push(`Show “${f.label}” again.`);
         break;

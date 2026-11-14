@@ -18,6 +18,7 @@ import { saveProposal } from '../repos/proposals.ts';
 import { withModel } from '../model/index.ts';
 import type { ExistingAppSummary } from '../model/types.ts';
 import { previewRecords } from '../services/previewContent.ts';
+import { groundExplorations } from '../services/grounding.ts';
 import { PAUSED_MESSAGE, premiumGate } from './gate.ts';
 
 export const recommendationRoutes = new Hono<AuthEnv>();
@@ -64,6 +65,8 @@ recommendationRoutes.post('/generate', async (c) => {
     .map((r) => ({ ...r, evidenceFactIds: r.evidenceFactIds.filter((id) => allowedFacts.has(id)), sourceCaptureIds: r.sourceCaptureIds.filter((id) => allowedCaptures.has(id)) }))
     .filter((r) => r.evidenceFactIds.length > 0 || r.sourceCaptureIds.length > 0)
     .filter((r) => r.kind !== 'update_app' || (r.targetAppId && appIds.has(r.targetAppId)))
+    .map((r) => groundExplorations(r, recent.map((c) => c.url)))
+    .filter((r): r is NonNullable<typeof r> => r !== null)
     .filter((r) => (seen.has(r.title.toLowerCase()) ? false : (seen.add(r.title.toLowerCase()), true)))
     .slice(0, count);
   if (!drafts.length) return c.json({ error: 'We could not produce grounded suggestions from this context. Share a few more specifics and try again.', code: 'model_unavailable' }, 503);
