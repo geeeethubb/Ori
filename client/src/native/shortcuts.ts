@@ -6,6 +6,7 @@
  */
 import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import { APP_ID_PATTERN } from '@shared/ids.ts';
+import { apiBase } from '../api.ts';
 
 export interface PinShortcutOptions {
   appId: string;
@@ -50,7 +51,9 @@ export async function pinAppShortcut(opts: PinShortcutOptions): Promise<PinShort
   if (!APP_ID_PATTERN.test(opts.appId)) return { requested: false, supported: true, message: 'Invalid app id.' };
   let iconBase64: string | undefined;
   try {
-    const res = await fetch(opts.iconUrl);
+    // Inside the shell the page origin is the local bundle; icons live on the API server.
+    const iconPath = new URL(opts.iconUrl, window.location.origin).pathname;
+    const res = await fetch(`${apiBase() || window.location.origin}${iconPath}`);
     if (res.ok) {
       const buf = new Uint8Array(await res.arrayBuffer());
       let bin = '';

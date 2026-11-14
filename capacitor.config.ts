@@ -9,7 +9,9 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.aiappstore.runtime',
   appName: 'AI App Store',
-  webDir: 'dist/client',
+  // scripts/build-apk.mjs builds a separate bundle (with the API base baked in) into dist/android so
+  // the browser bundle in dist/client never carries a phone-only API address.
+  webDir: process.env.AAS_ANDROID_WEBDIR ?? 'dist/client',
   server: {
     // http origin + cleartext so the shell can talk to a LAN/emulator-host server during the
     // prototype (http://10.0.2.2:8787 on the emulator). A production deployment uses HTTPS.

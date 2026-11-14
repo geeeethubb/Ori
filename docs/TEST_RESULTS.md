@@ -32,7 +32,7 @@ Bugs found by these tests and fixed before the browser runs: PNG icon routes nev
 | Adapter smoke: recommend → journal spec → board spec → revision → unsupported | ✅ | `npx tsx server/scripts/ai-generate-smoke.ts` (13–17 s per generation) |
 | **Through the real routes** (import → recommendations → draft → build → record → revision → feedback): extraction 24 facts (11.7 s); 4 grounded recommendations, work + explore, quoting the profile (18.6 s); journal draft with weekly challenge + required reflection field validated (14.6 s); build; record saved; live revision "add next experiment field" previewed (13.9 s), applied as v2, record retained; feedback → suggestion (5.1 s); board draft with due_soon rule + priority (19.9 s) | ✅ | Python client against `node --import tsx server/index.ts` on :8791 with the real `.env` (2026-11-14 03:38) |
 | Grammar-constrained structured output for the full spec | ❌ → fixed | API rejected the large schema ("compiled grammar is too large"); spec/revision calls now use JSON-in-text + zod validation with retries |
-| Browser journey in Live AI mode (`E2E_LIVE=1 … journey.spec.ts`, desktop) | ⏳ running | result recorded in BUILD_STATUS when finished |
+| Browser journey in Live AI mode (`E2E_LIVE=1 npx playwright test tests/e2e/journey.spec.ts --project=desktop`): sign up → sample context (Claude extraction) → For You (Claude recommendations) → customize → draft → build → save → reload → live revision → undo; plus the two-profile contrast | ✅ 2 passed (1.9 min) | 2026-11-14 03:58, real key, `claude-opus-5-5` |
 
 ## 3. Browser (Playwright, production build served by Node, Sample mode, throwaway DB) — `npm run test:e2e`
 

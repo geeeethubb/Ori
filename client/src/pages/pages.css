@@ -72,10 +72,10 @@
 @media (min-width: 640px) { .st-sticky-cta .btn { flex: 0 0 auto; } }
 
 /* ---------- for you ---------- */
-.st-rec-grid { grid-template-columns: 1fr; }
-@media (min-width: 640px) { .st-rec-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 960px) { .st-rec-grid { grid-template-columns: repeat(3, 1fr); } }
-.st-rec-card { display: flex; flex-direction: column; gap: 12px; }
+.st-rec-grid { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 640px) { .st-rec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .st-rec-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.st-rec-card { display: flex; flex-direction: column; gap: 12px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .st-rec-head { display: flex; align-items: center; gap: 12px; }
 .st-rec-head svg { flex: none; }
 .st-rec-title { display: flex; flex-direction: column; gap: 4px; min-width: 0; }

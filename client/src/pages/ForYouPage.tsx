@@ -149,7 +149,10 @@ export function ForYouPage() {
             <p className="lede">Apps that fit your workflows and your curiosity.</p>
           </div>
           <div className="row">
-            <ModeBadge mode={user?.modelMode} />
+            <ModeBadge mode={data?.recs.generatedBy ?? user?.modelMode} />
+            {data?.recs.generatedBy === 'sample' && user?.modelMode === 'anthropic' && (
+              <span className="tiny faint">These came from the built-in catalog. Refresh to use live AI.</span>
+            )}
             <button type="button" className="btn btn-secondary" data-testid="recs-refresh" onClick={() => void generate()} disabled={generating || !hasContext}>
               Refresh
             </button>

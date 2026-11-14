@@ -48,16 +48,17 @@ if (!apiBase) {
 console.log(`JDK: ${java}\nSDK: ${sdk}\nAPI base baked into the bundle: ${apiBase || '(none)'}`);
 fs.writeFileSync(path.join(root, 'android', 'local.properties'), `sdk.dir=${sdk.replace(/\\/g, '\\\\')}\n`);
 
-const env = { ...process.env, JAVA_HOME: java, ANDROID_HOME: sdk, ANDROID_SDK_ROOT: sdk, VITE_API_BASE_URL: apiBase, PATH: `${path.join(java, 'bin')}${path.delimiter}${process.env.PATH}` };
+const env = { ...process.env, JAVA_HOME: java, ANDROID_HOME: sdk, ANDROID_SDK_ROOT: sdk, VITE_API_BASE_URL: apiBase, AAS_ANDROID_WEBDIR: 'dist/android', PATH: `${path.join(java, 'bin')}${path.delimiter}${process.env.PATH}` };
 const run = (cmd, cwd = root) => {
   console.log(`\n$ ${cmd}`);
   execSync(cmd, { stdio: 'inherit', cwd, env, shell: true });
 };
 
-run('npx vite build');
+run('npx vite build --outDir ../dist/android --emptyOutDir'); // separate from the browser bundle in dist/client
 run('npx cap sync android');
-const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
-const gradle = spawnSync(gradlew, ['assembleDebug', '--no-daemon', '--console=plain'], { cwd: path.join(root, 'android'), env, stdio: 'inherit', shell: true });
+// Absolute path: some Windows shells do not resolve a bare .bat from the current directory.
+const gradlew = path.join(root, 'android', process.platform === 'win32' ? 'gradlew.bat' : 'gradlew');
+const gradle = spawnSync(`"${gradlew}"`, ['assembleDebug', '--no-daemon', '--console=plain'], { cwd: path.join(root, 'android'), env, stdio: 'inherit', shell: true });
 if (gradle.status !== 0) { console.error(`\nGradle failed with status ${gradle.status}.`); process.exit(gradle.status ?? 1); }
 
 const apk = path.join(root, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');

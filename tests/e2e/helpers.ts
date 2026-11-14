@@ -37,6 +37,28 @@ export function isoDaysFromToday(days: number): string {
 
 /** Fails when the page scrolls horizontally (clipped phone layout). */
 export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
-  const { scrollWidth, innerWidth } = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth }));
-  expect(scrollWidth, `page is ${scrollWidth}px wide in a ${innerWidth}px viewport`).toBeLessThanOrEqual(innerWidth + 1);
+  // body has overflow-x hidden, so scrollWidth alone can hide clipped content: also measure the
+  // widest element's right edge (ignoring intentionally scrollable containers' children).
+  const r = await page.evaluate(() => {
+    const innerWidth = window.innerWidth;
+    let worst = { right: 0, tag: '' };
+    const scrollers = new Set<Element>();
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>('*'))) {
+      const cs = getComputedStyle(el);
+      if (/(auto|scroll)/.test(cs.overflowX)) scrollers.add(el);
+    }
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>('body *'))) {
+      if (el.closest('.toast-host')) continue;
+      let p: Element | null = el.parentElement;
+      let inScroller = false;
+      while (p) { if (scrollers.has(p)) { inScroller = true; break; } p = p.parentElement; }
+      if (inScroller) continue;
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0) continue;
+      if (rect.right > worst.right) worst = { right: rect.right, tag: `${el.tagName.toLowerCase()}.${(el.className && typeof el.className === 'string' ? el.className : '').split(' ')[0]}` };
+    }
+    return { scrollWidth: document.documentElement.scrollWidth, innerWidth, worst };
+  });
+  expect(r.scrollWidth, `page is ${r.scrollWidth}px wide in a ${r.innerWidth}px viewport`).toBeLessThanOrEqual(r.innerWidth + 1);
+  expect(r.worst.right, `${r.worst.tag} extends to ${Math.round(r.worst.right)}px in a ${r.innerWidth}px viewport`).toBeLessThanOrEqual(r.innerWidth + 1);
 }

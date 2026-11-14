@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
-import { ApiError, describeError } from '../api.ts';
+import { ApiError, describeError, isNative } from '../api.ts';
 import { useAuth } from '../auth.tsx';
 import { Skeleton } from '../components/ui.tsx';
 import { safeNextPath } from './parts/helpers.ts';
@@ -42,7 +42,8 @@ export function LoginPage({ mode }: { mode: 'login' | 'signup' }) {
   }
   if (user) return <Navigate to={destination} replace />;
 
-  const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  // The Android shell's origin is also "localhost", so the hint is web-only.
+  const isLocal = !isNative() && ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

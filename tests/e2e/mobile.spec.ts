@@ -12,9 +12,18 @@ test('primary screens fit a phone without clipping', async ({ page }) => {
   const board = await createFixtureApp(page.request, 'follow-up-board');
   await addRecord(page.request, board.app.id, { person: 'Priya', stage: 'promised', commitment: 'Send the deck', due: isoDaysFromToday(-1) });
 
+  // Context + recommendations (Sample mode) so the discovery screens have real content.
+  expect((await page.request.post('/api/context/sample', { data: { profile: 'founder-photographer' } })).status()).toBe(201);
+  const gen = await page.request.post('/api/recommendations/generate', { data: {} });
+  expect(gen.status()).toBe(200);
+  const firstRec = ((await gen.json()) as { recommendations: { id: string }[] }).recommendations[0];
+
   const shots = path.join(process.cwd(), 'test-results', 'screens');
   const pages: [string, string][] = [
     ['/import', 'import'],
+    ['/context', 'context'],
+    ['/for-you', 'for-you'],
+    [`/recommendations/${firstRec?.id}`, 'recommendation'],
     ['/collection', 'collection'],
     [`/apps/${journal.app.id}/`, 'journal'],
     [`/apps/${board.app.id}/`, 'board'],

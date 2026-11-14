@@ -82,9 +82,10 @@ p { margin: 0; }
 .stack-l { display: flex; flex-direction: column; gap: 24px; }
 .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .row-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
-@media (min-width: 640px) { .grid-2 { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 960px) { .grid-2 { grid-template-columns: repeat(2, 1fr); } .grid-3 { grid-template-columns: repeat(3, 1fr); } }
+.grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+.grid > * { min-width: 0; }
+@media (min-width: 640px) { .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 8px 0 4px; }
 .divider { border: 0; border-top: 1px solid var(--line); margin: 8px 0; }
 
