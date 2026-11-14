@@ -205,7 +205,7 @@ function rowToRecord(r: R): AppRecord {
 
 export function listRecords(ownerId: string, appId: string): AppRecord[] | null {
   if (!getApp(ownerId, appId)) return null;
-  const rows = getDb().prepare('SELECT * FROM app_records WHERE app_id = ? AND deleted_at IS NULL ORDER BY created_at DESC').all(appId) as R[];
+  const rows = getDb().prepare('SELECT * FROM app_records WHERE app_id = ? AND deleted_at IS NULL ORDER BY created_at DESC, rowid DESC').all(appId) as R[];
   return rows.map(rowToRecord);
 }
 

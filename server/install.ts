@@ -109,8 +109,13 @@ async function pngResponse(icon: AppIconSpec, size: number, maskable: boolean): 
 }
 
 installRoutes.get('/manifest.webmanifest', (c) => c.body(JSON.stringify(storeManifest()), 200, { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-cache' }));
-installRoutes.get('/icons/store-:size{\\d+}.png', (c) => pngResponse(STORE_ICON, clampSize(c.req.param('size') ?? '192'), false));
-installRoutes.get('/icons/store-:size{\\d+}-maskable.png', (c) => pngResponse(STORE_ICON, clampSize(c.req.param('size') ?? '192'), true));
+// Hono parameters must occupy a whole path segment, so the file name is one param with a regex.
+const ICON_FILE = /^(?:icon|store)-(\d+)(-maskable)?\.png$/;
+installRoutes.get('/icons/:file{store-\\d+(?:-maskable)?\\.png}', (c) => {
+  const m = ICON_FILE.exec(c.req.param('file') ?? '');
+  if (!m) return c.notFound();
+  return pngResponse(STORE_ICON, clampSize(m[1] as string), Boolean(m[2]));
+});
 installRoutes.get('/icons/store.svg', (c) => c.body(appIconSvg(STORE_ICON, 256), 200, { 'Content-Type': 'image/svg+xml' }));
 
 installRoutes.get('/apps/:appId/manifest.webmanifest', (c) => {
@@ -128,18 +133,12 @@ installRoutes.get('/apps/:appId/icon.svg', (c) => {
   return c.body(appIconSvg(iconFor(meta), 256), 200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-cache' });
 });
 
-installRoutes.get('/apps/:appId/icon-:size{\\d+}.png', (c) => {
+installRoutes.get('/apps/:appId/:file{icon-\\d+(?:-maskable)?\\.png}', (c) => {
   const appId = c.req.param('appId');
-  const meta = APP_ID_PATTERN.test(appId) ? getAppPublicMeta(appId) : null;
-  if (!meta) return c.notFound();
-  return pngResponse(iconFor(meta), clampSize(c.req.param('size') ?? '192'), false);
-});
-
-installRoutes.get('/apps/:appId/icon-:size{\\d+}-maskable.png', (c) => {
-  const appId = c.req.param('appId');
-  const meta = APP_ID_PATTERN.test(appId) ? getAppPublicMeta(appId) : null;
-  if (!meta) return c.notFound();
-  return pngResponse(iconFor(meta), clampSize(c.req.param('size') ?? '192'), true);
+  const m = ICON_FILE.exec(c.req.param('file') ?? '');
+  const meta = m && APP_ID_PATTERN.test(appId) ? getAppPublicMeta(appId) : null;
+  if (!meta || !m) return c.notFound();
+  return pngResponse(iconFor(meta), clampSize(m[1] as string), Boolean(m[2]));
 });
 
 function clampSize(raw: string): number {

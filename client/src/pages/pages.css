@@ -1,0 +1,141 @@
+/* ------------------------------------------------------------------
+   Storefront pages. Classes are prefixed st-; base components, tokens
+   and utilities live in client/src/styles.css. Phone first.
+   ------------------------------------------------------------------ */
+
+/* ---------- shared page bits ---------- */
+.st-page-head { display: flex; flex-direction: column; gap: 6px; padding: 8px 0 4px; }
+.st-page-head .lede { margin-top: 2px; }
+.st-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.st-head-row > .row { margin-left: auto; }
+.st-section { display: flex; flex-direction: column; gap: 12px; }
+.st-section h2 { font-size: 1.3rem; }
+.st-h2-sm { font-size: 1.2rem; }
+.st-wrap { overflow-wrap: anywhere; }
+.st-status { display: flex; align-items: center; gap: 10px; }
+.st-back { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; font-weight: 600; color: var(--ink-2); }
+.st-back svg { width: 18px; height: 18px; }
+.st-inline-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.st-inline-form .input { flex: 1 1 220px; }
+.st-details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; color: var(--ink-2); list-style: none; }
+.st-details summary::-webkit-details-marker { display: none; }
+.st-details summary::before { content: '\25B8'; margin-right: 8px; color: var(--ink-3); }
+.st-details[open] summary::before { content: '\25BE'; }
+
+/* ---------- welcome ---------- */
+.st-hero-actions { margin-top: 20px; }
+.st-hero-actions .btn { flex: 1 1 200px; }
+@media (min-width: 640px) { .st-hero-actions .btn { flex: 0 0 auto; } }
+.st-examples { margin-top: 10px; }
+.purpose-card .badge { margin-bottom: 8px; }
+.st-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 760px) { .st-steps { grid-template-columns: repeat(5, 1fr); } }
+.st-steps li { display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-s); font-weight: 600; font-size: 0.92rem; }
+.st-step-num { flex: none; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent-ink); font-size: 0.8rem; font-weight: 700; }
+.st-footer-note { text-align: center; padding: 12px 0 0; }
+
+/* ---------- auth ---------- */
+.st-auth-form { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; }
+.st-auth-note { margin-top: 14px; }
+
+/* ---------- import ---------- */
+.st-tabs-panel { display: flex; flex-direction: column; gap: 14px; }
+.st-prompt-box { border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); padding: 0 14px; }
+.st-prompt-box summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; list-style: none; }
+.st-prompt-box summary::-webkit-details-marker { display: none; }
+.st-prompt-box summary::before { content: '\25B8'; margin-right: 8px; color: var(--ink-3); }
+.st-prompt-box[open] summary::before { content: '\25BE'; }
+.st-prompt-box .code { margin: 0 0 12px; background: var(--surface); }
+.st-prompt-actions { padding-bottom: 14px; }
+.st-counter { display: flex; justify-content: space-between; gap: 8px; font-size: 0.8rem; color: var(--ink-3); }
+.st-counter .over { color: var(--danger); font-weight: 600; }
+.st-file-input { display: block; width: 100%; min-height: 46px; padding: 10px; border: 1px dashed var(--line-2); border-radius: 12px; background: var(--surface); }
+.st-sample-card { border: 1px dashed #e4c98a; background: #fffaf0; }
+.st-sample-card .row .btn { flex: 1 1 200px; }
+
+/* ---------- your context ---------- */
+.st-conflict { background: var(--warn-soft); border-color: #efd98a; }
+.st-fact { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.st-fact:first-child { border-top: 0; }
+.st-fact-main { flex: 1 1 240px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.st-fact-value { overflow-wrap: anywhere; }
+.st-fact-actions { display: flex; gap: 4px; margin-left: auto; }
+.st-fact-edit { display: flex; gap: 8px; flex-wrap: wrap; width: 100%; }
+.st-fact-edit .input { flex: 1 1 220px; }
+.st-source { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.st-source:first-child { border-top: 0; }
+.st-source-main { flex: 1 1 220px; min-width: 0; }
+.st-source .btn { margin-left: auto; }
+.st-sticky-cta { position: sticky; bottom: calc(var(--nav-h) + var(--safe-bottom) + 12px); z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; box-shadow: var(--shadow); }
+@media (min-width: 760px) { .st-sticky-cta { bottom: 16px; } }
+.st-sticky-cta .btn { flex: 1 1 200px; }
+@media (min-width: 640px) { .st-sticky-cta .btn { flex: 0 0 auto; } }
+
+/* ---------- for you ---------- */
+.st-rec-grid { grid-template-columns: 1fr; }
+@media (min-width: 640px) { .st-rec-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 960px) { .st-rec-grid { grid-template-columns: repeat(3, 1fr); } }
+.st-rec-card { display: flex; flex-direction: column; gap: 12px; }
+.st-rec-head { display: flex; align-items: center; gap: 12px; }
+.st-rec-head svg { flex: none; }
+.st-rec-title { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.st-rec-title h3 { overflow-wrap: anywhere; }
+.st-preview { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; color: var(--ink-2); }
+.st-preview-row { display: flex; align-items: center; gap: 8px; min-height: 22px; }
+.st-preview-row span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-preview-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--line-2); }
+.st-preview-bar { flex: none; height: 8px; border-radius: 4px; background: var(--line-2); }
+.st-preview-cols { flex-direction: row; gap: 8px; overflow: hidden; }
+.st-preview-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.st-preview-col-title { font-weight: 600; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-preview-card { display: block; height: 14px; border-radius: 4px; background: var(--surface); border: 1px solid var(--line); }
+.st-preview-card.short { width: 70%; }
+.st-why { display: flex; flex-direction: column; gap: 6px; }
+.st-why .eyebrow { font-size: 0.7rem; }
+.st-rec-actions { display: flex; gap: 8px; margin-top: auto; flex-wrap: wrap; }
+.st-rec-actions .btn-primary { flex: 1 1 160px; }
+.st-explore { display: flex; flex-direction: column; gap: 10px; }
+
+/* ---------- recommendation detail / build ---------- */
+.st-detail-head { display: flex; gap: 16px; align-items: flex-start; }
+.st-detail-head svg { flex: none; }
+.st-detail-title { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.st-detail-title h1 { overflow-wrap: anywhere; }
+.st-evidence { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.st-evidence li { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; font-size: 0.92rem; }
+.st-suggestions { display: flex; flex-wrap: wrap; gap: 6px; }
+.st-suggestions button { min-height: 44px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface); font-size: 0.85rem; font-weight: 500; }
+.st-suggestions button:hover { background: var(--surface-2); }
+.st-draft { display: flex; flex-direction: column; gap: 14px; }
+.st-draft h3 { font-size: 1.05rem; margin-bottom: 6px; }
+.st-draft-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.st-draft-list li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; font-size: 0.92rem; }
+.st-draft-list li.st-draft-stack { flex-direction: column; align-items: flex-start; gap: 4px; }
+.st-draft-list .faint { white-space: nowrap; }
+.st-build-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.st-build-actions .btn { flex: 1 1 200px; }
+@media (min-width: 640px) { .st-build-actions .btn { flex: 0 0 auto; } }
+
+/* ---------- my collection ---------- */
+.st-tile { flex-wrap: wrap; }
+.st-tile-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+@media (max-width: 520px) { .st-tile-actions { width: 100%; } .st-tile-actions .btn-primary { flex: 1; } }
+
+/* ---------- pricing ---------- */
+.st-plan-table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.st-plan-table th, .st-plan-table td { text-align: left; padding: 14px 16px; border-top: 1px solid var(--line); vertical-align: top; }
+.st-plan-table thead th { border-top: 0; background: var(--surface-2); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+.st-price { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; white-space: nowrap; }
+@media (max-width: 600px) {
+  .st-plan-table thead { display: none; }
+  .st-plan-table tr { display: block; padding: 8px 0; border-top: 1px solid var(--line); }
+  .st-plan-table tr:first-child { border-top: 0; }
+  .st-plan-table td { display: block; border-top: 0; padding: 4px 16px; }
+}
+
+/* ---------- account ---------- */
+.st-kv { display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; font-size: 0.95rem; margin: 0; }
+.st-kv dt { color: var(--ink-3); }
+.st-kv dd { margin: 0; overflow-wrap: anywhere; }
+.st-usage { height: 10px; border-radius: 5px; background: var(--surface-3); overflow: hidden; }
+.st-usage-fill { height: 100%; background: var(--work); border-radius: 5px; transition: width 0.3s ease; }

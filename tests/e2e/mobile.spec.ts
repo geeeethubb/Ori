@@ -1,17 +1,18 @@
 /** Phone-width layout checks: no horizontal overflow, tap targets, screenshots for review. */
+import path from 'node:path';
 import { test, expect } from '@playwright/test';
 import { addRecord, createFixtureApp, expectNoHorizontalOverflow, isoDaysFromToday, signupViaApi } from './helpers.ts';
 
 test.skip(({ isMobile }) => !isMobile, 'phone project only');
 
-test('primary screens fit a phone without clipping', async ({ page }, testInfo) => {
+test('primary screens fit a phone without clipping', async ({ page }) => {
   await signupViaApi(page);
   const journal = await createFixtureApp(page.request, 'photo-walk-journal');
   await addRecord(page.request, journal.app.id, { date: isoDaysFromToday(0), subject: 'Rain on the tram window', reflection: 'Shoot through glass more often; the reflections add a second frame.' });
   const board = await createFixtureApp(page.request, 'follow-up-board');
   await addRecord(page.request, board.app.id, { person: 'Priya', stage: 'promised', commitment: 'Send the deck', due: isoDaysFromToday(-1) });
 
-  const shots = testInfo.outputPath('..', '..', 'screens');
+  const shots = path.join(process.cwd(), 'test-results', 'screens');
   const pages: [string, string][] = [
     ['/import', 'import'],
     ['/collection', 'collection'],

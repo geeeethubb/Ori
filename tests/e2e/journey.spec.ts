@@ -82,6 +82,7 @@ test('context → recommendations → build → use → reopen → revise withou
   await expect(page.getByTestId('rt-revise-accept')).toBeVisible({ timeout: 90_000 });
   await expect(page.getByTestId('rt-revise-changes')).toContainText(/next experiment/i);
   await page.getByTestId('rt-revise-accept').click();
+  await expect(page.getByText(/change applied/i)).toBeVisible({ timeout: 30_000 });
   await page.goto(appUrl);
   await expect(page.getByTestId('rt-entry')).toHaveCount(1);
   await expect(page.getByText('Low sun across the brick wall by the station')).toBeVisible();
@@ -92,6 +93,7 @@ test('context → recommendations → build → use → reopen → revise withou
   // Undo restores the previous definition and keeps the entry.
   await page.getByTestId('rt-settings-link').click();
   await page.getByTestId('rt-undo').click();
+  await expect(page.getByText(/undone/i)).toBeVisible({ timeout: 30_000 });
   await page.goto(appUrl);
   await expect(page.getByTestId('rt-entry')).toHaveCount(1);
   await page.getByTestId('rt-new-entry').click();

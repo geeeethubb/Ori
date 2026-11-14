@@ -133,13 +133,13 @@ export function computeMetric(records: AppRecord[], metric: MetricSpec, now: Dat
       return { id: metric.id, label: metric.label, value: s, display: `${fmt(s)}${unit}` };
     }
     case 'avg': {
-      if (!nums.length) return { id: metric.id, label: metric.label, value: null, display: '—' };
+      if (!nums.length) return { id: metric.id, label: metric.label, value: null, display: '–' };
       const a = nums.reduce((x, y) => x + y, 0) / nums.length;
       return { id: metric.id, label: metric.label, value: a, display: `${fmt(a)}${unit}` };
     }
     case 'min':
     case 'max': {
-      if (!nums.length) return { id: metric.id, label: metric.label, value: null, display: '—' };
+      if (!nums.length) return { id: metric.id, label: metric.label, value: null, display: '–' };
       const v = metric.kind === 'min' ? Math.min(...nums) : Math.max(...nums);
       return { id: metric.id, label: metric.label, value: v, display: `${fmt(v)}${unit}` };
     }
