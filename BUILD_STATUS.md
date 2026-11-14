@@ -1,6 +1,6 @@
 # BUILD_STATUS — AI App Store prototype
 
-Last updated: 2026-11-14 ~04:05 (session 1). Core demo journey verified in Sample mode (browser) and Live AI mode (browser + API); Android shell verified on the emulator (pin, warm launch, cold launch via the shortcut intent).
+Last updated: 2026-11-14 ~04:10 (session 1, final). Core demo journey verified in Sample mode (browser) and Live AI mode (browser + API); Android shell verified on the emulator (two pinned shortcuts with their own icons, warm launch by tap, cold launch via the shortcut intent).
 
 ## Resume here
 
@@ -96,4 +96,4 @@ node scripts/build-apk.mjs --api-base http://10.0.2.2:8787   # Android debug APK
 
 ## Next task
 
-Final polish: re-pin a shortcut with the rebuilt APK to confirm the app icon, run the full test suite once more, review DEMO.md against the seeded data, and commit. Founder follow-ups: physical iPhone Add-to-Home-Screen check, Velocity prompts.
+Session 1 is complete; everything is committed. Founder follow-ups: (1) physical iPhone Add-to-Home-Screen check with a reachable server URL (`docs/DEMO.md`), (2) run the Velocity prompts in `docs/velocity-contribution.md` and drop outputs in `docs/velocity/`, (3) optional: physical Android phone with `node scripts/build-apk.mjs --api-base http://<laptop-lan-ip>:8787`. Possible next engineering items: a service worker for offline cold starts of installed web apps; code-splitting the 500 KB client bundle; a shareable app blueprint export (stretch in the README).

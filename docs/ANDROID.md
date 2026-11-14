@@ -68,9 +68,9 @@ Environment: Windows 11 host, Android Studio JBR (JDK 21), Android SDK 36/37, em
 | **Add shortcut** from the journal's settings → launcher pin dialog → confirmed | ✅ | `dumpsys shortcut` lists pinned `app-<appId>` with label "Photo Walk Journal" |
 | **Warm launch**: tap the pinned icon while the shell is running → navigates to that app | ✅ | tapped on the home screen; shell switched from settings to the journal with its entries |
 | **Cold launch** via the shortcut's intent (`am start -a VIEW -d aiappstore://apps/<id>/ --es …APP_ID <id>`) → shell starts, reads the pending id, authenticates, opens the app | ✅ | `LaunchState: COLD`; board opened with "1 overdue · 1 due today · 1 due soon" |
-| Two different shortcut targets → two different apps (board cold, then journal warm) | ✅ | intent-level on the emulator |
+| Two different shortcut targets → two different apps | ✅ | board cold via intent then journal warm via intent; and two pinned icons on the home screen, the board's opening the board on a warm tap |
 | Cold launch by **tapping** the pinned icon | ⚠️ blocked by the emulator image | On this Google Play image with no Google account, tapping a sideloaded app's icon triggers Play Protect ("Checking info…") which hands off to a Google sign-in; the same intent sent by the launcher works (row above). On a signed-in device, or an image without Play, the tap path is the launcher path. Verify on a physical phone |
-| Shortcut icon shows the app's own icon | ⚠️ fixed after the run | the first pin used the launcher icon because the shell fetched the icon from its local origin; the bridge now fetches from the API server (`client/src/native/shortcuts.ts`). Re-pin after installing the rebuilt APK |
+| Shortcut icon shows the app's own icon | ✅ | after the fix (icons served with CORS, bridge fetches from the API server, native download fallback): the board's pin dialog and home-screen icon show the teal people icon; shortcuts pinned before the fix keep the launcher icon until re-pinned |
 | Physical Android device | ⏳ not run | none connected |
 
 Emulator notes: adb authorization was accepted through the emulator console (`event mouse` taps) because the emulator ran headless; `local.properties` must use forward slashes; the Gradle wrapper must be invoked by absolute path from Node on this machine.

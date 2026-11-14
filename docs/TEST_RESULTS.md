@@ -54,9 +54,9 @@ Bugs found by these tests and fixed before the browser runs: PNG icon routes nev
 | Pin a shortcut from an app's settings; launcher confirmation; shortcut registered with id `app-<appId>` and the app's label | ✅ | `dumpsys shortcut` |
 | Warm launch: tapping the pinned icon switches the running shell to that app with its records | ✅ | home-screen tap |
 | Cold launch with the shortcut's intent opens the intended app with its records after authenticating | ✅ | `am start … APP_ID` (what the launcher sends); `LaunchState: COLD` |
-| Two targets → two apps (board cold, journal warm) | ✅ | intent-level |
+| Two targets → two apps: board cold + journal warm via intents; two pinned icons on the home screen, board icon warm-tap opens the board | ✅ | `docs/screenshots/android-home-two-shortcuts.png` |
 | Cold launch by tapping the icon | ⚠️ | Play Protect on this account-less Play image intercepts the first open of a sideloaded app and hands off to Google sign-in; not an app defect, see `docs/ANDROID.md`. Verify on a physical phone |
-| Shortcut shows the app's own icon | ⚠️ → fixed | bridge now fetches the icon from the API server; re-pin with the rebuilt APK |
+| Shortcut shows the app's own icon | ✅ | after enabling CORS on public icons + native download fallback (`docs/screenshots/android-pin-dialog.png`) |
 
 ## 5. Physical devices
 
