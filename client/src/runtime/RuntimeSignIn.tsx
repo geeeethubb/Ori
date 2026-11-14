@@ -2,6 +2,7 @@
  * Inline sign-in / sign-up shown at the app's own URL. Installed iOS web apps keep their own
  * cookies, so signing in must happen inside the app's scope, never on another page.
  */
+import { BRAND } from '@shared/brand.ts';
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { describeError } from '../api.ts';
@@ -125,7 +126,7 @@ export function RuntimeSignIn({ appId }: { appId: string }) {
           </button>
           {!standalone && (
             <p className="small faint rt-center-text">
-              <Link to="/">Back to AI App Store</Link>
+              <Link to="/">Back to {BRAND.name}</Link>
             </p>
           )}
         </div>

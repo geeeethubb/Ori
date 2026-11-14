@@ -28,7 +28,7 @@ export function AppSettingsPage({ appId, detail, recordCount, offline, onDetail 
           {Icons.back}
           <span>Back to {spec.name}</span>
         </Link>
-        <Link to="/collection" className="rt-backlink">
+        <Link to="/apps" className="rt-backlink">
           Back to collection
         </Link>
       </div>

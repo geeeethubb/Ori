@@ -3,6 +3,7 @@
  * Values for hidden or unknown field IDs are preserved untouched so revisions never lose data.
  */
 import type { AppSpec, FieldSpec } from './appSpec.ts';
+import { SHORT_ID_PATTERN } from './ids.ts';
 import { parseIsoDate, todayIso } from './time.ts';
 
 export type FieldValue = string | number | boolean | string[] | null;
@@ -18,6 +19,10 @@ export interface AppRecord {
 
 export const MAX_VALUE_KEYS = 64;
 export const MAX_STRING_LENGTH = 20_000;
+
+/** Image values are media ids; preview content uses `example:<name>` which is never stored. */
+export const EXAMPLE_IMAGE_PREFIX = 'example:';
+export const IMAGE_VALUE_PATTERN = /^(?:[A-Za-z0-9_-]{8,40}|example:[a-z0-9-]{1,40})$/;
 
 export interface ValuesValidation {
   ok: boolean;
@@ -47,6 +52,8 @@ export function defaultValues(spec: AppSpec, now: Date = new Date()): RecordValu
       case 'rating':
       case 'number':
         if (f.default !== undefined) out[f.id] = f.default;
+        break;
+      case 'image':
         break;
       default:
         if (f.default !== undefined) out[f.id] = f.default;
@@ -102,6 +109,12 @@ function coerceField(f: FieldSpec, raw: unknown): { value: FieldValue; error?: s
       const tags = Array.from(new Set(arr.map((t) => String(t).trim()).filter(Boolean))).slice(0, 30);
       return { value: tags.map((t) => t.slice(0, 40)) };
     }
+    case 'image': {
+      const s = typeof raw === 'string' ? raw.trim() : '';
+      // Only real media ids are accepted; example images (`example:…`) never reach storage.
+      if (!SHORT_ID_PATTERN.test(s)) return { value: null, error: 'Add a photo' };
+      return { value: s };
+    }
   }
 }
 
@@ -141,6 +154,17 @@ export function validateValues(spec: AppSpec, input: unknown, opts: { partial?: 
   return { ok: Object.keys(errors).length === 0, values: out, errors };
 }
 
+/** Image field ids whose values are media ids (so a server can check ownership before saving). */
+export function imageMediaIds(spec: AppSpec, values: RecordValues): string[] {
+  const out: string[] = [];
+  for (const f of spec.fields) {
+    if (f.type !== 'image') continue;
+    const v = values[f.id];
+    if (typeof v === 'string' && SHORT_ID_PATTERN.test(v) && !v.startsWith(EXAMPLE_IMAGE_PREFIX)) out.push(v);
+  }
+  return out;
+}
+
 /** Short display string for a value in lists/cards. */
 export function formatValue(f: FieldSpec | undefined, v: unknown): string {
   if (v === null || v === undefined || v === '') return '';
@@ -156,6 +180,8 @@ export function formatValue(f: FieldSpec | undefined, v: unknown): string {
       return `${v}${f.unit ? ` ${f.unit}` : ''}`;
     case 'rating':
       return `${v}/${f.max}`;
+    case 'image':
+      return 'Photo';
     default:
       return String(v);
   }

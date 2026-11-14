@@ -20,7 +20,7 @@ export function liveAdapter(): ModelAdapter | null {
   return live;
 }
 
-export type UsageKind = 'extract' | 'recommend' | 'generate' | 'revise' | 'suggest';
+export type UsageKind = 'extract' | 'recommend' | 'generate' | 'revise' | 'suggest' | 'respond';
 
 export function logUsage(ownerId: string, kind: UsageKind, provider: ModelMode, ok: boolean): void {
   try {

@@ -68,6 +68,7 @@ export const SOURCE_KIND_LABELS: Record<SourceKind, string> = {
   manual: 'Short profile',
   sample: 'Sample context',
   chosen_interest: 'Something you chose',
+  capture: 'Shared with the agent',
 };
 
 export const FACT_STATUS_LABELS: Record<FactStatus, string> = {
@@ -152,6 +153,14 @@ export function describeView(spec: AppSpec, view: ViewSpec): string {
       return view.title ? `List view: ${view.title}` : 'List view';
     case 'summary':
       return `Summary: ${view.metrics.map((m) => m.label).join(', ')}`;
+    case 'gallery':
+      return `Photo gallery${view.title ? `: ${view.title}` : ''} (${view.columns} across)`;
+    case 'practice':
+      return `Practice timer with ${view.presets.join(' / ')} minute presets${view.tempoHelper ? ' and a tempo helper' : ''}`;
+    case 'links':
+      return view.title ? `Saved sources: ${view.title}` : 'Saved sources';
+    case 'queue':
+      return `Next-action queue grouped by ${view.groupBy === 'person' ? 'person' : 'what is due'}`;
   }
 }
 

@@ -84,8 +84,8 @@ export function bootTarget(appId: string | null): { appId: string; name: string;
     appId,
     name: boot.name,
     icon: {
-      symbol: isIconSymbol(boot.icon?.symbol) ? boot.icon.symbol : 'sparkle',
-      color: isIconColor(boot.icon?.color) ? boot.icon.color : 'plum',
+      symbol: isIconSymbol(boot.icon?.symbol) ? boot.icon.symbol : 'compass',
+      color: isIconColor(boot.icon?.color) ? boot.icon.color : 'blue',
     },
   };
 }

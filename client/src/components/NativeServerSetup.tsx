@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { apiBase, setApiBase } from '../api.ts';
-import { AppIcon } from './AppIcon.tsx';
+import { BrandMark } from './BrandMark.tsx';
+import { BRAND } from '@shared/brand.ts';
 
 /**
  * Shown inside the Android shell when no API server is configured (a phone cannot reach the
@@ -36,10 +37,10 @@ export function NativeServerSetup({ onDone }: { onDone: () => void }) {
     <main className="page">
       <div className="card auth-card stack">
         <div className="row">
-          <AppIcon icon={{ symbol: 'sparkle', color: 'plum' }} size={40} />
+          <BrandMark size={40} />
           <h1 style={{ fontSize: '1.5rem' }}>Connect to your server</h1>
         </div>
-        <p className="muted">This Android app is a shell for your personal apps. Point it at the AI App Store server that holds your collection.</p>
+        <p className="muted">This Android app is a shell for your personal apps. Point it at the server that holds your apps.</p>
         <label className="field">
           <span className="field-label">Server address</span>
           <input className="input" inputMode="url" autoCapitalize="off" autoCorrect="off" placeholder="http://192.168.1.20:8787" value={url} onChange={(e) => setUrl(e.target.value)} />

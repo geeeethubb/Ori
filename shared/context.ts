@@ -1,15 +1,17 @@
 /**
- * Context import → profile facts → recommendations. These are the contracts between the UI,
- * the API and the model adapter. Imported text is DATA: it is never treated as instructions.
+ * Context (what the person shared) → proposals (what they could do with it) → apps.
+ * These are the contracts between the UI, the API and the model adapter. Everything the person
+ * shares is DATA: it is never treated as instructions.
  */
 import { z } from 'zod';
-import { AppIconSchema, PATTERNS, PURPOSES } from './appSpec.ts';
+import { AppIconSchema, CAPABILITIES, DesignSchema, PATTERNS, PURPOSES } from './appSpec.ts';
+import { APP_ID_PATTERN } from './ids.ts';
 
 export const MAX_SOURCE_CHARS = 60_000; // ~15k tokens; the export prompt asks for < 800 words
-export const MAX_SOURCES_PER_USER = 20;
+export const MAX_SOURCES_PER_USER = 40;
 export const MAX_UPLOAD_BYTES = 200 * 1024;
 
-export const SOURCE_KINDS = ['paste', 'upload', 'manual', 'sample', 'chosen_interest'] as const;
+export const SOURCE_KINDS = ['paste', 'upload', 'manual', 'sample', 'chosen_interest', 'capture'] as const;
 export type SourceKind = (typeof SOURCE_KINDS)[number];
 
 export interface ContextSource {
@@ -72,30 +74,111 @@ export const ExtractionResultSchema = z.object({
 });
 export type ExtractionResult = z.infer<typeof ExtractionResultSchema>;
 
-/** A recommendation card as stored and shown. */
+// ---------- captures (the Agent's entrance: a thought, a link, a screenshot) ----------
+
+export const CAPTURE_KINDS = ['note', 'link', 'image'] as const;
+export type CaptureKind = (typeof CAPTURE_KINDS)[number];
+
+/**
+ * Honest read status. A saved URL is not read content:
+ * - read: the note text, or the image, was actually read (image reading needs the live model);
+ * - metadata_only: only the public title/author/thumbnail of an allowlisted provider were read (oEmbed);
+ * - not_read: the link was saved; the page itself was never fetched;
+ * - unavailable: a metadata lookup was attempted and failed.
+ */
+export const READ_STATUSES = ['read', 'metadata_only', 'not_read', 'unavailable'] as const;
+export type ReadStatus = (typeof READ_STATUSES)[number];
+
+export const READ_STATUS_LABELS: Record<ReadStatus, string> = {
+  read: 'Read',
+  metadata_only: 'Title read, content not read',
+  not_read: 'Saved link, not read',
+  unavailable: 'Could not read',
+};
+
+export interface LinkMeta {
+  provider: string;
+  title?: string;
+  author?: string;
+  thumbnailUrl?: string;
+}
+
+export interface Capture {
+  id: string;
+  ownerId: string;
+  kind: CaptureKind;
+  /** The person's own note (may be empty for a bare link or screenshot). */
+  text: string;
+  url: string | null;
+  linkMeta: LinkMeta | null;
+  mediaId: string | null;
+  readStatus: ReadStatus;
+  /** Where it came from, e.g. "Typed note", "Instagram link", "Screenshot". */
+  sourceLabel: string;
+  /** Clearly labelled example content (demo), never personal. */
+  isExample: boolean;
+  createdAt: string;
+}
+
+export interface MediaItem {
+  id: string;
+  ownerId: string;
+  mime: string;
+  size: number;
+  width: number | null;
+  height: number | null;
+  createdAt: string;
+}
+
+export const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
+export const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
+
+// ---------- proposals / recommendations ----------
+
+export const PROPOSAL_KINDS = ['new_app', 'explore', 'update_app', 'keep'] as const;
+export type ProposalKind = (typeof PROPOSAL_KINDS)[number];
+
+/**
+ * A proposal card as stored and shown. Fact-grounded recommendations (Playground) and
+ * capture-grounded proposals (Agent) share this shape and the same build pipeline.
+ */
 export const RecommendationDraftSchema = z.object({
   /** Stable concept key from the catalog, when the recommendation is catalog-based. */
   conceptId: z.string().trim().max(60).optional(),
+  /** What kind of outcome: a new app, an exploration (no app needed), an update to an existing app, or just keeping the source. */
+  kind: z.enum(PROPOSAL_KINDS).default('new_app'),
+  /** Outcome-led title (what the person gets), 2-50 chars. */
   title: z.string().trim().min(2).max(50),
   purpose: z.enum(PURPOSES),
   pattern: z.enum(PATTERNS),
   icon: AppIconSchema,
   tagline: z.string().trim().min(2).max(120),
-  /** What the app would do, in plain words. */
+  /** What the person would see or do, in plain words. */
   description: z.string().trim().min(10).max(500),
-  /** "Why this fits you" — must be grounded in the cited facts only. */
+  /** "Why this fits you" — grounded in the cited facts and captures only. One or two sentences. */
   reason: z.string().trim().min(10).max(400),
-  /** IDs of approved profile facts this recommendation is grounded in (at least one). */
-  evidenceFactIds: z.array(z.string()).min(1).max(8),
+  /** IDs of approved profile facts this is grounded in. */
+  evidenceFactIds: z.array(z.string()).max(8).default([]),
+  /** IDs of captures (notes, links, screenshots) this is grounded in. */
+  sourceCaptureIds: z.array(z.string()).max(4).default([]),
   /** A concrete thing to do in the first minute. */
   firstAction: z.string().trim().min(5).max(200),
   /** Short preview lines (e.g. example fields or columns) for the card. */
   previewLines: z.array(z.string().trim().max(60)).min(1).max(5),
+  /** Real runtime capabilities the app would use (new_app / update_app). */
+  capabilities: z.array(z.enum(CAPABILITIES)).max(8).default([]),
+  /** Suggested identity (new_app). */
+  design: DesignSchema.optional(),
+  /** explore: 3-6 concrete steps the person can do today, using only what they shared or general practice. No invented links. */
+  explorationSteps: z.array(z.string().trim().min(3).max(200)).max(6).optional(),
+  /** update_app: which existing app and what to change (a change request the revision planner can apply). */
+  targetAppId: z.string().regex(APP_ID_PATTERN).optional(),
+  updateRequest: z.string().trim().max(400).optional(),
 });
 export type RecommendationDraft = z.infer<typeof RecommendationDraftSchema>;
 export const RecommendationBatchSchema = z.object({ recommendations: z.array(RecommendationDraftSchema).min(1).max(8) });
 
-export const RECOMMENDATION_STATUSES = ['fresh', 'built', 'dismissed', 'stale'] as const;
+export const RECOMMENDATION_STATUSES = ['fresh', 'built', 'dismissed', 'stale', 'kept', 'applied'] as const;
 export type RecommendationStatus = (typeof RECOMMENDATION_STATUSES)[number];
 
 export interface Recommendation extends RecommendationDraft {
@@ -104,16 +187,40 @@ export interface Recommendation extends RecommendationDraft {
   status: RecommendationStatus;
   /** Which adapter produced it: live model or sample mode. */
   generatedBy: 'anthropic' | 'sample';
-  /** Hash of the approved facts used; recommendations go stale when facts change. */
+  /** Hash of the approved facts used; fact-born recommendations go stale when facts change. */
   inputHash: string;
   builtAppId?: string | null;
+  /** Set when the proposal came from an Agent capture rather than the Playground refresh. */
+  captureId?: string | null;
+  createdAt: string;
+}
+
+/** What the agent says back after a capture. */
+export const AgentReplyDraftSchema = z.object({
+  /** Concise acknowledgement of exactly what was received and read (≤ 80 words). */
+  message: z.string().trim().min(1).max(700),
+  /** At most one clarifying question, only when the answer materially changes the proposals. */
+  question: z.string().trim().max(200).optional(),
+  proposals: z.array(RecommendationDraftSchema).min(1).max(4),
+  /** New things learned about the person from their note (stored as editable context). */
+  learned: z.array(ExtractedFactSchema).max(6).default([]),
+});
+export type AgentReplyDraft = z.infer<typeof AgentReplyDraftSchema>;
+
+export interface AgentReply {
+  captureId: string;
+  message: string;
+  question: string | null;
+  proposals: Recommendation[];
+  generatedBy: 'anthropic' | 'sample';
+  fallbackReason?: string | null;
   createdAt: string;
 }
 
 export const EVENT_TYPES = [
   'app_built', 'first_item_saved', 'item_saved', 'task_completed', 'app_opened',
   'revision_accepted', 'revision_declined', 'revision_undone', 'feedback_given', 'install_guide_viewed',
-  'shortcut_requested',
+  'shortcut_requested', 'first_action_completed',
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 
@@ -134,3 +241,14 @@ export const GeneratedAppSchema = z.object({
   unsupported: z.array(z.object({ request: z.string().max(400), reason: z.string().max(400), alternative: z.string().max(400) })).max(10).default([]),
 });
 export type GeneratedApp = z.infer<typeof GeneratedAppSchema>;
+
+/** The few choices a person makes before "Make mine"; everything else is designed for them. */
+export const BuildChoicesSchema = z.object({
+  /** Minutes available for a session (practice apps); becomes the first timer preset. */
+  timeBudgetMinutes: z.number().int().min(1).max(180).optional(),
+  /** The outcome in the person's words. */
+  goal: z.string().trim().max(200).optional(),
+  /** Presentation preference. */
+  look: z.enum(['bright', 'paper', 'charcoal', 'ink', 'mint', 'lilac', 'sunset']).optional(),
+});
+export type BuildChoices = z.infer<typeof BuildChoicesSchema>;

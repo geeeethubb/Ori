@@ -1,34 +1,33 @@
-import { NavLink, Link, Outlet, useLocation } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { BRAND, NAV } from '@shared/brand.ts';
 import { useAuth } from '../auth.tsx';
-import { AppIcon } from './AppIcon.tsx';
+import { BrandMark } from './BrandMark.tsx';
 import { Icons } from './ui.tsx';
 import { useInstallMeta } from '../hooks/useInstallMeta.ts';
 
-const STORE_ICON = { symbol: 'sparkle', color: 'plum' } as const;
+const STORE_ICON = { symbol: 'compass', color: 'blue' } as const;
+const NAV_ICONS = { agent: Icons.agent, playground: Icons.playground, apps: Icons.grid } as const;
 
-/** Storefront chrome: top bar on desktop, bottom tabs on phones. Not used by /apps/{id}/. */
+/** Parent shell: top bar with Agent / Playground / My apps on desktop, three-tab bottom nav on phones, avatar menu for settings. Not used by /apps/{id}/. */
 export function StoreLayout() {
   const { user } = useAuth();
   const location = useLocation();
-  useInstallMeta({ appId: null, name: 'AI App Store', icon: STORE_ICON }, { title: false });
-  const tabs = [
-    { to: '/for-you', label: 'For You', icon: Icons.sparkle },
-    { to: '/collection', label: 'My Collection', icon: Icons.grid },
-    { to: '/context', label: 'Your Context', icon: Icons.person },
-  ];
-  const hideTabs = !user || ['/login', '/signup', '/'].includes(location.pathname);
+  useInstallMeta({ appId: null, name: BRAND.name, icon: STORE_ICON }, { title: false });
+  const publicPage = ['/login', '/signup', '/'].includes(location.pathname);
+  const showTabs = Boolean(user) && !publicPage;
   return (
     <>
       <header className="topbar">
         <div className="topbar-inner">
-          <Link to={user ? '/for-you' : '/'} className="brand" aria-label="AI App Store home">
-            <AppIcon icon={STORE_ICON} size={30} />
-            <span>AI App Store</span>
+          <Link to={user ? '/playground' : '/'} className="brand" aria-label={`${BRAND.name} home`} data-testid="brand-home">
+            <BrandMark size={28} />
+            <span>{BRAND.name}</span>
           </Link>
           {user && (
             <nav className="topnav" aria-label="Primary">
-              {tabs.map((t) => (
-                <NavLink key={t.to} to={t.to} className={({ isActive }) => (isActive ? 'active' : '')}>
+              {NAV.map((t) => (
+                <NavLink key={t.key} to={t.path} className={({ isActive }) => (isActive ? 'active' : '')} data-testid={`nav-${t.key}`}>
                   {t.label}
                 </NavLink>
               ))}
@@ -36,29 +35,92 @@ export function StoreLayout() {
           )}
           <span className="topbar-spacer" />
           {user ? (
-            <Link to="/account" className="btn btn-ghost btn-sm" aria-label="Account">
-              {user.displayName}
-            </Link>
+            <AvatarMenu name={user.displayName} email={user.email} />
           ) : (
-            <Link to={`/login?next=${encodeURIComponent(location.pathname === '/' ? '/for-you' : location.pathname)}`} className="btn btn-secondary btn-sm">
-              Sign in
-            </Link>
+            <div className="row" style={{ gap: 6 }}>
+              <Link to={`/login?next=${encodeURIComponent(location.pathname === '/' ? '/playground' : location.pathname)}`} className="btn btn-ghost btn-sm" data-testid="nav-signin">
+                Sign in
+              </Link>
+              {location.pathname !== '/signup' && (
+                <Link to="/signup" className="btn btn-primary btn-sm" data-testid="nav-signup">
+                  Make it yours
+                </Link>
+              )}
+            </div>
           )}
         </div>
       </header>
       <main className="page">
         <Outlet />
       </main>
-      {!hideTabs && (
+      {showTabs && (
         <nav className="bottomnav" aria-label="Primary">
-          {tabs.map((t) => (
-            <NavLink key={t.to} to={t.to} className={({ isActive }) => (isActive ? 'active' : '')}>
-              {t.icon}
+          {NAV.map((t) => (
+            <NavLink key={t.key} to={t.path} className={({ isActive }) => (isActive ? 'active' : '')} data-testid={`tab-${t.key}`}>
+              {NAV_ICONS[t.key]}
               <span>{t.label}</span>
             </NavLink>
           ))}
         </nav>
       )}
     </>
+  );
+}
+
+function AvatarMenu({ name, email }: { name: string; email: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+  const initial = (name.trim()[0] ?? email[0] ?? '?').toUpperCase();
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+  return (
+    <div className="menu-anchor" ref={ref}>
+      <button type="button" className="avatar-btn" aria-haspopup="menu" aria-expanded={open} aria-label="Account menu" data-testid="avatar-menu" onClick={() => setOpen((o) => !o)}>
+        {initial}
+      </button>
+      {open && (
+        <div className="menu" role="menu">
+          <div className="menu-head">
+            <strong style={{ color: 'var(--ink)' }}>{name}</strong>
+            <br />
+            {email}
+          </div>
+          <Link to="/settings" role="menuitem" onClick={() => setOpen(false)} data-testid="menu-settings">{Icons.gear} Settings</Link>
+          <Link to="/settings/memory" role="menuitem" onClick={() => setOpen(false)} data-testid="menu-memory">{Icons.person} What you've shared</Link>
+          <Link to="/pricing" role="menuitem" onClick={() => setOpen(false)}>{Icons.tag} Plan and pricing</Link>
+          <div className="menu-sep" />
+          <button
+            type="button"
+            role="menuitem"
+            data-testid="menu-signout"
+            onClick={async () => {
+              setOpen(false);
+              try {
+                await logout();
+              } finally {
+                navigate('/', { replace: true });
+              }
+            }}
+          >
+            {Icons.logout} Sign out
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

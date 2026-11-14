@@ -1,3 +1,4 @@
+import { BRAND } from '@shared/brand.ts';
 import type { ChangeEvent } from 'react';
 import { Link } from 'react-router';
 import type { AppDetailDto, AppSummaryDto } from '@shared/api.ts';
@@ -41,7 +42,7 @@ function AppTile({ app }: { app: AppSummaryDto }) {
 }
 
 export function CollectionPage() {
-  usePageTitle('My Collection · AI App Store');
+  usePageTitle(`My apps · ${BRAND.name}`);
   const { toast } = useToast();
   const { data, error, loading, reload } = useLoad(() => api<{ apps: AppSummaryDto[] }>('/api/apps'));
   const apps = data?.apps ?? [];
@@ -82,7 +83,7 @@ export function CollectionPage() {
         title="Your collection starts with one app."
         body="Pick a recommendation that fits you and we will build it. It lives here and on your home screen."
         action={
-          <Link to="/for-you" className="btn btn-primary" data-testid="collection-see-for-you">
+          <Link to="/playground" className="btn btn-primary" data-testid="collection-see-for-you">
             See what fits you
           </Link>
         }

@@ -217,7 +217,7 @@ export const CONCEPT_PROMPTS: Record<string, string[]> = {
   ],
 };
 
-const GENERIC: Record<Pattern, Record<Purpose, string[]>> = {
+const GENERIC_BASE: Record<'journal' | 'board' | 'tracker', Record<Purpose, string[]>> = {
   journal: {
     explore: [
       'Notice one thing you usually walk past',
@@ -284,6 +284,13 @@ const GENERIC: Record<Pattern, Record<Purpose, string[]>> = {
       'Celebrate a week of entries',
     ],
   },
+};
+
+const GENERIC: Record<Pattern, Record<Purpose, string[]>> = {
+  ...GENERIC_BASE,
+  gallery: GENERIC_BASE.journal,
+  practice: GENERIC_BASE.tracker,
+  queue: GENERIC_BASE.board,
 };
 
 export function promptsFor(conceptId: string | undefined, pattern: Pattern, purpose: Purpose): string[] {

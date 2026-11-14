@@ -1,3 +1,4 @@
+import { BRAND } from '@shared/brand.ts';
 import { useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import type { AppDetailDto } from '@shared/api.ts';
@@ -33,7 +34,7 @@ export function RecommendationPage() {
   const { refresh } = useAuth();
   const { data, error, loading, reload } = useLoad(() => api<RecommendationDetail>(`/api/recommendations/${recId}`), [recId]);
   const rec = data?.recommendation;
-  usePageTitle(rec ? `${rec.title} · AI App Store` : 'App detail · AI App Store');
+  usePageTitle(rec ? `${rec.title} · ${BRAND.name}` : `Make mine · ${BRAND.name}`);
 
   const [instructions, setInstructions] = useState('');
   const [draft, setDraft] = useState<DraftDto | null>(null);
@@ -42,7 +43,7 @@ export function RecommendationPage() {
   const [actError, setActError] = useState<ActionError | null>(null);
   const lastAction = useRef<(() => Promise<void>) | null>(null);
 
-  if (!recId) return <Navigate to="/for-you" replace />;
+  if (!recId) return <Navigate to="/playground" replace />;
 
   const busy = phase !== 'idle';
   const draftIsCurrent = draft !== null && draftFor === instructions;
@@ -118,7 +119,7 @@ export function RecommendationPage() {
   if (!rec) {
     return (
       <div className="container-narrow stack-l">
-        <Link to="/for-you" className="st-back">{Icons.back}For You</Link>
+        <Link to="/playground" className="st-back">{Icons.back}For You</Link>
         <ErrorBanner message={error ?? 'We could not find that recommendation.'} onRetry={reload} />
       </div>
     );
@@ -129,7 +130,7 @@ export function RecommendationPage() {
 
   return (
     <div className="container-narrow stack-l">
-      <Link to="/for-you" className="st-back" data-testid="rec-back">{Icons.back}For You</Link>
+      <Link to="/playground" className="st-back" data-testid="rec-back">{Icons.back}For You</Link>
 
       <header className="st-detail-head">
         <AppIcon icon={rec.icon} size={72} title={rec.title} />

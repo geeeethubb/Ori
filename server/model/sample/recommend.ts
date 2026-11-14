@@ -120,11 +120,26 @@ export function previewLinesFor(spec: AppSpecInput): string[] {
   return out.length ? out : [clip(spec.tagline ?? spec.name, 60)];
 }
 
+/** Capabilities a catalog concept's pattern exercises (shown on cards before a spec exists). */
+export function capabilitiesForPattern(pattern: Concept['pattern']): RecommendationDraft['capabilities'] {
+  switch (pattern) {
+    case 'practice': return ['practice_timer', 'tempo', 'source_links', 'summary', 'prompts'];
+    case 'gallery': return ['gallery', 'photo_upload', 'summary', 'prompts'];
+    case 'queue': return ['next_actions', 'due_soon', 'summary'];
+    case 'board': return ['board', 'due_soon', 'summary'];
+    case 'tracker': return ['list', 'summary'];
+    default: return ['journal', 'summary'];
+  }
+}
+
 function draftFor(concept: Concept, matches: MatchedFact[], reason: string): RecommendationDraft {
   const spec = concept.buildSpec({ instructions: '' });
   AppSpecSchema.parse(spec); // every concept must build a valid app
   const draft: RecommendationDraft = {
     conceptId: concept.id,
+    kind: 'new_app',
+    sourceCaptureIds: [],
+    capabilities: capabilitiesForPattern(concept.pattern),
     title: clip(concept.title, 50),
     purpose: concept.purpose,
     pattern: concept.pattern,

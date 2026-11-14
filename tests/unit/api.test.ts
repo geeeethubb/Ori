@@ -7,6 +7,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_PASSWORD, clientFor, makeClient, uniqueEmail, type RequestOptions, type Session, type TestClient } from '../helpers/testServer.ts';
 import { createServer } from '../../server/index.ts';
 import { bootForApp, renderIndex } from '../../server/install.ts';
+import { BRAND } from '../../shared/brand.ts';
 import { PRACTICE_TRACKER } from '../../server/fixtures/specs.ts';
 import type { AppDetailDto, AppExportDto, AppSummaryDto, AppVersionDto, UserDto } from '../../shared/api.ts';
 import type { AppRecord } from '../../shared/records.ts';
@@ -371,7 +372,7 @@ describe('home-screen install metadata is public, by unguessable id', () => {
   it('the storefront manifest is served too', async () => {
     const manifest = await client.request<Record<string, unknown>>('/manifest.webmanifest');
     expect(manifest.status).toBe(200);
-    expect(manifest.json).toMatchObject({ id: '/', start_url: '/', name: 'AI App Store' });
+    expect(manifest.json).toMatchObject({ id: '/', start_url: '/', name: BRAND.name });
   });
 
   it('the launch URL is routable: the app page, or a clear "client not built" notice, never 404', async () => {
@@ -596,7 +597,7 @@ describe('the launch page installs as the app', () => {
     expect(html).toContain(`<link rel="apple-touch-icon" sizes="180x180" href="/apps/${app.app.id}/icon-180.png">`);
     expect(html).toContain('<meta name="apple-mobile-web-app-title" content="Photo Walk Journal">');
     expect(html).toContain('<meta name="theme-color" content="#B8441C">'); // terracotta
-    expect(bootOf(html)).toEqual({ appId: app.app.id, name: 'Photo Walk Journal', icon: { symbol: 'camera', color: 'terracotta' }, purpose: 'explore' });
+    expect(bootOf(html)).toEqual({ appId: app.app.id, name: 'Photo Walk Journal', icon: { symbol: 'camera', color: 'terracotta' }, purpose: 'explore', theme: 'bright' });
     expect(html.match(/<\/head>/g)).toHaveLength(1);
   });
 
@@ -615,9 +616,9 @@ describe('the launch page installs as the app', () => {
 
   it('an unknown id falls back to the storefront boot', () => {
     const html = renderIndex(TEMPLATE, bootForApp('doesnotexist1'));
-    expect(html).toContain('<title>AI App Store</title>');
+    expect(html).toContain(`<title>${BRAND.name}</title>`);
     expect(html).toContain('<link rel="manifest" href="/manifest.webmanifest">');
-    expect(bootOf(html)).toMatchObject({ appId: null, name: 'AI App Store' });
+    expect(bootOf(html)).toMatchObject({ appId: null, name: BRAND.name });
     expect(renderIndex(TEMPLATE, bootForApp(undefined))).toContain('/icons/store-180.png');
   });
 });

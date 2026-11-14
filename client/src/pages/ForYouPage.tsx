@@ -1,3 +1,4 @@
+import { BRAND } from '@shared/brand.ts';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { ContextOverviewDto, RecommendationsDto } from '@shared/api.ts';
@@ -25,7 +26,7 @@ interface ActionError {
 const THINKING = 'Reading your context and thinking about apps for you… about 20 seconds.';
 
 export function ForYouPage() {
-  usePageTitle('For You · AI App Store');
+  usePageTitle(`Playground · ${BRAND.name}`);
   const { user, refresh } = useAuth();
   const { toast } = useToast();
   const { data, error, loading, reload, setData } = useLoad<ForYouData>(async () => {
@@ -96,7 +97,7 @@ export function ForYouPage() {
       title="Start with your context"
       body="Bring a profile from your AI, upload a file or write a few lines, and we will find apps for your work and your curiosity."
       action={
-        <Link to="/import" className="btn btn-primary" data-testid="recs-import">
+        <Link to="/settings/import" className="btn btn-primary" data-testid="recs-import">
           Bring your context
         </Link>
       }

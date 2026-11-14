@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router';
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 import { useAuth } from './auth.tsx';
 import { ToastProvider, Spinner } from './components/ui.tsx';
 import { StoreLayout } from './components/Layout.tsx';
@@ -13,6 +13,7 @@ import { CollectionPage } from './pages/CollectionPage.tsx';
 import { PricingPage } from './pages/PricingPage.tsx';
 import { AccountPage } from './pages/AccountPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
+import { AgentPage } from './pages/AgentPage.tsx';
 import { NativeServerSetup } from './components/NativeServerSetup.tsx';
 import { apiBase, isNative } from './api.ts';
 import { wireShortcutLaunches } from './native/shortcuts.ts';
@@ -24,12 +25,18 @@ function RequireAuth({ children }: { children: React.ReactElement }) {
   if (loading) {
     return (
       <div className="container" style={{ padding: 40 }}>
-        <Spinner label="Loading your collection…" />
+        <Spinner label="Loading…" />
       </div>
     );
   }
   if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
   return children;
+}
+
+/** Old URL shapes keep working: /recommendations/:id → /make/:id. */
+function RedirectWithParam({ to }: { to: (id: string) => string }) {
+  const { id } = useParams();
+  return <Navigate to={to(id ?? '')} replace />;
 }
 
 export function App() {
@@ -48,7 +55,7 @@ export function App() {
   return (
     <ToastProvider>
       <Routes>
-        {/* Personal apps live at their own stable URL and bring their own chrome + in-place sign-in. */}
+        {/* Personal apps live at their own stable URL and bring their own identity + in-place sign-in. */}
         <Route path="/apps/:appId/*" element={<AppRuntimePage />} />
 
         <Route element={<StoreLayout />}>
@@ -56,12 +63,25 @@ export function App() {
           <Route path="/login" element={<LoginPage mode="login" />} />
           <Route path="/signup" element={<LoginPage mode="signup" />} />
           <Route path="/pricing" element={<PricingPage />} />
-          <Route path="/import" element={<RequireAuth><ImportPage /></RequireAuth>} />
-          <Route path="/context" element={<RequireAuth><ContextPage /></RequireAuth>} />
-          <Route path="/for-you" element={<RequireAuth><ForYouPage /></RequireAuth>} />
-          <Route path="/recommendations/:recId" element={<RequireAuth><RecommendationPage /></RequireAuth>} />
-          <Route path="/collection" element={<RequireAuth><CollectionPage /></RequireAuth>} />
-          <Route path="/account" element={<RequireAuth><AccountPage /></RequireAuth>} />
+
+          {/* Agent / Playground / My apps */}
+          <Route path="/agent" element={<RequireAuth><AgentPage /></RequireAuth>} />
+          <Route path="/playground" element={<RequireAuth><ForYouPage /></RequireAuth>} />
+          <Route path="/apps" element={<RequireAuth><CollectionPage /></RequireAuth>} />
+          <Route path="/make/:recId" element={<RequireAuth><RecommendationPage /></RequireAuth>} />
+
+          {/* Settings: account, memory ("what you've shared"), bring more context */}
+          <Route path="/settings" element={<RequireAuth><AccountPage /></RequireAuth>} />
+          <Route path="/settings/memory" element={<RequireAuth><ContextPage /></RequireAuth>} />
+          <Route path="/settings/import" element={<RequireAuth><ImportPage /></RequireAuth>} />
+
+          {/* Previous prototype URLs */}
+          <Route path="/for-you" element={<Navigate to="/playground" replace />} />
+          <Route path="/collection" element={<Navigate to="/apps" replace />} />
+          <Route path="/context" element={<Navigate to="/settings/memory" replace />} />
+          <Route path="/import" element={<Navigate to="/settings/import" replace />} />
+          <Route path="/account" element={<Navigate to="/settings" replace />} />
+          <Route path="/recommendations/:id" element={<RedirectWithParam to={(id) => `/make/${id}`} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

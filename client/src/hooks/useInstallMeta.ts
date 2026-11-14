@@ -17,7 +17,7 @@ export function useInstallMeta(target: { appId: string | null; name: string; ico
     setLink('apple-touch-icon', target.appId ? `${base}icon-180.png` : '/icons/store-180.png');
     setLink('icon', target.appId ? `${base}icon.svg` : '/icons/store.svg');
     setMeta('apple-mobile-web-app-title', target.name);
-    setMeta('theme-color', ICON_GRADIENTS[target.icon.color]?.[1] ?? '#5E2E78');
+    setMeta('theme-color', ICON_GRADIENTS[target.icon.color]?.[1] ?? '#3147F2');
   }, [target?.appId, target?.name, target?.icon.color, target?.icon.symbol, setTitle]);
 }
 

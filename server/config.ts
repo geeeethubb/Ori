@@ -25,6 +25,11 @@ export const config = {
   port: Number(env.PORT ?? 8787),
   host: env.HOST ?? '0.0.0.0',
   databasePath: env.DATABASE_PATH ?? './data/app.db',
+  /** Uploaded photos live here as files; the `media` table is the owner-scoped index. */
+  mediaDir: env.MEDIA_DIR ?? './data/media',
+  maxImageBytes: Number(env.MAX_IMAGE_BYTES ?? 6 * 1024 * 1024),
+  /** Allowlisted oEmbed providers for link titles. Nothing else is fetched server-side. */
+  linkMetadataEnabled: (env.LINK_METADATA ?? 'on') !== 'off',
   publicOrigin: (env.PUBLIC_ORIGIN ?? `http://localhost:${env.PORT ?? 8787}`).replace(/\/$/, ''),
   cookieSecure: env.COOKIE_SECURE ?? 'auto',
   corsOrigins: (env.CORS_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean),

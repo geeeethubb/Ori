@@ -1,7 +1,7 @@
 /** DTOs exchanged between client and server. Keep this file dependency-light. */
-import type { AppIcon, AppSpec, Purpose } from './appSpec.ts';
+import type { AppDesign, AppIcon, AppSpec, Capability, Purpose } from './appSpec.ts';
 import type { AppRecord } from './records.ts';
-import type { AppEvent, ContextSource, ProfileFact, Recommendation } from './context.ts';
+import type { AgentReply, AppEvent, Capture, ContextSource, MediaItem, ProfileFact, Recommendation } from './context.ts';
 import type { RevisionOp } from './revision.ts';
 
 export interface UserDto {
@@ -27,6 +27,9 @@ export interface AppSummaryDto {
   icon: AppIcon;
   purpose: Purpose;
   pattern: AppSpec['pattern'];
+  /** Resolved design (compatibility defaults applied). */
+  design: Required<AppDesign>;
+  capabilities: Capability[];
   currentVersion: number;
   pinned: boolean;
   archivedAt: string | null;
@@ -66,6 +69,8 @@ export interface RevisionPreviewDto {
   unsupported: { request: string; reason: string; alternative: string }[];
   previewSpec: AppSpec;
   generatedBy: 'anthropic' | 'sample';
+  fallbackReason?: string;
+  baseVersion?: number;
 }
 
 export interface ImprovementSuggestionDto {
@@ -88,16 +93,63 @@ export interface AppExportDto {
 export interface ContextOverviewDto {
   sources: ContextSource[];
   facts: ProfileFact[];
+  captures: Capture[];
 }
 
 export interface RecommendationsDto {
   recommendations: Recommendation[];
   generatedBy: 'anthropic' | 'sample' | null;
   stale: boolean;
+  fallbackReason?: string;
 }
 
 export interface BuildResultDto {
   app: AppDetailDto;
+}
+
+// ---------- Agent ----------
+
+export interface AgentThreadItemDto {
+  capture: Capture;
+  media: MediaItem | null;
+  reply: AgentReply | null;
+}
+
+export interface AgentThreadDto {
+  items: AgentThreadItemDto[];
+}
+
+/** Result of sharing something: the capture is always saved, even when the agent could not answer. */
+export interface CaptureResultDto {
+  capture: Capture;
+  media: MediaItem | null;
+  reply: AgentReply | null;
+  /** Set when the agent failed; the capture is kept and can be retried. */
+  error?: string;
+}
+
+export interface MediaUploadDto {
+  media: MediaItem;
+}
+
+// ---------- Make mine (preview and build) ----------
+
+export interface ProposalDetailDto {
+  recommendation: Recommendation;
+  evidence: ProfileFact[];
+  captures: Capture[];
+  /** Existing app for update_app proposals. */
+  targetApp: AppSummaryDto | null;
+}
+
+export interface ProposalPreviewDto {
+  spec: AppSpec;
+  description: string;
+  unsupported: { request: string; reason: string; alternative: string }[];
+  generatedBy: 'anthropic' | 'sample';
+  fallbackReason?: string;
+  /** Clearly labelled example records that let the real renderer show the app before it exists. */
+  previewRecords: AppRecord[];
 }
 
 export interface ApiError {

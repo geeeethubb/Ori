@@ -10,7 +10,7 @@ const API_BASE_KEY = 'aas_api_base';
 declare global {
   interface Window {
     Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string };
-    __AAS_BOOT__?: { appId: string | null; name: string; icon: { symbol: string; color: string }; purpose: string | null };
+    __AAS_BOOT__?: { appId: string | null; name: string; icon: { symbol: string; color: string }; purpose: string | null; theme?: string | null };
   }
 }
 

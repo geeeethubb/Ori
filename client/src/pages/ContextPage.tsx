@@ -1,3 +1,4 @@
+import { BRAND } from '@shared/brand.ts';
 import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import type { ContextOverviewDto } from '@shared/api.ts';
@@ -11,7 +12,7 @@ import { usePageTitle } from './parts/usePageTitle.ts';
 import './pages.css';
 
 export function ContextPage() {
-  usePageTitle('Your Context · AI App Store');
+  usePageTitle(`What you've shared · ${BRAND.name}`);
   const { toast } = useToast();
   const location = useLocation();
   const importNote = (location.state as { note?: string | null } | null)?.note ?? null;
@@ -140,7 +141,7 @@ export function ContextPage() {
           title="Bring your context to get started"
           body="Paste the profile your AI wrote, upload a file, or write a few lines about what you are working on and what you are curious about."
           action={
-            <Link to="/import" className="btn btn-primary" data-testid="context-import">
+            <Link to="/settings/import" className="btn btn-primary" data-testid="context-import">
               Bring your context
             </Link>
           }
@@ -189,7 +190,7 @@ export function ContextPage() {
       )}
 
       <p className="small muted">
-        <Link to="/import">Bring more context</Link>
+        <Link to="/settings/import">Bring more context</Link>
       </p>
 
       {total > 0 && (
@@ -198,7 +199,7 @@ export function ContextPage() {
             <strong>Ready for recommendations?</strong>
             <div className="small muted">They are grounded in what is on this page.</div>
           </div>
-          <Link to="/for-you" className="btn btn-primary" data-testid="store-go-for-you">
+          <Link to="/playground" className="btn btn-primary" data-testid="store-go-for-you">
             See your recommendations
           </Link>
         </div>

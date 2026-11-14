@@ -166,6 +166,7 @@ function rowToRecommendation(r: R): Recommendation {
     generatedBy: String(r.generated_by) as Recommendation['generatedBy'],
     inputHash: String(r.input_hash),
     builtAppId: (r.built_app_id as string | null) ?? null,
+    captureId: (r.capture_id as string | null) ?? null,
     createdAt: String(r.created_at),
   };
 }
@@ -180,17 +181,34 @@ export function getRecommendation(ownerId: string, id: string): Recommendation |
   return r ? rowToRecommendation(r) : null;
 }
 
-/** Replace the current fresh set (built/dismissed history is kept). */
+/** Replace the current fresh Playground set (built/dismissed history and capture-born proposals are kept). */
 export function replaceFreshRecommendations(ownerId: string, drafts: RecommendationDraft[], generatedBy: Recommendation['generatedBy'], inputHash: string): Recommendation[] {
   return transaction(() => {
-    getDb().prepare("DELETE FROM recommendations WHERE owner_id = ? AND status IN ('fresh', 'stale')").run(ownerId);
+    getDb().prepare("DELETE FROM recommendations WHERE owner_id = ? AND status IN ('fresh', 'stale') AND capture_id IS NULL").run(ownerId);
     const now = nowIso();
     for (const d of drafts) {
       getDb()
-        .prepare('INSERT INTO recommendations (id, owner_id, data_json, status, generated_by, input_hash, built_app_id, created_at) VALUES (?, ?, ?, ?, ?, ?, NULL, ?)')
+        .prepare('INSERT INTO recommendations (id, owner_id, data_json, status, generated_by, input_hash, built_app_id, created_at, capture_id) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, NULL)')
         .run(newId(), ownerId, JSON.stringify(d), 'fresh', generatedBy, inputHash, now);
     }
     return listRecommendations(ownerId);
+  });
+}
+
+/** Store the proposals the Agent made for one capture (they stay until the capture is forgotten). */
+export function insertCaptureProposals(ownerId: string, captureId: string, drafts: RecommendationDraft[], generatedBy: Recommendation['generatedBy']): Recommendation[] {
+  return transaction(() => {
+    getDb().prepare("DELETE FROM recommendations WHERE owner_id = ? AND capture_id = ? AND status IN ('fresh', 'stale')").run(ownerId, captureId);
+    const now = nowIso();
+    const ids: string[] = [];
+    for (const d of drafts) {
+      const id = newId();
+      ids.push(id);
+      getDb()
+        .prepare('INSERT INTO recommendations (id, owner_id, data_json, status, generated_by, input_hash, built_app_id, created_at, capture_id) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)')
+        .run(id, ownerId, JSON.stringify(d), 'fresh', generatedBy, `capture:${captureId}`, now, captureId);
+    }
+    return listRecommendations(ownerId, ['fresh']).filter((r) => ids.includes(r.id));
   });
 }
 

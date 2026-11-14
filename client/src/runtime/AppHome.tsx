@@ -65,7 +65,7 @@ export function AppHome({ appId, detail, records, actions }: Props) {
     <div className="rt-page">
       {!standalone && (
         <div className="rt-topline">
-          <Link to="/collection" className="rt-backlink" data-testid="rt-back-collection">
+          <Link to="/apps" className="rt-backlink" data-testid="rt-back-collection">
             {Icons.back}
             <span>Back to collection</span>
           </Link>

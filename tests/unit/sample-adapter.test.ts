@@ -158,7 +158,7 @@ describe('recommend', () => {
   });
 
   it('skips apps already in the collection and stays deterministic', () => {
-    const recs = recommendFor(founderFacts, { existingApps: [{ name: 'People to Follow Up With', purpose: 'work', pattern: 'board' }] });
+    const recs = recommendFor(founderFacts, { existingApps: [{ id: 'app-existing-1', name: 'People to Follow Up With', purpose: 'work', pattern: 'board', capabilities: ['board', 'due_soon', 'summary'] }] });
     expect(recs.map((r) => r.title)).not.toContain('People to Follow Up With');
     expect(recommendFor(founderFacts)).toEqual(recommendFor(founderFacts));
   });

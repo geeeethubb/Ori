@@ -1,3 +1,4 @@
+import { BRAND } from '@shared/brand.ts';
 import { Link } from 'react-router';
 import type { UserDto } from '@shared/api.ts';
 import { useAuth } from '../auth.tsx';
@@ -32,7 +33,7 @@ function TrialStatus({ user }: { user: UserDto }) {
 }
 
 export function PricingPage() {
-  usePageTitle('Pricing · AI App Store');
+  usePageTitle(`Pricing · ${BRAND.name}`);
   const { user } = useAuth();
   const { toast } = useToast();
   const allowance = user ? `${user.aiGenerationAllowance.toLocaleString()} generations per month` : 'hundreds of generations per month';

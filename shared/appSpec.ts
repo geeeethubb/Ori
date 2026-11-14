@@ -1,13 +1,17 @@
 /**
  * AppSpec: the validated, bounded definition of a personal app.
  *
- * The runtime renders ONLY what this schema allows (an allowlist of field types, views and
- * rules). No generated code is ever executed. Field IDs are stable: labels, order, views and
- * rules may change across versions while records keep their field-id → value maps.
+ * The runtime renders ONLY what this schema allows (an allowlist of field types, views, rules and
+ * design options). No generated code is ever executed. Field IDs are stable: labels, order, views,
+ * rules and design may change across versions while records keep their field-id → value maps.
+ *
+ * Schema version stays 1: the redesign extended it ADDITIVELY (image field, gallery / practice /
+ * links / queue views, per-view filters and forms, a design block). Every spec written by the
+ * previous prototype still validates and renders through the compatibility defaults below.
  */
 import { z } from 'zod';
 import { FIELD_ID_PATTERN } from './ids.ts';
-import { ICON_COLORS, ICON_SYMBOLS } from './icons.ts';
+import { ICON_COLORS, ICON_SYMBOLS, type IconColor } from './icons.ts';
 
 export const APP_SPEC_SCHEMA_VERSION = 1 as const;
 
@@ -55,16 +59,30 @@ export const FieldSchema = z.discriminatedUnion('type', [
   FieldBase.extend({ type: z.literal('rating'), max: z.number().int().min(3).max(10).default(5), default: z.number().int().optional() }),
   FieldBase.extend({ type: z.literal('url'), default: z.string().max(500).optional() }),
   FieldBase.extend({ type: z.literal('tags'), suggestions: z.array(z.string().trim().min(1).max(30)).max(20).optional(), default: z.array(z.string()).optional() }),
+  /** A photo uploaded by the owner; the value is the media id (served owner-scoped by /api/media/:id). */
+  FieldBase.extend({ type: z.literal('image') }),
 ]);
 export type FieldSpec = z.infer<typeof FieldSchema>;
 export type FieldType = FieldSpec['type'];
-export const FIELD_TYPES = ['text', 'long_text', 'date', 'number', 'select', 'checkbox', 'rating', 'url', 'tags'] as const satisfies readonly FieldType[];
+export const FIELD_TYPES = ['text', 'long_text', 'date', 'number', 'select', 'checkbox', 'rating', 'url', 'tags', 'image'] as const satisfies readonly FieldType[];
 
 // ---------- views ----------
 
 const viewId = z.string().regex(FIELD_ID_PATTERN);
 
-const ViewBase = z.object({ id: viewId, title: label.optional() });
+const ViewBase = z.object({
+  id: viewId,
+  title: label.optional(),
+  /**
+   * Only records whose `fieldId` equals `value` belong to this view, and the view's form sets it.
+   * Lets one app hold several kinds of record (e.g. practice sessions and saved sources).
+   */
+  filter: z.object({ fieldId, value: z.string().trim().min(1).max(40) }).optional(),
+  /** Fields this view's create/edit form shows, in order. Omitted → every visible field. */
+  formFieldIds: z.array(fieldId).max(30).optional(),
+  /** Label of the view's primary action, e.g. "Add photo", "Save session". */
+  addLabel: z.string().trim().min(1).max(40).optional(),
+});
 
 export const JournalViewSchema = ViewBase.extend({
   type: z.literal('journal'),
@@ -121,9 +139,67 @@ export const SummaryViewSchema = ViewBase.extend({
   metrics: z.array(MetricSchema).min(1).max(6),
 });
 
-export const ViewSchema = z.discriminatedUnion('type', [JournalViewSchema, BoardViewSchema, ListViewSchema, SummaryViewSchema]);
+/** Photography: a contact sheet of real photos with a short caption/observation each. */
+export const GalleryViewSchema = ViewBase.extend({
+  type: z.literal('gallery'),
+  imageFieldId: fieldId,
+  captionFieldId: fieldId.optional(),
+  noteFieldId: fieldId.optional(),
+  dateFieldId: fieldId.optional(),
+  columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).default(3),
+  sort: z.enum(['newest', 'oldest']).default('newest'),
+});
+
+/** Music and other timed practice: a session timer (+ tempo helper) that saves a small result. */
+export const PracticeViewSchema = ViewBase.extend({
+  type: z.literal('practice'),
+  /** number field that receives the elapsed minutes */
+  minutesFieldId: fieldId,
+  focusFieldId: fieldId.optional(),
+  tempoFieldId: fieldId.optional(),
+  /** rating or select field for "how it felt" */
+  feelFieldId: fieldId.optional(),
+  notesFieldId: fieldId.optional(),
+  dateFieldId: fieldId.optional(),
+  /** Minute presets offered by the timer; the first is the default. */
+  presets: z.array(z.number().int().min(1).max(180)).min(1).max(6).default([10, 15, 25]),
+  defaultTempo: z.number().int().min(30).max(240).default(72),
+  tempoHelper: z.boolean().default(true),
+});
+
+/** Saved sources: links the person keeps (songs, reels, articles) with a note and status. */
+export const LinksViewSchema = ViewBase.extend({
+  type: z.literal('links'),
+  urlFieldId: fieldId,
+  titleFieldId: fieldId.optional(),
+  noteFieldId: fieldId.optional(),
+  kindFieldId: fieldId.optional(),
+  tagsFieldId: fieldId.optional(),
+});
+
+/** People and follow-through: a next-action queue grouped by due state or by person. */
+export const QueueViewSchema = ViewBase.extend({
+  type: z.literal('queue'),
+  personFieldId: fieldId,
+  actionFieldId: fieldId,
+  dueFieldId: fieldId.optional(),
+  /** Either a checkbox that marks completion… */
+  doneFieldId: fieldId.optional(),
+  /** …or a select stage field with the values that count as done. */
+  stageFieldId: fieldId.optional(),
+  doneStageValues: z.array(z.string()).max(20).default([]),
+  contextFieldId: fieldId.optional(),
+  channelFieldId: fieldId.optional(),
+  groupBy: z.enum(['due', 'person']).default('due'),
+});
+
+export const ViewSchema = z.discriminatedUnion('type', [
+  JournalViewSchema, BoardViewSchema, ListViewSchema, SummaryViewSchema,
+  GalleryViewSchema, PracticeViewSchema, LinksViewSchema, QueueViewSchema,
+]);
 export type ViewSpec = z.infer<typeof ViewSchema>;
 export type ViewType = ViewSpec['type'];
+export const VIEW_TYPES = ['journal', 'board', 'list', 'summary', 'gallery', 'practice', 'links', 'queue'] as const satisfies readonly ViewType[];
 
 // ---------- rules (deterministic, bounded) ----------
 
@@ -153,6 +229,26 @@ export type RuleSpec = z.infer<typeof RuleSchema>;
 export type DueSoonRule = z.infer<typeof DueSoonRuleSchema>;
 export type PromptRotationRule = z.infer<typeof PromptRotationRuleSchema>;
 
+// ---------- design (Studio Pop: each app has its own identity) ----------
+
+export const APP_THEMES = ['bright', 'paper', 'charcoal', 'ink', 'mint', 'lilac', 'sunset'] as const;
+export type AppTheme = (typeof APP_THEMES)[number];
+export const APP_TYPOGRAPHY = ['editorial', 'display', 'compact'] as const;
+export type AppTypography = (typeof APP_TYPOGRAPHY)[number];
+export const APP_DENSITY = ['airy', 'regular', 'compact'] as const;
+export const APP_ARTWORK = ['none', 'stripes', 'grid', 'halftone', 'waves'] as const;
+
+export const DesignSchema = z.object({
+  /** Surface palette. bright = parent canvas; paper/charcoal = photography; ink = listening room; mint = people. */
+  theme: z.enum(APP_THEMES).default('bright'),
+  /** Accent color; defaults to the icon color. */
+  accent: z.enum(ICON_COLORS).optional(),
+  typography: z.enum(APP_TYPOGRAPHY).default('editorial'),
+  density: z.enum(APP_DENSITY).default('regular'),
+  artwork: z.enum(APP_ARTWORK).default('none'),
+});
+export type AppDesign = z.infer<typeof DesignSchema>;
+
 // ---------- spec ----------
 
 export const AppIconSchema = z.object({ symbol: z.enum(ICON_SYMBOLS), color: z.enum(ICON_COLORS) });
@@ -160,8 +256,15 @@ export type AppIcon = z.infer<typeof AppIconSchema>;
 
 export const PURPOSES = ['work', 'explore'] as const;
 export type Purpose = (typeof PURPOSES)[number];
-export const PATTERNS = ['journal', 'board', 'tracker'] as const;
+/** Collection shape. The first four are the original patterns; the rest arrived with the redesign. */
+export const PATTERNS = ['journal', 'board', 'tracker', 'gallery', 'practice', 'queue'] as const;
 export type Pattern = (typeof PATTERNS)[number];
+
+/** Capability vocabulary used by proposals and summaries (derived from a spec by capabilitiesOf). */
+export const CAPABILITIES = [
+  'journal', 'board', 'list', 'summary', 'gallery', 'photo_upload', 'practice_timer', 'tempo', 'source_links', 'next_actions', 'due_soon', 'prompts',
+] as const;
+export type Capability = (typeof CAPABILITIES)[number];
 
 export const AppSpecSchema = z
   .object({
@@ -171,6 +274,8 @@ export const AppSpecSchema = z
     purpose: z.enum(PURPOSES),
     pattern: z.enum(PATTERNS),
     icon: AppIconSchema,
+    /** Absent on apps built before the redesign; see designFor(). */
+    design: DesignSchema.optional(),
     fields: z.array(FieldSchema).min(1).max(30),
     views: z.array(ViewSchema).min(1).max(6),
     rules: z.array(RuleSchema).max(10).default([]),
@@ -193,8 +298,25 @@ export const AppSpecSchema = z
       if (!f) return ctx.addIssue({ code: 'custom', path: where, message: `Unknown field "${id}"` });
       if (types && !types.includes(f.type)) ctx.addIssue({ code: 'custom', path: where, message: `Field "${id}" must be ${types.join(' or ')}` });
     };
+    const checkDoneStages = (stageFieldId: string | undefined, done: string[], where: (string | number)[]) => {
+      const stage = stageFieldId ? fields.get(stageFieldId) : undefined;
+      if (stage?.type === 'select') {
+        const values = new Set(stage.options.map((o) => o.value));
+        done.forEach((d) => {
+          if (!values.has(d)) ctx.addIssue({ code: 'custom', path: where, message: `"${d}" is not an option of ${stage.id}` });
+        });
+      }
+    };
     spec.views.forEach((v, i) => {
       const p = ['views', i];
+      if (v.filter) {
+        need(v.filter.fieldId, [...p, 'filter', 'fieldId'], ['select', 'text']);
+        const ff = fields.get(v.filter.fieldId);
+        if (ff?.type === 'select' && !ff.options.some((o) => o.value === v.filter?.value)) {
+          ctx.addIssue({ code: 'custom', path: [...p, 'filter', 'value'], message: `"${v.filter.value}" is not an option of ${ff.id}` });
+        }
+      }
+      v.formFieldIds?.forEach((id, j) => need(id, [...p, 'formFieldIds', j]));
       if (v.type === 'journal') {
         need(v.dateFieldId, [...p, 'dateFieldId'], ['date']);
         need(v.titleFieldId, [...p, 'titleFieldId']);
@@ -204,13 +326,7 @@ export const AppSpecSchema = z
         need(v.titleFieldId, [...p, 'titleFieldId']);
         need(v.dueFieldId, [...p, 'dueFieldId'], ['date']);
         v.cardFieldIds?.forEach((id, j) => need(id, [...p, 'cardFieldIds', j]));
-        const stage = fields.get(v.stageFieldId);
-        if (stage?.type === 'select') {
-          const values = new Set(stage.options.map((o) => o.value));
-          v.doneStageValues.forEach((d) => {
-            if (!values.has(d)) ctx.addIssue({ code: 'custom', path: [...p, 'doneStageValues'], message: `"${d}" is not an option of ${stage.id}` });
-          });
-        }
+        checkDoneStages(v.stageFieldId, v.doneStageValues, [...p, 'doneStageValues']);
       } else if (v.type === 'list') {
         need(v.titleFieldId, [...p, 'titleFieldId']);
         need(v.sortFieldId, [...p, 'sortFieldId']);
@@ -229,6 +345,34 @@ export const AppSpecSchema = z
           }
           if (m.where) need(m.where.fieldId, [...mp, 'where', 'fieldId']);
         });
+      } else if (v.type === 'gallery') {
+        need(v.imageFieldId, [...p, 'imageFieldId'], ['image']);
+        need(v.captionFieldId, [...p, 'captionFieldId'], ['text', 'long_text']);
+        need(v.noteFieldId, [...p, 'noteFieldId'], ['text', 'long_text']);
+        need(v.dateFieldId, [...p, 'dateFieldId'], ['date']);
+      } else if (v.type === 'practice') {
+        need(v.minutesFieldId, [...p, 'minutesFieldId'], ['number']);
+        need(v.focusFieldId, [...p, 'focusFieldId'], ['text', 'long_text']);
+        need(v.tempoFieldId, [...p, 'tempoFieldId'], ['number']);
+        need(v.feelFieldId, [...p, 'feelFieldId'], ['rating', 'select']);
+        need(v.notesFieldId, [...p, 'notesFieldId'], ['text', 'long_text']);
+        need(v.dateFieldId, [...p, 'dateFieldId'], ['date']);
+      } else if (v.type === 'links') {
+        need(v.urlFieldId, [...p, 'urlFieldId'], ['url']);
+        need(v.titleFieldId, [...p, 'titleFieldId'], ['text']);
+        need(v.noteFieldId, [...p, 'noteFieldId'], ['text', 'long_text']);
+        need(v.kindFieldId, [...p, 'kindFieldId'], ['select']);
+        need(v.tagsFieldId, [...p, 'tagsFieldId'], ['tags']);
+      } else if (v.type === 'queue') {
+        need(v.personFieldId, [...p, 'personFieldId'], ['text']);
+        need(v.actionFieldId, [...p, 'actionFieldId'], ['text', 'long_text']);
+        need(v.dueFieldId, [...p, 'dueFieldId'], ['date']);
+        need(v.doneFieldId, [...p, 'doneFieldId'], ['checkbox']);
+        need(v.stageFieldId, [...p, 'stageFieldId'], ['select']);
+        need(v.contextFieldId, [...p, 'contextFieldId'], ['text', 'long_text']);
+        need(v.channelFieldId, [...p, 'channelFieldId'], ['select']);
+        if (!v.doneFieldId && !v.stageFieldId) ctx.addIssue({ code: 'custom', path: p, message: 'A queue needs doneFieldId or stageFieldId so actions can be completed' });
+        checkDoneStages(v.stageFieldId, v.doneStageValues, [...p, 'doneStageValues']);
       }
     });
     spec.rules.forEach((r, i) => {
@@ -279,6 +423,58 @@ export function primaryView(spec: AppSpec): ViewSpec {
   return spec.views[0] as ViewSpec;
 }
 
+/** Fields the given view's create/edit form shows (its filter field is set automatically, not shown). */
+export function formFieldsFor(spec: AppSpec, view: ViewSpec): FieldSpec[] {
+  const base = view.formFieldIds
+    ? view.formFieldIds.map((id) => fieldById(spec, id)).filter((f): f is FieldSpec => Boolean(f) && !f?.hidden)
+    : visibleFields(spec);
+  return base.filter((f) => f.id !== view.filter?.fieldId);
+}
+
+/** Records that belong to a view (all of them when the view has no filter). */
+export function recordMatchesView(view: ViewSpec, values: Record<string, unknown>): boolean {
+  if (!view.filter) return true;
+  return values[view.filter.fieldId] === view.filter.value;
+}
+
+/**
+ * Design with compatibility defaults. Apps built before the redesign have no design block; they get
+ * a sensible identity from their pattern so old apps keep working without looking identical.
+ */
+export function designFor(spec: Pick<AppSpec, 'design' | 'pattern' | 'icon' | 'purpose'>): Required<AppDesign> {
+  const d = spec.design;
+  const fallbackTheme: AppTheme = spec.pattern === 'gallery' ? 'paper' : spec.pattern === 'practice' ? 'ink' : spec.pattern === 'queue' ? 'mint' : 'bright';
+  const accent: IconColor = d?.accent ?? spec.icon.color;
+  return {
+    theme: d?.theme ?? fallbackTheme,
+    accent,
+    typography: d?.typography ?? (spec.pattern === 'practice' ? 'display' : spec.pattern === 'queue' || spec.pattern === 'board' ? 'compact' : 'editorial'),
+    density: d?.density ?? 'regular',
+    artwork: d?.artwork ?? 'none',
+  };
+}
+
+/** The real capabilities a spec exercises; used for proposals ("update an existing app") and launcher labels. */
+export function capabilitiesOf(spec: Pick<AppSpec, 'views' | 'rules' | 'fields'>): Capability[] {
+  const out = new Set<Capability>();
+  for (const v of spec.views) {
+    if (v.type === 'journal') out.add('journal');
+    if (v.type === 'board') out.add('board');
+    if (v.type === 'list') out.add('list');
+    if (v.type === 'summary') out.add('summary');
+    if (v.type === 'gallery') { out.add('gallery'); out.add('photo_upload'); }
+    if (v.type === 'practice') { out.add('practice_timer'); if (v.tempoHelper) out.add('tempo'); }
+    if (v.type === 'links') out.add('source_links');
+    if (v.type === 'queue') out.add('next_actions');
+  }
+  if (spec.fields.some((f) => f.type === 'image' && !f.hidden)) out.add('photo_upload');
+  for (const r of spec.rules) {
+    if (r.type === 'due_soon') out.add('due_soon');
+    if (r.type === 'prompt_rotation') out.add('prompts');
+  }
+  return [...out];
+}
+
 /** Human-friendly name for a field type, used in change previews. */
 export function fieldTypeLabel(type: FieldType): string {
   switch (type) {
@@ -291,5 +487,20 @@ export function fieldTypeLabel(type: FieldType): string {
     case 'rating': return 'rating';
     case 'url': return 'link';
     case 'tags': return 'tags';
+    case 'image': return 'photo';
+  }
+}
+
+/** Human-friendly name for a view type. */
+export function viewTypeLabel(type: ViewType): string {
+  switch (type) {
+    case 'journal': return 'journal';
+    case 'board': return 'board';
+    case 'list': return 'list';
+    case 'summary': return 'summary';
+    case 'gallery': return 'photo gallery';
+    case 'practice': return 'practice timer';
+    case 'links': return 'saved sources';
+    case 'queue': return 'next-action queue';
   }
 }

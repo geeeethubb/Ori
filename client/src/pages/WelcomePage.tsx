@@ -1,3 +1,4 @@
+import { BRAND } from '@shared/brand.ts';
 import { Link, Navigate } from 'react-router';
 import { useAuth } from '../auth.tsx';
 import { Skeleton } from '../components/ui.tsx';
@@ -7,7 +8,7 @@ import './pages.css';
 const STEPS = ['Bring context', 'Discover apps', 'Make it yours', 'Build and use', 'Grow together'];
 
 export function WelcomePage() {
-  usePageTitle('AI App Store');
+  usePageTitle(BRAND.name);
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -26,7 +27,7 @@ export function WelcomePage() {
       </div>
     );
   }
-  if (user) return <Navigate to="/for-you" replace />;
+  if (user) return <Navigate to="/playground" replace />;
 
   return (
     <div className="container stack-l">

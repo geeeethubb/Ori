@@ -42,7 +42,7 @@ export function CollectionSection({ appId, detail, recordCount, onDetail }: Prop
       await api<{ ok: boolean }>(`/api/apps/${appId}`, { method: 'DELETE' });
       clearCache(appId);
       toast('App deleted');
-      navigate('/collection', { replace: true });
+      navigate('/apps', { replace: true });
     } catch (err) {
       toast(describeError(err), { kind: 'error' });
       setBusy(null);

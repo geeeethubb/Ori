@@ -83,7 +83,7 @@ export function RecCard({ rec, facts, onDismiss, busy }: RecCardProps) {
             Open app
           </Link>
         ) : (
-          <Link to={`/recommendations/${rec.id}`} className="btn btn-primary" data-testid="rec-build">
+          <Link to={`/make/${rec.id}`} className="btn btn-primary" data-testid="rec-build">
             Build this for me
           </Link>
         )}

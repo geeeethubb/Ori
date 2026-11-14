@@ -1,99 +1,51 @@
-# BUILD_STATUS — AI App Store prototype
+# BUILD_STATUS — personal AI playground redesign (session 2)
 
-Last updated: 2026-11-14 ~04:10 (session 1, final). Core demo journey verified in Sample mode (browser) and Live AI mode (browser + API); Android shell verified on the emulator (two pinned shortcuts with their own icons, warm launch by tap, cold launch via the shortcut intent).
+Last updated: 2026-11-14 10:55. **Phase 0 (inspect) done; Phase 1 (foundation) in progress.** Product name undecided: the UI uses the temporary label from `shared/brand.ts` ("Your Playground").
 
 ## Resume here
 
-1. Read this file, then `docs/TEST_RESULTS.md` (what is verified, where) and `docs/DEMO.md` (the 3-minute script).
-2. `npm install && npm run typecheck && npm test` → expect 0 type errors, 223 tests passing.
-3. `npm run build && npm run seed && npm start` → http://localhost:8787 (production path used by phones). Demo account `demo@aiappstore.local` / `demo-pass-2026`. `npm run dev` for hot reload (UI on :5173).
-4. `npm run test:e2e` → 9 browser tests (Sample mode, ~1 min). `E2E_LIVE=1 npx playwright test tests/e2e/journey.spec.ts --project=desktop` runs the journey against the real model (~$0.30).
-5. Android: `node scripts/build-apk.mjs --api-base http://10.0.2.2:8787` (emulator) or `--api-base http://<laptop-lan-ip>:8787` (phone), then `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`. Details and verification state in `docs/ANDROID.md`.
+1. Read this file, then `redesign/START_HERE.md` → `PRODUCT_SPEC.md` → `DESIGN_SPEC.md` → `BUILD_PLAN.md` (the redesign requirements) and `docs/redesign-contract.md` (what the code agrees on; written in Phase 1).
+2. Baseline before any redesign change (verified 10:47): `npm run typecheck` 0 errors; `npm test` 223 passed (10 files). The pre-redesign database copy is `data/backups/app-20261114-104708-pre-redesign.db` (git-ignored). Never reset or reseed `data/app.db`; migrations are additive only.
+3. Run: `npm run build && npm start` → http://localhost:8787 (production path, install metadata injected). `npm run dev` for hot reload (UI :5173). Demo account from session 1: `demo@aiappstore.local` / `demo-pass-2026` (`SEED_DEMO_PASSWORD`). Do not copy `.env.example` over the configured `.env`.
+4. Checks: `npm run typecheck`, `npm test`, `npm run test:e2e` (Playwright, Sample mode, throwaway DB on :8799), `E2E_LIVE=1 npx playwright test tests/e2e/journey.spec.ts --project=desktop` (real model, costs money).
 
-## What works (verified)
+## Phase 0 findings (actual code, not handoff claims)
 
-| Flow | Sample mode | Live AI (`claude-opus-5-5`) |
+| Area | Where | Finding |
 | --- | --- | --- |
-| Bring context (paste / upload / short profile / labelled sample) → facts with Confirmed vs Inferred, sources, conflicts | ✅ browser (phone + desktop) | ✅ API route (24 facts, 11.7 s) |
-| For You: grounded cards citing fact IDs, work + explore, reasons quote the profile; two profiles differ | ✅ browser | ✅ API route (4 cards, 18.6 s, quotes like "get lost in my notes") |
-| Customize → preview → **Build this for me** → app at `/apps/{id}/` | ✅ browser | ✅ browser (`E2E_LIVE=1`, 1.9 min journey) + API route (journal with weekly challenge + reflection, 14.6 s; board with due rule + priority, 19.9 s) |
-| Save an entry, reload the stable URL, entry persists; sign in **inside** the app URL | ✅ browser | ✅ (same runtime) |
-| **Make a change** → readable preview → accept → entries retained → undo | ✅ browser | ✅ API route (13.9 s) |
-| Unsupported requests declined with an alternative | ✅ unit + API | ✅ adapter smoke |
-| Board due-soon/overdue rule incl. completion and date boundaries | ✅ browser + 32 unit tests | n/a |
-| Per-app manifest, apple-touch-icon, PNG icons, head injection on a fresh request; cross-user 404 | ✅ browser + API tests | n/a |
-| Export/import JSON with history | ✅ API tests | n/a |
-| Phone layout without clipping, tap targets ≥ 40 px | ✅ screenshots in `test-results/screens/` | n/a |
-| Android shell: real-bundle APK installs; sign-in inside the shell; pin a shortcut from an app; warm launch by tapping the icon; cold launch via the shortcut's intent; two targets → two apps | ✅ emulator (`docs/ANDROID.md`) | tap-to-cold-launch blocked on this account-less Play image by Play Protect; physical phone pending |
+| Client shell | `client/src/App.tsx`, `components/Layout.tsx`, `styles.css` | Routes `/`, `/login`, `/signup`, `/pricing`, `/import`, `/context`, `/for-you`, `/recommendations/:id`, `/collection`, `/account`; `/apps/:appId/*` renders the runtime outside the store chrome. Cream/brown tokens, serif display font, purple sparkle brand, "Get things done / Explore life" pills everywhere. |
+| Storefront pages | `client/src/pages/*` | Welcome, Import (paste/upload/short profile + labelled samples), Context (facts by category, conflicts, sources), For You (3-col rec cards with mock previews), Recommendation (instructions → draft → build), Collection (wide rows + gear), Pricing, Account, Login. |
+| Runtime | `client/src/runtime/*` | One shell (`AppHome`) renders journal/board/list/summary views from the spec; record sheet form per field type; settings (revise/history/install/data/collection). Offline cache + in-place sign-in work. Every app shares the same chrome: this is the "universal form renderer" the brief rejects. |
+| App contract | `shared/appSpec.ts` (v1), `records.ts`, `revision.ts`, `rules.ts` | Fields text/long_text/date/number/select/checkbox/rating/url/tags; views journal/board/list/summary; rules due_soon/prompt_rotation; stable field ids; additive revision ops; undo appends a version. No media, no design block, no timer/gallery/queue capabilities. |
+| Server | `server/index.ts`, `routes/*`, `repos/*`, `db/migrations/001_init.sql` | Hono + `node:sqlite`; owner-scoped repos (foreign ids → 404); auth cookie/bearer; `/api/apps` (records, versions, apply/undo, export/import, events), `/api/context` (sources, facts, interests), `/api/recommendations` (generate/draft/build/dismiss), revisions preview/suggestion/feedback; install metadata (`install.ts`) with per-app manifest + PNG icons. 1 MB JSON body limit on `/api/*`; no media routes; no URL fetching. |
+| Model boundary | `server/model/types.ts`, `anthropic.ts`, `sample/*`, `index.ts` | `ModelAdapter` with extract/recommend/generateSpec/proposeRevision/suggestImprovement; live adapter uses structured outputs for small schemas and JSON-in-text + zod for the spec; sample adapter is a deterministic 28-concept catalog. `withModel` falls back to sample and labels it. |
+| Tests | `tests/unit/*` (223), `tests/e2e/*` (9) | API, schema, rules, revisions, records, persistence, fallback, sample adapter, view logic; browser journey/direct-url/board-rule/mobile against the old routes and test ids. |
+| Android | `android/`, `capacitor.config.ts`, `scripts/build-apk.mjs` | One shell APK; pinned shortcuts carry an app id. Unchanged by the redesign; described accurately in `docs/ANDROID.md`. |
+| Env | `.env` (git-ignored, has the key; never printed) | Model `claude-opus-5-5` configured. Not touched. |
 
-## Environment found (do not re-derive)
+## Plan (milestones and acceptance, not hours)
 
-| Item | Finding |
-| --- | --- |
-| Node / npm | v24.14.1 / 11.11.0. SQLite via built-in `node:sqlite` (ExperimentalWarning is harmless) |
-| Java / Android | JDK 21 at `C:\Program Files\Android\Android Studio\jbr`; SDK `%LOCALAPPDATA%\Android\Sdk` (platforms 36, build-tools 35–37, platform-tools, emulator). `local.properties` needs forward slashes. Emulator AVD `Pixel_9_Pro` (Android 17) boots headless; adb authorization was accepted through the emulator console (`event mouse` taps) |
-| AI credentials | `ANTHROPIC_API_KEY` in root `.env` (git-ignored). `ANTHROPIC_MODEL=claude-opus-5-5` (changed from the sonnet example; set `claude-sonnet-5-5` for cheaper/faster) |
-| Velocity | No access/outputs supplied → `docs/velocity-contribution.md` has four founder-ready prompts with integration points, labelled pending |
+- **R1 Foundation** (in progress): Electric Playground tokens + self-hosted Manrope/DM Sans (OFL) + lucide icons (ISC); `shared/brand.ts`; Agent / Playground / My apps navigation with avatar menu; route map with redirects from every old URL; AppSpec v1 extended additively (image field; gallery/practice/links/queue views; per-view `filter`/`formFieldIds`; `design` block; flat icon themes); media + captures + agent reply tables (migration 002, additive); media upload/serve routes (owner-scoped, type/size validated); capture routes with honest read status (no server-side page fetching; allowlisted oEmbed title/thumbnail only); `respondToCapture` on the model boundary (live reads screenshots; sample says it cannot). Exit: typecheck + existing tests pass, shell visibly Electric Playground, `docs/redesign-contract.md` written.
+- **R2 The guitar slice**: Agent composer (note / link / screenshot) → concise grounded reply with explore / make / update / keep proposals → real app preview with one meaningful choice (practice time) → Make mine → Riff app at `/apps/{id}/` with practice timer + tempo helper + saved session → reload persists → Make this more me → preview → accept keeps data → undo. Exit: browser journey passes in Sample mode; live run recorded with latency.
+- **R3 Distinct apps + Playground + My apps**: Light gallery with real uploads (legacy text entries readable), People next-action queue, Playground editorial grid with explore/make/open actions and "Why this?", My apps launcher, memory/settings pages. Exit: three apps differ on layout, dominant content, typography, primary interaction; all usable.
+- **R4 Delivery + evidence**: per-app URL/title/manifest/icon checks, 320/390/768/1440 layouts, keyboard/touch/error states, screenshots inspected, Android shell still builds, Velocity state recorded honestly.
+- **R5 Handoff**: tests fixed/extended, before/after screenshots, README/DEMO/TEST_RESULTS/velocity docs updated, final report.
 
-## Architecture (decided)
+## Work log (session 2)
 
-- **One npm package**, pinned versions + lockfile. `client/` (Vite 7 + React 19 + React Router 7, plain CSS tokens), `server/` (Hono on Node 24, `tsx`), `shared/` (zod contracts + pure rule functions), `android/` (Capacitor 8 + local `AppShortcuts` plugin).
-- **Persistence**: SQLite `data/app.db`; migrations in `server/db/migrations`. Tables: users, sessions, apps, app_versions, app_records, app_events, revision_proposals, context_sources, profile_facts, recommendations, ai_usage.
-- **Auth**: email + password (scrypt), opaque session tokens stored hashed; cookie on the web, `Authorization: Bearer` + `X-Client: native` in the Android shell. Prototype auth, documented in README.
-- **Identity model**: `App` (unguessable stable id) ⟂ `AppVersion` (immutable spec per version) ⟂ `AppRecord` (field-id → value). Field IDs never change; hidden fields keep values; undo appends a version equal to the previous one.
-- **AI boundary**: `ModelAdapter` → `AnthropicAdapter` (structured outputs for small schemas; JSON-in-text + zod + 3 attempts for the full spec and revision ops because the grammar mode rejected the large schema; `fallbacks: "default"` on) with `SampleAdapter` fallback labelled `generatedBy: 'sample'` + reason. Failed live calls never count toward the monthly allowance. Imported text is wrapped as `<user_data>` and declared non-instructional.
-- **Sample mode** (`server/model/sample/`): deterministic extraction of the README export format, 28-concept catalog with trigger phrases, generation/revision heuristics, event-based suggestions. Used when no key is set, as the fallback, in browser tests, and by the seed.
-- **Install paths**: `/apps/{appId}/` served with app-specific title/manifest/apple-touch-icon/theme on every fresh request; manifest has distinct `id`/`start_url`/`scope`, `display: standalone`; icons rasterized with `@resvg/resvg-js`. Sign-in happens inside the app URL (installed iOS web apps have their own cookie jar). Android: shared runtime APK + pinned shortcuts carrying a validated app id (cold start via `getLaunchAppId`, warm via `appLaunch` event).
-- **Business model in data**: 14-day trial dates on the user, `plan`, `ai_usage` meter (300 generations/month disclosed); after the trial, build/revise/generate return 403 `premium_paused` while viewing/export keep working. Pricing page shows real dates; no simulated payments.
-- **Recorded trade-off**: app name + icon are readable by anyone holding the unguessable app id (needed for a fresh iOS install request). Records/specs/lists always require ownership.
+- 10:44 Redesign package read (`redesign/*`, brief PDF text extracted with pypdf since pdftoppm is absent). Repo inspected file by file; findings above.
+- 10:47 Baseline checks run (0 type errors, 223 tests). Database backed up before schema work.
+- 10:55 Plan recorded; starting R1.
 
-## Milestones
+## Blockers / founder inputs still pending
 
-- [x] **M0** Reconnaissance, plan, scaffold.
-- [x] **M1** Runtime slice: journal at `/apps/{id}/`, persistence across reload/restart, additive revision + undo, export/import, in-place sign-in, ownership 404s. Gate passed (browser + API tests).
-- [x] **M2** Discovery: import → Your Context → For You → Build → My Collection, live adapter + sample mode. Gate passed (two profiles differ; build and save in browser).
-- [x] **M3** Evolution: board + tracker patterns, due-soon rule, NL revision preview/accept/undo, unsupported declines, events + suggestions + feedback. Gate passed.
-- [x] **M4** Home-screen: iOS metadata + guide verified in browser (physical iPhone pending, founder); Android real-bundle APK installed on the emulator, shortcut pinned, warm launch by tap and cold launch via the shortcut intent verified; details and the one emulator-specific caveat in `docs/ANDROID.md`.
-- [~] **M5** Docs (README, DEMO, TEST_RESULTS, ANDROID, Velocity prompts) written; pricing/account pages done; live-mode browser run passed; remaining: final polish items below.
+1. Three real inspirations (photography, guitar/music, recurring work need) — not supplied yet; the demo uses clearly labelled example captures and public-domain example photos (`docs/ASSET_SOURCES.md`).
+2. Velocity outputs — none supplied; `docs/velocity-contribution.md` stays pending until real outputs exist.
+3. Physical iPhone / Android phone checks — no device attached to this machine.
 
-## Work log (session 1)
+## Session 1 facts worth keeping (verified then, still true)
 
-- Foundation (shared contracts, server, adapter, shell) by the main session; runtime UI, storefront pages, sample adapter and tests built by four parallel agents against `docs/api-contract.md`. The sample agent stalled for ~40 min on an oversized single write; a stopgap was written and then superseded by the agent's richer version.
-- Bugs found and fixed by tests: PNG icon routes never matched (Hono params must fill a segment); impossible dates accepted; streak ignored its filter; grid/title/tap-target CSS issues.
-- Live model: grammar-constrained output rejected the AppSpec schema → JSON-in-text + validation.
-
-## Commands
-
-```
-npm install            # pinned deps
-npm run dev            # server :8787 + vite :5173 (proxy)
-npm run build          # client → dist/client
-npm start              # production server on :8787 serving dist/client
-npm run seed           # demo account + sample context/apps/recommendations; -- --reset recreates
-npm run typecheck      # tsc --noEmit (0 errors)
-npm test               # vitest: 223 tests
-npm run test:e2e       # playwright: 9 tests, Sample mode, throwaway DB on :8799
-E2E_LIVE=1 npx playwright test tests/e2e/journey.spec.ts --project=desktop   # journey with the real model
-npx tsx server/scripts/ai-smoke.ts            # one tiny live request
-npx tsx server/scripts/ai-generate-smoke.ts   # live recommend → spec → revision (a few cents)
-node scripts/build-apk.mjs --api-base http://10.0.2.2:8787   # Android debug APK (emulator host address)
-```
-
-## Blockers / prerequisites
-
-1. Physical iPhone verification of Add to Home Screen (two icons → two apps) must be done by the founder: `docs/DEMO.md` "Phone" step; needs the server reachable from the phone (`PUBLIC_ORIGIN`, same Wi-Fi or an HTTPS tunnel).
-2. Velocity: founder to run the four prompts in `docs/velocity-contribution.md` and drop outputs in `docs/velocity/`.
-3. Android physical device: none connected; emulator used instead.
-
-## Decisions log
-
-- Default model `claude-opus-5-5`; founder can switch to `claude-sonnet-5-5` in `.env`.
-- Large-schema model calls use JSON-in-text + zod validation (grammar mode rejected the AppSpec schema).
-- Suggestions from usage events are deterministic (free, instant); explicit feedback goes to the live model.
-- Recommendations default to 4 cards; conflicting facts are excluded from generation until resolved.
-- Android shell uses an `http://localhost` origin + cleartext so it can talk to a LAN/emulator-host server during the prototype; production uses HTTPS.
-- Empty summary metrics show an en dash (product copy avoids em dashes).
-
-## Next task
-
-Session 1 is complete; everything is committed. Founder follow-ups: (1) physical iPhone Add-to-Home-Screen check with a reachable server URL (`docs/DEMO.md`), (2) run the Velocity prompts in `docs/velocity-contribution.md` and drop outputs in `docs/velocity/`, (3) optional: physical Android phone with `node scripts/build-apk.mjs --api-base http://<laptop-lan-ip>:8787`. Possible next engineering items: a service worker for offline cold starts of installed web apps; code-splitting the 500 KB client bundle; a shareable app blueprint export (stretch in the README).
+- Node v24.14.1 / npm 11.11.0; SQLite via built-in `node:sqlite`. JDK 21 at `C:\Program Files\Android\Android Studio\jbr`; SDK `%LOCALAPPDATA%\Android\Sdk`; emulator `Pixel_9_Pro` (Android 17). `local.properties` needs forward slashes; call `gradlew.bat` by absolute path.
+- Grammar-constrained structured output rejects the full AppSpec schema → spec and revision calls use JSON-in-text + zod validation with retries; small schemas use structured outputs.
+- App name + icon are readable by anyone holding the unguessable app id (needed for a fresh iOS install request); records always require ownership.
+- Android: tap-to-cold-launch of a pinned shortcut is intercepted by Play Protect on the account-less emulator image; the shortcut's intent and warm taps work (`docs/ANDROID.md`).

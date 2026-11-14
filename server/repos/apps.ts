@@ -4,7 +4,7 @@
  */
 import { getDb, nowIso, transaction } from '../db/index.ts';
 import { newId } from '../../shared/ids.ts';
-import { AppSpecSchema, type AppSpec } from '../../shared/appSpec.ts';
+import { AppSpecSchema, capabilitiesOf, designFor, type AppSpec } from '../../shared/appSpec.ts';
 import type { AppRecord, RecordValues } from '../../shared/records.ts';
 import type { AppEvent, EventType } from '../../shared/context.ts';
 import type { AppSummaryDto, AppVersionDto } from '../../shared/api.ts';
@@ -27,10 +27,22 @@ export interface AppRow {
   updatedAt: string;
   lastOpenedAt: string | null;
   sourceRecommendationId: string | null;
+  sourceCaptureId: string | null;
   isSample: boolean;
+  /** Current spec (joined); present on rows read through listApps/getApp. */
+  spec?: AppSpec;
 }
 
+const SELECT_APP = `SELECT a.*, v.spec_json,
+  (SELECT COUNT(*) FROM app_records r WHERE r.app_id = a.id AND r.deleted_at IS NULL) AS record_count
+  FROM apps a LEFT JOIN app_versions v ON v.app_id = a.id AND v.version = a.current_version`;
+
 function rowToApp(r: R): AppRow {
+  let spec: AppSpec | undefined;
+  if (r.spec_json) {
+    const parsed = AppSpecSchema.safeParse(JSON.parse(String(r.spec_json)));
+    if (parsed.success) spec = parsed.data;
+  }
   return {
     id: String(r.id),
     ownerId: String(r.owner_id),
@@ -47,18 +59,25 @@ function rowToApp(r: R): AppRow {
     updatedAt: String(r.updated_at),
     lastOpenedAt: (r.last_opened_at as string | null) ?? null,
     sourceRecommendationId: (r.source_recommendation_id as string | null) ?? null,
+    sourceCaptureId: (r.source_capture_id as string | null) ?? null,
     isSample: Boolean(r.is_sample),
+    spec,
   };
 }
 
 export function toSummary(app: AppRow, recordCount = 0): AppSummaryDto {
+  const icon = { symbol: app.iconSymbol as AppSummaryDto['icon']['symbol'], color: app.iconColor as AppSummaryDto['icon']['color'] };
+  const pattern = app.pattern as AppSummaryDto['pattern'];
+  const purpose = app.purpose as AppSummaryDto['purpose'];
   return {
     id: app.id,
     name: app.name,
     tagline: app.tagline ?? undefined,
-    icon: { symbol: app.iconSymbol as AppSummaryDto['icon']['symbol'], color: app.iconColor as AppSummaryDto['icon']['color'] },
-    purpose: app.purpose as AppSummaryDto['purpose'],
-    pattern: app.pattern as AppSummaryDto['pattern'],
+    icon,
+    purpose,
+    pattern,
+    design: app.spec ? designFor(app.spec) : designFor({ design: undefined, pattern, icon, purpose }),
+    capabilities: app.spec ? capabilitiesOf(app.spec) : [],
     currentVersion: app.currentVersion,
     pinned: app.pinned,
     archivedAt: app.archivedAt,
@@ -75,36 +94,35 @@ export function toSummary(app: AppRow, recordCount = 0): AppSummaryDto {
 
 export function listApps(ownerId: string): (AppRow & { recordCount: number })[] {
   const rows = getDb()
-    .prepare(
-      `SELECT a.*, (SELECT COUNT(*) FROM app_records r WHERE r.app_id = a.id AND r.deleted_at IS NULL) AS record_count
-       FROM apps a WHERE a.owner_id = ? ORDER BY a.pinned DESC, COALESCE(a.last_opened_at, a.updated_at) DESC`,
-    )
+    .prepare(`${SELECT_APP} WHERE a.owner_id = ? ORDER BY a.pinned DESC, COALESCE(a.last_opened_at, a.updated_at) DESC`)
     .all(ownerId) as R[];
   return rows.map((r) => ({ ...rowToApp(r), recordCount: Number(r.record_count) }));
 }
 
 export function getApp(ownerId: string, appId: string): (AppRow & { recordCount: number }) | null {
-  const r = getDb()
-    .prepare(
-      `SELECT a.*, (SELECT COUNT(*) FROM app_records r WHERE r.app_id = a.id AND r.deleted_at IS NULL) AS record_count
-       FROM apps a WHERE a.id = ? AND a.owner_id = ?`,
-    )
-    .get(appId, ownerId) as R | undefined;
+  const r = getDb().prepare(`${SELECT_APP} WHERE a.id = ? AND a.owner_id = ?`).get(appId, ownerId) as R | undefined;
   return r ? { ...rowToApp(r), recordCount: Number(r.record_count) } : null;
 }
 
-/** Public install metadata only (name + icon), looked up by unguessable ID. No records. */
-export function getAppPublicMeta(appId: string): { id: string; name: string; iconSymbol: string; iconColor: string; purpose: string; tagline: string | null } | null {
-  const r = getDb().prepare('SELECT id, name, icon_symbol, icon_color, purpose, tagline FROM apps WHERE id = ?').get(appId) as R | undefined;
-  return r
-    ? { id: String(r.id), name: String(r.name), iconSymbol: String(r.icon_symbol), iconColor: String(r.icon_color), purpose: String(r.purpose), tagline: (r.tagline as string | null) ?? null }
-    : null;
+/** Public install metadata only (name, icon, look), looked up by unguessable ID. No records. */
+export function getAppPublicMeta(appId: string): { id: string; name: string; iconSymbol: string; iconColor: string; purpose: string; tagline: string | null; theme: string | null } | null {
+  const r = getDb()
+    .prepare('SELECT a.id, a.name, a.icon_symbol, a.icon_color, a.purpose, a.tagline, a.pattern, v.spec_json FROM apps a LEFT JOIN app_versions v ON v.app_id = a.id AND v.version = a.current_version WHERE a.id = ?')
+    .get(appId) as R | undefined;
+  if (!r) return null;
+  let theme: string | null = null;
+  if (r.spec_json) {
+    const parsed = AppSpecSchema.safeParse(JSON.parse(String(r.spec_json)));
+    if (parsed.success) theme = designFor(parsed.data).theme;
+  }
+  return { id: String(r.id), name: String(r.name), iconSymbol: String(r.icon_symbol), iconColor: String(r.icon_color), purpose: String(r.purpose), tagline: (r.tagline as string | null) ?? null, theme };
 }
 
 export function getSpec(ownerId: string, appId: string, version?: number): { version: number; spec: AppSpec } | null {
   const app = getApp(ownerId, appId);
   if (!app) return null;
   const v = version ?? app.currentVersion;
+  if (v === app.currentVersion && app.spec) return { version: v, spec: app.spec };
   const r = getDb().prepare('SELECT spec_json FROM app_versions WHERE app_id = ? AND version = ?').get(appId, v) as R | undefined;
   if (!r) return null;
   const parsed = AppSpecSchema.safeParse(JSON.parse(String(r.spec_json)));
@@ -130,6 +148,7 @@ export interface CreateAppInput {
   changeSummary?: string;
   origin?: AppVersionDto['origin'];
   sourceRecommendationId?: string | null;
+  sourceCaptureId?: string | null;
   isSample?: boolean;
   id?: string;
 }
@@ -142,11 +161,11 @@ export function createApp(input: CreateAppInput): AppRow {
     getDb()
       .prepare(
         `INSERT INTO apps (id, owner_id, name, tagline, icon_symbol, icon_color, purpose, pattern, current_version, pinned, archived_at,
-          created_at, updated_at, last_opened_at, source_recommendation_id, is_sample)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0, NULL, ?, ?, NULL, ?, ?)`,
+          created_at, updated_at, last_opened_at, source_recommendation_id, is_sample, source_capture_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0, NULL, ?, ?, NULL, ?, ?, ?)`,
       )
       .run(id, input.ownerId, spec.name, spec.tagline ?? null, spec.icon.symbol, spec.icon.color, spec.purpose, spec.pattern, now, now,
-        input.sourceRecommendationId ?? null, input.isSample ? 1 : 0);
+        input.sourceRecommendationId ?? null, input.isSample ? 1 : 0, input.sourceCaptureId ?? null);
     getDb()
       .prepare('INSERT INTO app_versions (app_id, version, spec_json, change_summary, origin, created_at) VALUES (?, 1, ?, ?, ?, ?)')
       .run(id, JSON.stringify(spec), input.changeSummary ?? 'Built from your request', input.origin ?? 'build', now);

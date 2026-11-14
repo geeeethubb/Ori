@@ -16,7 +16,7 @@ export interface ImportOutcome {
 
 export async function importSource(
   ownerId: string,
-  input: { label: string; kind: 'paste' | 'upload' | 'manual' | 'sample'; text: string },
+  input: { label: string; kind: 'paste' | 'upload' | 'manual' | 'sample' | 'capture'; text: string },
   opts: { forceSample?: boolean } = {},
 ): Promise<ImportOutcome> {
   const source = ctx.createSource(ownerId, input);

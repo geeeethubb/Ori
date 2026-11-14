@@ -1,3 +1,4 @@
+import { BRAND } from '@shared/brand.ts';
 import { useCallback, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import type { ContextSource, ProfileFact } from '@shared/context.ts';
@@ -23,7 +24,7 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export function ImportPage() {
-  usePageTitle('Bring your context · AI App Store');
+  usePageTitle(`Bring more context · ${BRAND.name}`);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { refresh } = useAuth();
@@ -38,7 +39,7 @@ export function ImportPage() {
       if (kind === 'sample') toast('Sample context added');
       else if (n === 0) toast('Nothing new to add yet');
       else toast(`Added ${n} ${n === 1 ? 'thing' : 'things'} we learned`);
-      navigate('/context', { state: { note: res.note ?? null } });
+      navigate('/settings/memory', { state: { note: res.note ?? null } });
     },
     [navigate, toast],
   );
@@ -102,7 +103,7 @@ export function ImportPage() {
       <SampleCard busy={isBusy} onPick={importSample} />
 
       <p className="small muted">
-        Already brought something? <Link to="/context">See Your Context</Link>.
+        Already brought something? <Link to="/settings/memory">See Your Context</Link>.
       </p>
     </div>
   );

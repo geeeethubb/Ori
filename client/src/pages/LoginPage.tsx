@@ -1,3 +1,4 @@
+import { BRAND } from '@shared/brand.ts';
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
 import { ApiError, describeError, isNative } from '../api.ts';
@@ -16,12 +17,12 @@ interface FormError {
 
 export function LoginPage({ mode }: { mode: 'login' | 'signup' }) {
   const isSignup = mode === 'signup';
-  usePageTitle(isSignup ? 'Create your account · AI App Store' : 'Sign in · AI App Store');
+  usePageTitle(isSignup ? `Create your account · ${BRAND.name}` : `Sign in · ${BRAND.name}`);
   const { user, loading, login, signup } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const rawNext = params.get('next');
-  const destination = safeNextPath(rawNext, isSignup ? '/import' : '/for-you');
+  const destination = safeNextPath(rawNext, isSignup ? '/agent' : '/playground');
   const nextQuery = rawNext ? `?next=${encodeURIComponent(rawNext)}` : '';
 
   const [email, setEmail] = useState('');
@@ -146,7 +147,7 @@ export function LoginPage({ mode }: { mode: 'login' | 'signup' }) {
       <p className="tiny faint">Prototype sign-in. Use any email; passwords are stored hashed on this server only.</p>
       {isLocal && (
         <p className="tiny faint" data-testid="auth-demo-hint">
-          Demo account on this machine: demo@aiappstore.local with password demo-pass-2026 (created by the seed script).
+          Demo account on this machine: demo@aiappstore.local with password demo-pass-2026 (created by the seed script; example content only).
         </p>
       )}
     </div>

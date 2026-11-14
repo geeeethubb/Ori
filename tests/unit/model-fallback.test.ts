@@ -11,6 +11,7 @@ const stub = (mode: 'anthropic' | 'sample', impl: () => Promise<unknown>): Model
     generateSpec: async () => ({ data: (await impl()) as never, generatedBy: mode }),
     proposeRevision: async () => ({ data: (await impl()) as never, generatedBy: mode }),
     suggestImprovement: async () => ({ data: (await impl()) as never, generatedBy: mode }),
+    respondToCapture: async () => ({ data: (await impl()) as never, generatedBy: mode }),
   }) as ModelAdapter;
 
 describe('extractJsonObject', () => {

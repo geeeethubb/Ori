@@ -35,7 +35,7 @@ export function NotFoundScreen({ kind }: { kind: 'invalid' | 'missing' }) {
               : 'App links look like /apps/your-app-id/. Open your collection to pick the right one.'
           }
           action={
-            <Link to="/collection" className="btn btn-primary">
+            <Link to="/apps" className="btn btn-primary">
               Go to my collection
             </Link>
           }
@@ -51,7 +51,7 @@ export function LoadErrorScreen({ message, onRetry, busy }: { message: string; o
       <div className="rt-page">
         <ErrorBanner message={message} onRetry={onRetry} retryLabel={busy ? 'Retrying…' : 'Try again'} />
         <p className="small muted">Nothing you saved is lost. Your entries live in your account and will show as soon as we can reach it.</p>
-        <Link to="/collection" className="rt-backlink">
+        <Link to="/apps" className="rt-backlink">
           Back to collection
         </Link>
       </div>

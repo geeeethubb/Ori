@@ -5,6 +5,7 @@ import { requireAuth, type AuthEnv } from '../auth.ts';
 import { FACT_CATEGORIES, MAX_SOURCES_PER_USER, MAX_SOURCE_CHARS } from '../../shared/context.ts';
 import { SHORT_ID_PATTERN } from '../../shared/ids.ts';
 import * as ctx from '../repos/context.ts';
+import * as captures from '../repos/captures.ts';
 import { importSource } from '../services/contextImport.ts';
 import { SAMPLE_PROFILES } from '../fixtures/sampleContext.ts';
 
@@ -20,7 +21,7 @@ function cleanText(text: string): string {
 
 contextRoutes.get('/', (c) => {
   const ownerId = c.get('user').id;
-  return c.json({ sources: ctx.listSources(ownerId), facts: ctx.listFacts(ownerId) });
+  return c.json({ sources: ctx.listSources(ownerId), facts: ctx.listFacts(ownerId), captures: captures.listCaptures(ownerId, 100) });
 });
 
 const SourceBody = z.object({

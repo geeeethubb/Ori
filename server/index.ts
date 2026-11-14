@@ -1,4 +1,4 @@
-/** AI App Store server: API + install metadata + built client. */
+/** Server: API + install metadata + built client. */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Hono } from 'hono';
@@ -13,6 +13,7 @@ import { authRoutes } from './routes/auth.ts';
 import { appRoutes } from './routes/apps.ts';
 import { bootForApp, installRoutes, loadIndexHtml, renderIndex } from './install.ts';
 import { APP_ID_PATTERN } from '../shared/ids.ts';
+import { BRAND } from '../shared/brand.ts';
 import { mountExtraRoutes } from './routes/register.ts';
 
 export function createServer(): Hono {
@@ -37,9 +38,11 @@ export function createServer(): Hono {
       maxAge: 600,
     }),
   );
-  app.use('/api/*', bodyLimit({ maxSize: 1024 * 1024, onError: (c) => c.json({ error: 'That upload is too large (1 MB max).', code: 'too_large' }, 413) }));
+  // JSON bodies are small; photo uploads (/api/media) carry their own, larger limit.
+  const jsonLimit = bodyLimit({ maxSize: 1024 * 1024, onError: (c) => c.json({ error: 'That upload is too large (1 MB max).', code: 'too_large' }, 413) });
+  app.use('/api/*', async (c, next) => (c.req.path.startsWith('/api/media') ? next() : jsonLimit(c, next)));
 
-  app.get('/api/health', (c) => c.json({ ok: true, modelMode: resolveModelMode(), aiGenerationAllowance: config.aiGenerationAllowance, trialDays: config.trialDays, time: new Date().toISOString() }));
+  app.get('/api/health', (c) => c.json({ ok: true, name: BRAND.name, modelMode: resolveModelMode(), aiGenerationAllowance: config.aiGenerationAllowance, trialDays: config.trialDays, time: new Date().toISOString() }));
   app.route('/api/auth', authRoutes);
   app.route('/api/apps', appRoutes);
   mountExtraRoutes(app);
@@ -63,7 +66,7 @@ export function createServer(): Hono {
     const html = loadIndexHtml();
     if (!html) {
       return c.html(
-        `<!doctype html><meta charset="utf-8"><title>AI App Store</title><body style="font-family:system-ui;padding:2rem"><h1>Client not built</h1><p>Run <code>npm run build</code> then restart, or use <code>npm run dev</code> and open <a href="http://localhost:5173">http://localhost:5173</a>.</p></body>`,
+        `<!doctype html><meta charset="utf-8"><title>${BRAND.name}</title><body style="font-family:system-ui;padding:2rem"><h1>Client not built</h1><p>Run <code>npm run build</code> then restart, or use <code>npm run dev</code> and open <a href="http://localhost:5173">http://localhost:5173</a>.</p></body>`,
         503,
       );
     }
@@ -79,6 +82,6 @@ const isMain = Boolean(process.argv[1]) && path.resolve(process.argv[1] as strin
 if (isMain || process.env.AAS_SERVE === '1') {
   const app = createServer();
   serve({ fetch: app.fetch, port: config.port, hostname: config.host }, (info) => {
-    console.log(`[server] AI App Store listening on http://localhost:${info.port} (model mode: ${resolveModelMode()}, db: ${config.databasePath})`);
+    console.log(`[server] ${BRAND.name} listening on http://localhost:${info.port} (model mode: ${resolveModelMode()}, db: ${config.databasePath})`);
   });
 }

@@ -361,6 +361,7 @@ export function typeWord(field: FieldInput): string {
     case 'rating': return 'rating';
     case 'url': return 'link';
     case 'tags': return 'tags';
+    case 'image': return 'photo';
   }
 }
 

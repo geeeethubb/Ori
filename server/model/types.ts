@@ -3,9 +3,11 @@
  * live Anthropic adapter and the deterministic sample adapter are interchangeable. Imported text
  * is always passed as DATA (inside delimited blocks), never as instructions.
  */
-import type { AppSpec } from '../../shared/appSpec.ts';
+import type { AppSpec, Capability } from '../../shared/appSpec.ts';
 import type { AppRecord } from '../../shared/records.ts';
-import type { ContextSource, ExtractionResult, ProfileFact, RecommendationDraft, GeneratedApp, AppEvent } from '../../shared/context.ts';
+import type {
+  AgentReplyDraft, BuildChoices, Capture, ContextSource, ExtractionResult, GeneratedApp, ProfileFact, RecommendationDraft, AppEvent,
+} from '../../shared/context.ts';
 import type { RevisionProposal } from '../../shared/revision.ts';
 
 export type ModelMode = 'anthropic' | 'sample';
@@ -16,22 +18,38 @@ export interface ExtractInput {
   existingFacts: Pick<ProfileFact, 'id' | 'category' | 'value' | 'status'>[];
 }
 
+export interface ExistingAppSummary {
+  id: string;
+  name: string;
+  purpose: string;
+  pattern: string;
+  tagline?: string;
+  capabilities: Capability[];
+}
+
 export interface RecommendInput {
   /** Only approved facts (status confirmed or inferred, never removed). */
   facts: Pick<ProfileFact, 'id' | 'category' | 'value' | 'status' | 'confidence'>[];
-  /** Names/purposes of apps already in the collection, to avoid duplicates. */
-  existingApps: { name: string; purpose: string; pattern: string }[];
+  /** Apps already in the collection, to avoid duplicates and to propose updates instead. */
+  existingApps: ExistingAppSummary[];
   /** Interests the user explicitly chose to explore (also present as facts). */
   chosenInterests: string[];
+  /** Recent captures (notes/links) the person shared, for variety. */
+  recentCaptures?: Pick<Capture, 'id' | 'kind' | 'text' | 'url' | 'linkMeta' | 'readStatus'>[];
   /** Desired count (3–6). */
   count: number;
 }
 
 export interface GenerateSpecInput {
+  /** The chosen card (a fact-born recommendation or a capture-born proposal). */
   recommendation: RecommendationDraft;
   /** User's customization instructions (free text, untrusted). */
   instructions: string;
   facts: Pick<ProfileFact, 'id' | 'category' | 'value'>[];
+  /** Captures the proposal cites (their text and link titles are the grounding). */
+  captures?: Pick<Capture, 'id' | 'kind' | 'text' | 'url' | 'linkMeta' | 'readStatus'>[];
+  /** The one or two choices the person made before "Make mine". */
+  choices?: BuildChoices;
 }
 
 export interface ReviseInput {
@@ -56,6 +74,22 @@ export interface ImprovementSuggestion {
   request: string;
 }
 
+/** What the person shared with the Agent, as the model sees it. */
+export interface RespondInput {
+  capture: Pick<Capture, 'id' | 'kind' | 'text' | 'url' | 'linkMeta' | 'readStatus' | 'sourceLabel'> & {
+    /** Present when a screenshot was attached; the live adapter reads it, the sample adapter cannot. */
+    image?: { mime: string; base64: string } | null;
+  };
+  facts: Pick<ProfileFact, 'id' | 'category' | 'value' | 'status'>[];
+  existingApps: ExistingAppSummary[];
+  recentCaptures: Pick<Capture, 'id' | 'kind' | 'text' | 'url' | 'createdAt'>[];
+}
+
+export interface RespondResult extends AgentReplyDraft {
+  /** True when the adapter actually read the attached image. */
+  imageRead: boolean;
+}
+
 export interface AdapterResult<T> {
   data: T;
   /** Which adapter actually produced the result (a live adapter may fall back to sample). */
@@ -71,6 +105,8 @@ export interface ModelAdapter {
   generateSpec(input: GenerateSpecInput): Promise<AdapterResult<GeneratedApp & { spec: AppSpec }>>;
   proposeRevision(input: ReviseInput): Promise<AdapterResult<RevisionProposal>>;
   suggestImprovement(input: SuggestInput): Promise<AdapterResult<ImprovementSuggestion | null>>;
+  /** The Agent: acknowledge exactly what was received and offer explore / make / update / keep. */
+  respondToCapture(input: RespondInput): Promise<AdapterResult<RespondResult>>;
 }
 
 /** Thrown by adapters when the model produced something unusable after bounded retries. */

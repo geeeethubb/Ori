@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { requireAuth, type AuthEnv } from '../auth.ts';
 import { APP_ID_PATTERN, SHORT_ID_PATTERN } from '../../shared/ids.ts';
 import { AppSpecSchema, type AppSpec } from '../../shared/appSpec.ts';
-import { validateValues } from '../../shared/records.ts';
+import { imageMediaIds, validateValues } from '../../shared/records.ts';
+import { ownedMediaIds } from '../repos/media.ts';
 import { RevisionOpSchema, applyRevision } from '../../shared/revision.ts';
 import { EVENT_TYPES } from '../../shared/context.ts';
 import type { AppDetailDto, AppExportDto } from '../../shared/api.ts';
@@ -98,6 +99,8 @@ appRoutes.post('/:appId/records', async (c) => {
   if (!body.success) return c.json({ error: 'Invalid record.', code: 'invalid' }, 400);
   const v = validateValues(current.spec, body.data.values);
   if (!v.ok) return c.json({ error: 'Some fields need attention.', code: 'validation', details: v.errors }, 422);
+  const photoProblem = foreignPhotos(c.get('user').id, current.spec, v.values);
+  if (photoProblem) return c.json({ error: 'Some fields need attention.', code: 'validation', details: photoProblem }, 422);
   const record = repo.createRecord(c.get('user').id, id.data, v.values);
   return c.json({ record }, 201);
 });
@@ -112,6 +115,8 @@ appRoutes.patch('/:appId/records/:recordId', async (c) => {
   if (!body.success) return c.json({ error: 'Invalid record.', code: 'invalid' }, 400);
   const v = validateValues(current.spec, body.data.values, { partial: true });
   if (!v.ok) return c.json({ error: 'Some fields need attention.', code: 'validation', details: v.errors }, 422);
+  const photoProblem = foreignPhotos(c.get('user').id, current.spec, v.values);
+  if (photoProblem) return c.json({ error: 'Some fields need attention.', code: 'validation', details: photoProblem }, 422);
   const before = repo.getRecord(c.get('user').id, id.data, rid.data);
   const record = repo.updateRecord(c.get('user').id, id.data, rid.data, v.values);
   if (!record) return c.json({ error: 'That item no longer exists.', code: 'not_found' }, 404);
@@ -124,6 +129,20 @@ appRoutes.patch('/:appId/records/:recordId', async (c) => {
   }
   return c.json({ record });
 });
+
+/** Image values must be photos in the owner's own library; returns per-field errors otherwise. */
+function foreignPhotos(ownerId: string, spec: AppSpec, values: Record<string, unknown>): Record<string, string> | null {
+  const ids = imageMediaIds(spec, values);
+  if (!ids.length) return null;
+  const owned = ownedMediaIds(ownerId, ids);
+  const errors: Record<string, string> = {};
+  for (const f of spec.fields) {
+    if (f.type !== 'image') continue;
+    const v = values[f.id];
+    if (typeof v === 'string' && ids.includes(v) && !owned.has(v)) errors[f.id] = 'That photo is not in your library';
+  }
+  return Object.keys(errors).length ? errors : null;
+}
 
 function isDoneValues(values: Record<string, unknown>, rule: { doneFieldId?: string; stageFieldId?: string; doneStageValues?: string[] }): boolean {
   if (rule.doneFieldId && values[rule.doneFieldId] === true) return true;
@@ -263,7 +282,7 @@ appRoutes.post('/:appId/events', async (c) => {
   const body = z.object({ type: z.enum(EVENT_TYPES), meta: z.record(z.string(), z.unknown()).optional() }).safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: 'Invalid event.', code: 'invalid' }, 400);
   // Only client-originated event types are accepted here; server-owned ones are derived.
-  if (!['app_opened', 'install_guide_viewed', 'shortcut_requested', 'feedback_given', 'revision_declined'].includes(body.data.type)) {
+  if (!['app_opened', 'install_guide_viewed', 'shortcut_requested', 'feedback_given', 'revision_declined', 'first_action_completed'].includes(body.data.type)) {
     return c.json({ error: 'That event is recorded automatically.', code: 'invalid' }, 400);
   }
   if (body.data.type === 'app_opened') repo.touchOpened(c.get('user').id, id.data);

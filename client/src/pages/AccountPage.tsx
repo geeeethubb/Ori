@@ -1,3 +1,4 @@
+import { BRAND } from '@shared/brand.ts';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../auth.tsx';
@@ -7,7 +8,7 @@ import { usePageTitle } from './parts/usePageTitle.ts';
 import './pages.css';
 
 export function AccountPage() {
-  usePageTitle('Account · AI App Store');
+  usePageTitle(`Settings · ${BRAND.name}`);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false);
@@ -80,7 +81,7 @@ export function AccountPage() {
         <h2 id="st-data-title" className="st-h2-sm">Your data</h2>
         <p className="small">Each app can be exported from its settings as JSON.</p>
         <p className="small muted">
-          Everything we know about you is editable in <Link to="/context">Your Context</Link>. Removing it there never deletes the apps you built.
+          Everything we know about you is editable in <Link to="/settings/memory">Your Context</Link>. Removing it there never deletes the apps you built.
         </p>
       </section>
 
@@ -88,7 +89,7 @@ export function AccountPage() {
         <button type="button" className="btn btn-secondary" onClick={() => void signOut()} disabled={signingOut} data-testid="account-signout">
           {signingOut ? 'Signing out…' : 'Sign out'}
         </button>
-        <Link to="/collection" className="btn btn-ghost">
+        <Link to="/apps" className="btn btn-ghost">
           My Collection
         </Link>
       </div>
