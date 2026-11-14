@@ -66,7 +66,7 @@ All `/api/*` routes require the session (cookie or `Authorization: Bearer` + `X-
 - `POST /api/media` multipart field `file` (jpeg/png/webp/gif ≤ 6 MB, type sniffed) → 201 `{ media: { id, mime, size, width, height } }`.
 - `GET /api/media/:id` → bytes, owner only (404 otherwise). In the browser `<img src="/api/media/:id">` works with the cookie; in the Android shell fetch with the bearer header and use an object URL (`AuthImage`).
 - `GET /api/media/:id/meta`, `DELETE /api/media/:id`.
-- `GET /examples/light-1.jpg` … `light-4.jpg`: public CC0 example photographs (previews, seed). Record values use media ids; preview records use `example:light-1` etc. (never stored).
+- `GET /examples/light-1.jpg` … `light-4.jpg`: public CC0 example photographs (previews, seed). Record values use media ids; preview records use `example:light-1` etc. (never stored). Client code must build these URLs with `apiBase()` (the Android shell's page origin is the local bundle).
 
 ### Proposals (`/api/recommendations`, shared by Playground and Agent)
 - `GET /` → `RecommendationsDto { recommendations, generatedBy, stale }` (statuses fresh/built/applied; capture-born ones carry `captureId`).
@@ -102,14 +102,14 @@ All `/api/*` routes require the session (cookie or `Authorization: Bearer` + `X-
 
 ## 6. Test ids (keep stable)
 
-Shell: `brand-home`, `nav-*`, `tab-*`, `avatar-menu`, `menu-settings`, `menu-memory`, `menu-signout`.
+Shell: `brand-home`, `nav-*`, `tab-*`, `avatar-menu`, `menu-settings`, `menu-memory`, `menu-import`, `menu-signout`.
 Agent: `agent-composer`, `agent-text`, `agent-add-link`, `agent-url`, `agent-add-image`, `agent-file-input`, `agent-send`, `agent-thinking`, `agent-empty`, `agent-example-guitar`, `agent-example-photo`, `agent-thread`, `agent-item`, `agent-read-status[data-status]`, `agent-reply`, `agent-no-reply`, `agent-forget`, `proposal-card[data-kind][data-rec-id]`, `proposal-action`.
-Make mine: `make-title`, `make-choice-minutes-<n>`, `make-preview` (the rendered preview), `make-preview-example-banner`, `make-mine` (primary CTA), `make-state` (planning|generating|validating|ready|failed), `make-retry`, `make-explore-steps`, `make-update-preview`, `make-update-accept`, `make-keep`.
+Make mine: `make-title`, `make-choice-minutes-<n>`, `make-preview-button` (Preview is an explicit step: it spends a model call in Live mode), `make-preview` (the rendered preview), `make-preview-example-banner`, `make-mine` (primary CTA; drafts first when no preview exists), `make-state` (planning|generating|validating|ready|failed), `make-retry`, `make-explore-steps`, `make-update-preview`, `make-update-accept`, `make-update-nothing` + `make-update-settings` (when nothing would change), `make-keep`.
 Playground: `pg-grid`, `pg-card[data-kind]`, `pg-featured`, `pg-why`, `pg-action`, `pg-dismiss`, `pg-refresh`, `pg-empty`, `pg-add-interest-input`, `pg-add-interest-submit`, `pg-sample-badge`.
 My apps: `apps-grid`, `app-tile[data-app-id]`, `app-tile-open`, `app-tile-menu`, `apps-empty`, `apps-recent`.
 Memory: `mem-fact`, `mem-fact-remove`, `mem-fact-edit`, `mem-source`, `mem-source-remove`, `mem-capture`, `mem-capture-forget`, `mem-add-interest`.
 Import (existing): `store-sample-founder`, `store-sample-student`, `store-import-textarea`, `store-import-submit`, `store-upload-submit`, `store-manual-submit`.
-Runtime (existing + new): `rt-app`, `rt-new-entry` (generic add), `rt-input-<fieldId>`, `rt-save-record`, `rt-entry`, `rt-settings-link`, `rt-view-tab-<viewId>`, `rt-revise-input`, `rt-revise-preview`, `rt-revise-changes`, `rt-revise-accept`, `rt-revise-decline`, `rt-undo`, `rt-card`, `rt-move-<recordId>`, `rt-attention-filter`, `rt-board-column-<value>`, `rt-signin-submit`, `rt-android-shortcut`; new: `rt-practice`, `rt-practice-preset-<minutes>`, `rt-practice-start`, `rt-practice-pause`, `rt-practice-reset`, `rt-practice-time`, `rt-tempo`, `rt-tempo-value`, `rt-tempo-toggle`, `rt-practice-save`, `rt-gallery`, `rt-gallery-tile`, `rt-add-photo`, `rt-photo-input`, `rt-lightbox`, `rt-links`, `rt-link-item`, `rt-add-link`, `rt-queue`, `rt-queue-group-<overdue|today|soon|later|done>`, `rt-queue-item`, `rt-queue-done-<recordId>`, `rt-preview-banner`.
+Runtime (existing + new): `rt-app`, `rt-new-entry` (generic add), `rt-input-<fieldId>`, `rt-save-record`, `rt-entry`, `rt-settings-link`, `rt-view-tab-<viewId>`, `rt-revise-input`, `rt-revise-preview`, `rt-revise-changes`, `rt-revise-accept`, `rt-revise-decline`, `rt-undo`, `rt-card`, `rt-move-<recordId>`, `rt-attention-filter`, `rt-board-column-<value>`, `rt-signin-submit`, `rt-android-shortcut`; new: `rt-practice`, `rt-practice-preset-<minutes>`, `rt-practice-start`, `rt-practice-pause`, `rt-practice-reset`, `rt-practice-time`, `rt-tempo`, `rt-tempo-value`, `rt-tempo-toggle`, `rt-practice-save`, `rt-practice-recent` with `rt-session` items (journal entries keep `rt-entry`), `rt-gallery`, `rt-gallery-tile`, `rt-add-photo`, `rt-photo-input`, `rt-lightbox`, `rt-links`, `rt-link-item`, `rt-add-link`, `rt-queue`, `rt-queue-group-<overdue|today|soon|later|done>`, `rt-queue-item`, `rt-queue-done-<recordId>`, `rt-preview-banner`.
 
 ## 7. Honesty rules in copy
 

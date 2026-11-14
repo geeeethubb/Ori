@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import type { AppIconSpec } from '@shared/icons.ts';
 import { ICON_GRADIENTS } from '@shared/icons.ts';
+import { isNative } from '../api.ts';
 
 /**
  * Keep document title, manifest link, apple-touch-icon and theme color in sync for SPA
@@ -13,6 +14,8 @@ export function useInstallMeta(target: { appId: string | null; name: string; ico
     if (!target) return;
     const base = target.appId ? `/apps/${target.appId}/` : '/';
     if (setTitle) document.title = target.name;
+    // Inside the Android shell the page origin is the local bundle: manifest and icon links would 404 there.
+    if (isNative()) return;
     setLink('manifest', target.appId ? `${base}manifest.webmanifest` : '/manifest.webmanifest');
     setLink('apple-touch-icon', target.appId ? `${base}icon-180.png` : '/icons/store-180.png');
     setLink('icon', target.appId ? `${base}icon.svg` : '/icons/store.svg');
