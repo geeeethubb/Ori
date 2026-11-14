@@ -50,10 +50,12 @@ export async function pinAppShortcut(opts: PinShortcutOptions): Promise<PinShort
   if (!isNativeShell()) return { requested: false, supported: false, message: 'Shortcuts are available in the Android app.' };
   if (!APP_ID_PATTERN.test(opts.appId)) return { requested: false, supported: true, message: 'Invalid app id.' };
   let iconBase64: string | undefined;
+  // Inside the shell the page origin is the local bundle; icons live on the API server. Android's
+  // adaptive mask wants the full-bleed (maskable) variant.
+  const iconPath = new URL(opts.iconUrl, window.location.origin).pathname.replace(/icon-(\d+)\.png$/, 'icon-$1-maskable.png');
+  const absoluteIconUrl = `${apiBase() || window.location.origin}${iconPath}`;
   try {
-    // Inside the shell the page origin is the local bundle; icons live on the API server.
-    const iconPath = new URL(opts.iconUrl, window.location.origin).pathname;
-    const res = await fetch(`${apiBase() || window.location.origin}${iconPath}`);
+    const res = await fetch(absoluteIconUrl);
     if (res.ok) {
       const buf = new Uint8Array(await res.arrayBuffer());
       let bin = '';
@@ -63,7 +65,8 @@ export async function pinAppShortcut(opts: PinShortcutOptions): Promise<PinShort
   } catch {
     // Icon is optional; the native side falls back to the launcher icon.
   }
-  return plugin.pin({ ...opts, label: opts.label.slice(0, 25), iconBase64 });
+  // The native side downloads iconUrl itself when no base64 arrived (no WebView/CORS dependency).
+  return plugin.pin({ ...opts, iconUrl: absoluteIconUrl, label: opts.label.slice(0, 25), iconBase64 });
 }
 
 /**

@@ -59,7 +59,7 @@ npm test              # vitest: schema, rules, revisions, records, sample adapte
 npm run test:e2e      # Playwright: builds, starts the server on :8799 with a throwaway DB in Sample mode, runs the demo journey at phone + desktop widths
 ```
 
-The live adapter is exercised by `npx tsx server/scripts/ai-generate-smoke.ts` (spends a few cents; needs the key).
+The live adapter is exercised by `npx tsx server/scripts/ai-generate-smoke.ts` (spends a few cents; needs the key), and the whole journey can run against the real model with `E2E_LIVE=1 npx playwright test tests/e2e/journey.spec.ts --project=desktop`.
 
 ## Project layout
 

@@ -103,9 +103,10 @@ async function pngResponse(icon: AppIconSpec, size: number, maskable: boolean): 
   const png = await renderIconPng(icon, size, maskable);
   if (!png) {
     // Graceful fallback: SVG still renders in browsers and on Android; iOS needs PNG.
-    return new Response(appIconSvg(icon, size), { headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' } });
+    return new Response(appIconSvg(icon, size), { headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600', 'Access-Control-Allow-Origin': '*' } });
   }
-  return new Response(new Uint8Array(png), { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' } });
+  // Icons are public assets; the Android shell fetches them cross-origin to build launcher shortcuts.
+  return new Response(new Uint8Array(png), { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400', 'Access-Control-Allow-Origin': '*' } });
 }
 
 installRoutes.get('/manifest.webmanifest', (c) => c.body(JSON.stringify(storeManifest()), 200, { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-cache' }));

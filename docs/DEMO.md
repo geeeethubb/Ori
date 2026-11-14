@@ -17,7 +17,7 @@ Open http://localhost:8787 on the laptop. For the phone part, make the server re
 Demo sign-in: `demo@aiappstore.local` / `demo-pass-2026` (or `SEED_DEMO_PASSWORD`).
 A clean run: `npm run seed -- --reset` recreates the demo account and its three sample apps.
 
-Mode badge: **Live AI** (key configured) or **Sample mode** (deterministic catalog). Say which one you are showing.
+Mode badge: **Live AI** (key configured) or **Sample mode** (deterministic catalog). Say which one you are showing. In Live AI mode the app names vary run to run (for example "Light Study Walk Journal" instead of "Photo Walk Journal"); pick the photography card. Generation takes 15 to 40 seconds per step, so narrate while it thinks.
 
 ## The script
 
