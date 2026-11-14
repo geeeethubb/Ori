@@ -31,6 +31,7 @@ const VIEWPORTS = [
   { name: '390', width: 390, height: 844, mobile: true },
   { name: '1440', width: 1440, height: 900, mobile: false },
 ];
+const SCALE = Number(args.scale ?? 1.5);
 
 const browser = await chromium.launch();
 try {
@@ -62,7 +63,8 @@ try {
     await api(seedCtx.request, 'POST', `/api/apps/${people.app.id}/records`, { values: { person, action, due: iso(d), done, context, channel } });
   }
   const cap = await api(seedCtx.request, 'POST', '/api/agent/captures', { text: 'I like this sound and have 15 minutes to practice. It is a fingerpicked acoustic riff I keep coming back to.', url: 'https://www.instagram.com/reel/example/' });
-  const newApp = cap.reply?.proposals.find((p) => p.kind === 'new_app');
+  const proposals = cap.reply?.proposals ?? [];
+  const newApp = proposals.find((p) => p.kind === 'new_app') ?? proposals.find((p) => p.kind === 'update_app') ?? proposals[0];
   await api(seedCtx.request, 'POST', '/api/context/sample', { profile: 'founder-photographer' }).catch(() => undefined);
   await api(seedCtx.request, 'POST', '/api/recommendations/generate', {}).catch(() => undefined);
   await seedCtx.close();
@@ -81,7 +83,7 @@ try {
   ];
 
   for (const vp of VIEWPORTS) {
-    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, isMobile: vp.mobile, deviceScaleFactor: 2, hasTouch: vp.mobile });
+    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, isMobile: vp.mobile, deviceScaleFactor: SCALE, hasTouch: vp.mobile });
     const page = await ctx.newPage();
     await page.goto(`${BASE}/`);
     await page.screenshot({ path: path.join(OUT, `landing-${vp.name}.png`), fullPage: true });
