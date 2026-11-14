@@ -153,7 +153,7 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[]): ApplyResult 
         spec.design = DesignSchema.parse(merged);
         const bits: string[] = [];
         if (op.design.theme) bits.push(THEME_WORDS[op.design.theme] ?? op.design.theme);
-        if (op.design.accent) bits.push(`a ${op.design.accent} accent`);
+        if (op.design.accent) bits.push(`${/^[aeiou]/.test(op.design.accent) ? 'an' : 'a'} ${op.design.accent} accent`);
         if (op.design.typography) bits.push(`${op.design.typography} typography`);
         if (op.design.density) bits.push(`${op.design.density} spacing`);
         if (op.design.artwork) bits.push(op.design.artwork === 'none' ? 'no artwork' : `${op.design.artwork} artwork`);

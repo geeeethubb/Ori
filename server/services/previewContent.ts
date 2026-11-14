@@ -45,7 +45,7 @@ function sampleValue(f: FieldSpec, i: number, today: string): unknown {
     case 'select':
       return f.options[i % f.options.length]?.value ?? f.default ?? '';
     case 'checkbox':
-      return i % 2 === 0;
+      return i % 3 === 2;
     case 'rating':
       return Math.min(f.max, 3 + (i % 3));
     case 'url':
