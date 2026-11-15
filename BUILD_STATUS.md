@@ -1,16 +1,26 @@
-# BUILD_STATUS — Ori (session 3: Velocity integration, then the Ori companion pass)
+# BUILD_STATUS — Ori (session 3: Velocity integration, the Ori companion pass, the pitch, the live service)
 
-Last updated: 2026-11-14 18:00. **Velocity integration committed (`a88d8e0`); the fixes from its adversarial review are being applied and checked (not yet committed). A bounded live run passed 15/15 (`docs/velocity/evidence/live-smoke-2026-11-14.txt`). The Ori pass has started with the brand foundation (O1).** The product name is decided: **Ori**. `docs/ori/ORI_DESIGN_SPEC.md` supersedes the "name undecided" notes in the session 2 record below, and the AI-native-phone audit's headline and navigation wording. The audit's functional findings are folded into the Ori screens and tracked in the Ori checklist.
+Last updated: 2026-11-15 01:00. **Ori is live on Render: https://ori-fjrx.onrender.com/ (product) and https://ori-fjrx.onrender.com/pitch/ (the pitch).** Live AI is verified on the deployed service: 4 of 4 model calls were answered by the live model, with no Sample fallback (3–17 s each), and the hosted journey passed 19/19 (`docs/TEST_RESULTS.md` section 8). Velocity integration and its review fixes: `a88d8e0`, `26381e8`. Ori pass: `eb2f82c`, `e27782b`, `809eed0`. Hosted demo tooling and docs: `5704696`. The pitch follows in the next commit. Physical phones: not tested.
 
 ## Resume here (session 3)
 
-1. Read `docs/ori/ORI_CLAUDE_BUILD_PROMPT.md`, `docs/ori/ORI_DESIGN_SPEC.md` and the ten images in `docs/ori/references/`, then `docs/velocity/INTEGRATION_REPORT.md`.
-2. Never reset or reseed `data/app.db`. It holds the founder's apps (Riff, Light, People, Fingerpicking Riff Lab, older journal/board/tracker apps) and the audit's "Ten-Minute Sketch Sprint" with its "AUDIT TEST — spoon" record, which must stay. Use throwaway databases for checks (the browser suite uses `data/test-e2e-8799.db`).
-3. Checks: `npm run typecheck` · `npm test` · `npm run test:e2e` · bounded live check `npx tsx server/scripts/velocity-live-smoke.ts` (five model calls; prints the model id, never the key).
+1. Read `docs/DEPLOY.md` (the live service, its settings, the demo account), `docs/TEST_RESULTS.md` section 8, `docs/ori/VISUAL_REVIEW.md`, `docs/DEMO.md`; for design intent `docs/ori/ORI_DESIGN_SPEC.md`; for the pitch `docs/ori-pitch-kit/` (storytelling, addenda, rehearsal).
+2. Never reset or reseed `data/app.db` (the founder's apps and the audit's "Ten-Minute Sketch Sprint" with its "AUDIT TEST — spoon" record must stay), and never run the seed with `--reset` on the host. Use throwaway databases for checks.
+3. Run locally: `npm install && npm run build && npm start` → http://localhost:8787 (pitch at `/pitch/`). Checks: `npm run typecheck` · `npm test` · `npm run test:e2e` · `node scripts/check-pitch.mjs --base <site>/pitch/` · `node scripts/verify-deploy.mjs --base <site> --phase before|after --state <file outside Git> [--expect-live yes]`.
+4. The pitch's source is `client/public/pitch/` (`scenes.js` is the single scene data source; `config.js` holds the clips and links; `media/` the recordings). It is plain static files served by the same Node server.
 
-## Ori pass — phased plan
+## Open items
 
-- **O1 Brand foundation** (in progress): faithful companion SVG (one body path, eight moods, reduced motion), custom `ori` wordmark, `OriCompanion` / `OriWordmark` components, operation-bound mood state (`useOriMood`, tested), brand config with the Ori messaging, canonical icons (Light camera on charcoal, Riff waveform on ink, People people on white; the three legacy reference defaults are mapped at display time, stored icons are never rewritten), parent icon/manifest/favicon and Android label, isolated gallery at `/ori`.
+- **Founder, Render:** the demo account exists (seeded once on the service; its login is verified). Remove `SEED_DEMO_ON_START` from the environment: the seed recognises demo apps by name, so a renamed demo app would be re-added on a later start. Keep `SEED_DEMO_PASSWORD` out of Git and the pitch.
+- **Physical phones:** Add to Home Screen on an iPhone and an Android phone, and launching from the icon, are untested; all "phone" results so far are browser viewports or the Android emulator.
+- **Accessibility:** no screen-reader or text-enlargement pass.
+- **Screenshots:** `docs/ori/screens/states/` predate the final build (see `docs/ori/VISUAL_REVIEW.md`, open differences).
+- **Android shell size:** the web bundle now includes the pitch and its recordings; exclude `pitch/` from the APK's web assets if size matters.
+- **Live database housekeeping:** the deploy checks created throwaway accounts (`deploy-check-…@example.test`, `deploy-stranger-…@example.test`) with one app; delete them when convenient.
+
+## Ori pass — phased plan (all five phases done; kept as the record of what was built)
+
+- **O1 Brand foundation**: faithful companion SVG (one body path, eight moods, reduced motion), custom `ori` wordmark, `OriCompanion` / `OriWordmark` components, operation-bound mood state (`useOriMood`, tested), brand config with the Ori messaging, canonical icons (Light camera on charcoal, Riff waveform on ink, People people on white; the three legacy reference defaults are mapped at display time, stored icons are never rewritten), parent icon/manifest/favicon and Android label, isolated gallery at `/ori`.
 - **O2 Light journey end to end**: share a photo thought and an image → honest reply with a Light card (Preview Light / Keep inspiration / Why this?) → preview with labelled example photos and one useful choice → Make mine (one truthful pending state) → Ready (Open Light / Add to home screen / Copy app link) → Light at its own URL without the parent navigation → add a photo, reload → platform install guide → Edit with Ori: "Add camera settings to my photo notes" → review → Apply change / Keep current version → the fields appear in the photo form → undo keeps every entry.
 - **O3 Surfaces**: landing with the home-screen promise, Agent first use and compact conversation, Playground ("A little more you.", real filters only), My apps launcher (Open / Edit with Ori / Add to home screen), Riff and People identities, memory and settings with provenance kept. Folded-in audit fixes: domain-aware previews, a compact mobile action bar, defaults from the request, revision copy that matches the change, concise replies, manual versus measured time, one refresh control, named controls.
 - **O4 Delivery**: per-app install identity checked, Android shell label and icon rebuilt and checked on the emulator, platform-specific install guide.

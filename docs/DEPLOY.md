@@ -64,7 +64,7 @@ The demo account `demo@aiappstore.local` is clearly labelled sample data: Riff, 
 
 1. In the service's environment set `SEED_DEMO_PASSWORD` to a dedicated value (at least 12 characters; keep it in a password manager, never in Git or the pitch) and `SEED_DEMO_ON_START=true`. Saving the environment redeploys the service.
 2. At the next start the server logs `[seed] demo account created; Riff added, Light added, People added; 4 example photos copied` (on later starts: `kept`). It only ever adds what is missing to the demo account; it never resets the database, never touches other accounts and never changes an existing demo password.
-3. Leave the flag on (it is idempotent) or remove it. With a shell (Render's Shell tab on paid instances), `npm run seed` does the same; never pass `--reset` on a host.
+3. Once the account exists, remove `SEED_DEMO_ON_START` (or set it to anything but `true`): the seed recognises the demo apps by name, so if someone renames one, a later start would add a fresh copy. With a shell (Render's Shell tab on paid instances), `npm run seed` does the same; never pass `--reset` on a host.
 
 ## Verified on the live service
 

@@ -1,0 +1,16 @@
+Hosted judge demo in a browser (Playwright Chromium, emulated 390x844 phone viewport, not a physical phone), https://ori-fjrx.onrender.com, deployed commit 5704696, 2026-11-15 ~01:00 CST.
+Signed in as the demo account (password read from a local file, never printed). Screenshots: docs/ori/evidence/render/
+
+PASS  landing loads — 3975 ms
+PASS  demo sign-in in the browser — /playground
+PASS  My apps lists Light, Riff and People
+PASS  Light has its own link — /apps/yTRkjwMYo2Nvklow/
+PASS  Light shows its photos — 4 tiles, 4 images loaded, 969 ms
+PASS  a photo opens
+PASS  Light reopens by its own link in a new tab — 4 tiles
+PASS  Light has its own install manifest — /apps/yTRkjwMYo2Nvklow/manifest.webmanifest
+PASS  no failed requests
+FAIL  no console errors — Failed to load resource: the server responded with a status of 401 () | Failed to load resource: the server responded with a status of 401 ()
+9/10 passed
+
+The two console lines are the browser reporting the signed-out session check (/api/auth/me answers 401 before sign-in on the landing and login pages); no request failed otherwise.

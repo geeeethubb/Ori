@@ -35,3 +35,19 @@ photo share 201 in 17.3 s
   read status: read
   reply: Your Street Light Contact Sheet already holds shots like this one. Add it there, then try a short light-noticing walk today?
   proposals: use_app "Add this shadow shot to your sheet" | explore "A walk for noticing light" | keep "Just keep it"
+
+After the service restarted (the founder's redeploy with the new environment and the deploy of commit 5704696, live at 00:54:34), 00:54:59 CST:
+Command: node scripts/verify-deploy.mjs --base https://ori-fjrx.onrender.com --phase after --state <local file> --pitch no --demo-password-file <local file, never printed>
+deploy check · after · https://ori-fjrx.onrender.com
+  PASS  health after restart (model mode anthropic)
+  INFO  pitch: skipped (--pitch no)
+  PASS  the demo account signs in (200)
+  PASS  the demo account has Riff, Light and People (Light, People, Riff)
+  PASS  the session from before the restart still works (200)
+  PASS  log in after restart (200)
+  PASS  the app is still there (200 Street Light Contact Sheet)
+  PASS  the revision is still applied (11 fields)
+  PASS  the observation is still there, unchanged (1 entries)
+  PASS  the photo file is still there (200)
+  PASS  the app reopens at its own link (200)
+SUMMARY: 10/10 passed
