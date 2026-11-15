@@ -6,7 +6,7 @@ import { APP_ID_PATTERN, SHORT_ID_PATTERN } from '../../shared/ids.ts';
 import { AppSpecSchema, type AppSpec } from '../../shared/appSpec.ts';
 import { BLANK_GALLERY_ENTRY, blankGalleryEntry, imageMediaIds, validateValues } from '../../shared/records.ts';
 import { ownedMediaIds } from '../repos/media.ts';
-import { RevisionOpSchema, planUndo, reservedFieldTypes } from '../../shared/revision.ts';
+import { RevisionOpSchema, changeHistoryLine, planUndo, reservedFieldTypes } from '../../shared/revision.ts';
 import { EVENT_TYPES } from '../../shared/context.ts';
 import type { AppDetailDto, AppExportDto, UndoPreviewDto } from '../../shared/api.ts';
 import * as repo from '../repos/apps.ts';
@@ -285,7 +285,8 @@ appRoutes.post('/:appId/revisions/apply', async (c) => {
   if (!guarded.spec) return c.json({ error: 'Those changes could not be applied.', code: 'apply_failed', details: guarded.errors }, 422);
   if (guarded.blocked.length) return c.json({ error: guarded.blocked.join(' '), code: 'apply_incompatible', details: guarded.blocked }, 409);
   const spec = guarded.spec;
-  const summary = body.data.summary ?? guarded.changes.join(' ');
+  // History records what changed ("Add “Camera” …"), never the preview's future tense ("Light will get …").
+  const summary = changeHistoryLine(guarded.changes);
   transaction(() => {
     const { version } = repo.appendVersion(ownerId, id.data, spec, summary, 'revision');
     repo.recordEvent(id.data, 'revision_accepted', { version, proposalId: ownProposal?.id ?? null });

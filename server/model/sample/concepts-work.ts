@@ -27,7 +27,7 @@ export const WORK_CONCEPTS: Concept[] = [
       stageFieldId: 'stage', titleFieldId: 'person', dueFieldId: 'due', doneStageValues: ['done'], cardFieldIds: ['commitment', 'due'],
       openLabel: 'Open follow-ups', doneLabel: 'Closed this week', viewTitle: 'Follow-ups',
       entryNoun: { singular: 'follow-up', plural: 'follow-ups' },
-      emptyStateHint: 'Add the last person you promised something to. A date turns a good intention into a reminder.',
+      emptyStateHint: 'Add the last person you promised something to. With a date, it stands out when it is due.',
     }),
   }),
 
@@ -124,10 +124,10 @@ export const WORK_CONCEPTS: Concept[] = [
     pattern: 'tracker',
     icon: { symbol: 'checklist', color: 'moss' },
     tagline: 'Small daily wins, counted',
-    description: 'A quick daily check-in for the habits you are building, with a streak counter and weekly totals so consistency becomes visible.',
+    description: 'A quick check-in you log for each day a habit happens, with a day streak and weekly totals so consistency becomes visible.',
     triggers: ['habit', 'habits', 'streak', 'streaks', 'morning routine', 'evening routine', 'routine', 'routines', 'consistency', 'consistent', 'every day', 'stick to', 'stick with', 'daily', 'discipline', 'checklist', 'checklists', 'tick things off'],
     firstAction: 'Log today: did the habit happen, and for how long?',
-    because: 'A one-tap daily check-in with a streak makes the habit visible and a little harder to skip.',
+    because: 'A one-tap check-in with a day streak makes the habit visible and a little harder to skip.',
     base: () => trackerSpec({
       name: 'Habit Streaks', tagline: 'Small daily wins, counted', purpose: 'work', icon: { symbol: 'checklist', color: 'moss' },
       fields: [
@@ -332,10 +332,10 @@ export const WORK_CONCEPTS: Concept[] = [
     pattern: 'journal',
     icon: { symbol: 'sun', color: 'mustard' },
     tagline: 'Ten minutes to reset the week',
-    description: 'A short weekly journal: what went well, what got stuck, and the one thing that matters next week, with a rating so you can see how weeks trend.',
+    description: 'A short end-of-week journal you write: what went well, what got stuck, and the one thing that matters next week, with a rating so you can see how weeks trend.',
     triggers: ['weekly review', 'review my week', 'reflect on the week', 'planning', 'plan my week', 'priorities', 'prioritize', 'prioritise', 'end of week', 'friday', 'retrospective', 'retro', 'deep work', 'productivity', 'focus', 'overcommitted', 'too many things', 'reset'],
     firstAction: 'Write this week’s review: one win, one thing that got stuck, one focus for next week.',
-    because: 'A ten-minute weekly review with a rating turns scattered weeks into a trend you can act on.',
+    because: 'A ten-minute review at the end of your week, with a rating, turns scattered weeks into a trend you can act on.',
     base: () => journalSpec({
       name: 'Weekly Review', tagline: 'Ten minutes to reset the week', purpose: 'work', icon: { symbol: 'sun', color: 'mustard' },
       fields: [

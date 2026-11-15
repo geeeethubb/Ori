@@ -41,34 +41,41 @@ const BOARD_APP = app({ id: 'app-brd-0001', name: 'People to Follow Up With', pu
 const NEVER_CLAIMS = /I (?:watched|listened to|read the (?:page|reel|post|video|clip|image|screenshot))/i;
 
 describe('honesty about what was read', () => {
-  it('quotes the note, and says for each link status exactly what was and was not read', () => {
+  it('says in one compact sentence what was not read, then the next step, without restating the note', () => {
     const note = respond();
-    expect(note.message).toContain(`Got your note: "${GUITAR_NOTE}"`);
+    // Only a note: nothing unread to report, and the note is not quoted back (it shows above the reply).
+    expect(note.message).toBe('A practice room for your 15 minutes to practice. Want to make it yours?');
+    expect(note.message).not.toContain(`"${GUITAR_NOTE}"`);
 
     const unread = respond({ kind: 'link', url: REEL, readStatus: 'not_read', sourceLabel: 'Instagram link' });
-    expect(unread.message).toMatch(/saved the link but have not read the page, so I am working from your note/);
+    expect(unread.message).toBe("I can't watch videos, so I'm using your note. Want a practice room for your 15 minutes to practice?");
+
+    const page = respond({ kind: 'link', url: 'https://example.com/guitar-tabs', readStatus: 'not_read', sourceLabel: 'Link to example.com' });
+    expect(page.message).toMatch(/^I have not read the page, so I'm using your note\. /);
 
     const titled = respond({ kind: 'link', url: 'https://www.youtube.com/watch?v=abc', readStatus: 'metadata_only', linkMeta: { provider: 'YouTube', title: 'Fingerstyle blues lesson', author: 'Some Teacher' }, sourceLabel: 'YouTube link' });
-    expect(titled.message).toContain('I read the title "Fingerstyle blues lesson" by Some Teacher on YouTube, but not the content itself.');
+    expect(titled.message).toMatch(/^I read only the title "Fingerstyle blues lesson", not the video itself\. /);
 
     const unavailable = respond({ kind: 'link', url: 'https://open.spotify.com/track/x', readStatus: 'unavailable', sourceLabel: 'Spotify link' });
-    expect(unavailable.message).toMatch(/saved the link but could not read the page or its title/);
+    expect(unavailable.message).toMatch(/^I could not open the link, so I'm using your note\. /);
 
     const shot = respond({ kind: 'image', readStatus: 'not_read', sourceLabel: 'Screenshot' });
-    expect(shot.message).toMatch(/In Sample mode I cannot read images/);
+    expect(shot.message).toMatch(/^Sample mode cannot read images, so I'm using your words\. /);
     expect(shot.imageRead).toBe(false);
 
-    for (const r of [note, unread, titled, unavailable, shot]) {
+    for (const r of [note, unread, page, titled, unavailable, shot]) {
       expect(r.message).not.toMatch(NEVER_CLAIMS);
-      expect(r.message.length).toBeLessThanOrEqual(700);
+      expect(r.message.split(/(?<=[.?!])\s+/).length).toBeLessThanOrEqual(2);
     }
     // metadata_only without a title falls back to the unread wording rather than inventing one.
-    expect(readLine(capture({ kind: 'link', url: REEL, readStatus: 'metadata_only', linkMeta: { provider: 'YouTube' } }))).toMatch(/have not read the page/);
+    expect(readLine(capture({ kind: 'link', url: 'https://example.com/a', readStatus: 'metadata_only', linkMeta: { provider: 'YouTube' } }))).toMatch(/have not read the page/);
+    expect(readLine(capture({ kind: 'link', url: REEL, readStatus: 'metadata_only', linkMeta: { provider: 'Instagram' } }))).toMatch(/can't watch videos/);
+    expect(readLine(capture())).toBeNull(); // a plain note was read in full
   });
 
   it('asks one question when only a link or a screenshot was shared, and still offers explore + keep', () => {
     const link = respond({ text: '', kind: 'link', url: 'https://example.com/x', readStatus: 'not_read', sourceLabel: 'Link to example.com' });
-    expect(link.message).toMatch(/Tell me in a line what it is about/);
+    expect(link.message).toMatch(/^I have not read the page\. /);
     expect(link.question).toMatch(/in a line/);
     expect(link.proposals.map((p) => p.kind)).toEqual(['explore', 'keep']);
 
@@ -90,7 +97,8 @@ describe('three domains, three different directions', () => {
     expect(riff.capabilities).toContain('practice_timer');
     expect(riff.design?.theme).toBe('ink');
     expect(riff.sourceCaptureIds).toEqual(['cap-guitar-01']);
-    expect(riff.reason).toContain(`"${GUITAR_NOTE}"`);
+    // The note is the card's source (listed under "Why this?"), so the reason does not quote it again.
+    expect(riff.reason).not.toContain(GUITAR_NOTE);
     expect(riff.reason).toContain('15 minutes');
     expect(riff.firstAction).toContain('15-minute');
     expect(riff.suggestedMinutes).toBe(15); // the Make page starts at the length they asked for
@@ -157,7 +165,7 @@ describe('three domains, three different directions', () => {
 
   it('falls back to the catalog for an unrelated note, grounded in the note itself', () => {
     const r = respond({ id: 'cap-plants-01', text: 'Trying to keep my houseplants alive through the winter' });
-    expect(r.message).toMatch(/Sample-mode suggestions start from your words/);
+    expect(r.message).toBe('Here are a few ways to start, from your own words.');
     expect(r.proposals.map((p) => p.kind)).toEqual(['new_app', 'explore', 'keep']);
     expect(r.proposals[0]?.conceptId).toBe('plant-care');
     expect(r.proposals[0]?.sourceCaptureIds).toEqual(['cap-plants-01']);
@@ -279,6 +287,24 @@ describe('every update request applies to its reference fixture with at least on
       for (const line of applied.changes) expect(line).toMatch(/^[A-Z].*\.$/);
     });
   }
+});
+
+describe('the person\'s own words for their time (P1-01, P1-07)', () => {
+  it('read naturally after "your", whole message and card, with "minute" for one', () => {
+    const cases: [string, string, string][] = [
+      ['I want a ten-minute guitar session before bed', 'A practice room for your ten minutes. Want to make it yours?', 'Make room for 10 minutes of guitar.'],
+      ['I have half an hour for guitar most evenings', 'A practice room for your half an hour. Want to make it yours?', 'Make room for 30 minutes of guitar.'],
+      ['I can practise piano for a quarter of an hour after work', 'A practice room for your quarter of an hour. Want to make it yours?', 'Make room for 15 minutes of piano.'],
+      ['an hour and a half of piano on Sunday', 'A practice room for your hour and a half. Want to make it yours?', 'Make room for 90 minutes of piano.'],
+      ['I only have 1 minute for guitar', 'A practice room for your 1 minute. Want to make it yours?', 'Make room for 1 minute of guitar.'],
+    ];
+    for (const [text, message, tagline] of cases) {
+      const r = respond({ id: 'cap-dur-0001', text });
+      expect(r.message, text).toBe(message);
+      expect(r.proposals[0]?.tagline, text).toBe(tagline);
+    }
+    expect(respond({ id: 'cap-dur-0002', text: 'I only have 1 minute for guitar' }).learned.map((f) => f.value)).toEqual(['Has about 1 minute at a time for guitar practice']);
+  });
 });
 
 describe('learned facts', () => {

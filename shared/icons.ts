@@ -16,6 +16,8 @@ export const ICON_SYMBOLS = [
   'guitar', 'timer', 'headphones', 'waveform', 'aperture', 'image', 'bookmark', 'link', 'disc', 'piano',
   'contact', 'footprints', 'mountain', 'waves', 'flame', 'trophy', 'plane', 'utensils', 'graduation', 'rocket',
   'puzzle', 'binoculars', 'brush', 'flower', 'kanban', 'notebook', 'checks',
+  // Ori additions (additive; existing symbols keep their glyphs): Riff's level bars
+  'levels',
 ] as const;
 export type IconSymbol = (typeof ICON_SYMBOLS)[number];
 
@@ -69,7 +71,11 @@ export const ICON_GLYPH: Record<IconColor, string> = {
 /** Flat colors render without the gradient sheen; legacy colors keep it. */
 export const FLAT_COLORS: ReadonlySet<IconColor> = new Set<IconColor>(['ink', 'lime', 'lilac', 'orange', 'mint', 'blue', 'charcoal', 'paper', 'white']);
 
-/** Near-white tiles get a hairline so they stay visible on a white page or home screen. */
+/**
+ * Near-white tiles get a hairline wherever they draw their own rounded corners (in-app icons, the
+ * per-app SVG), so they stay visible on a white page. Home-screen PNGs are full-bleed and masked by
+ * the platform, so they have none.
+ */
 export const OUTLINED_COLORS: ReadonlySet<IconColor> = new Set<IconColor>(['paper', 'white']);
 
 /** A readable text color for UI drawn on top of a given icon color (chips, theme bars). */
@@ -112,8 +118,8 @@ export const ICON_PATHS: Record<IconSymbol, string> = {
   guitar: 'm11.9 12.1 4.514-4.514 M20.1 2.3a1 1 0 0 0-1.4 0l-1.114 1.114A2 2 0 0 0 17 4.828v1.344a2 2 0 0 1-.586 1.414A2 2 0 0 1 17.828 7h1.344a2 2 0 0 0 1.414-.586L21.7 5.3a1 1 0 0 0 0-1.4z M6 16l2 2 M8.23 9.85A3 3 0 0 1 11 8a5 5 0 0 1 5 5 3 3 0 0 1-1.85 2.77l-.92.38A2 2 0 0 0 12 18a4 4 0 0 1-4 4 6 6 0 0 1-6-6 4 4 0 0 1 4-4 2 2 0 0 0 1.85-1.23z',
   timer: 'M10 2L14 2 M12 14L15 11 M4 14a8 8 0 1 0 16 0a8 8 0 1 0 -16 0',
   headphones: 'M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3',
-  // Level bars (Lucide audio-lines): Riff's identity in every Ori reference.
-  waveform: 'M2 10v3 M6 6v11 M10 3v18 M14 8v7 M18 5v13 M22 10v3',
+  // A continuous wave (the redesign's glyph, unchanged so apps that chose it keep their look).
+  waveform: 'M2 13a2 2 0 0 0 2-2V7a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0V4a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0v-4a2 2 0 0 1 2-2',
   aperture: 'M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0 M14.31 8l5.74 9.94 M9.69 8h11.48 M7.38 12l5.74-9.94 M9.69 16 3.95 6.06 M14.31 16H2.83 M16.62 12l-5.74 9.94',
   image: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z M7 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0 M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21',
   bookmark: 'M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z',
@@ -137,6 +143,8 @@ export const ICON_PATHS: Record<IconSymbol, string> = {
   kanban: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z M8 7v7 M12 7v4 M16 7v9',
   notebook: 'M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4 M2 6h4 M2 10h4 M2 14h4 M2 18h4 M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z',
   checks: 'M13 5h8 M13 12h8 M13 19h8 M3 17l2 2 4-4 M3 7l2 2 4-4',
+  // Level bars (Lucide audio-lines): Riff's canonical icon in every Ori reference.
+  levels: 'M2 10v3 M6 6v11 M10 3v18 M14 8v7 M18 5v13 M22 10v3',
 };
 
 export interface AppIconSpec {
@@ -147,6 +155,8 @@ export interface AppIconSpec {
 /**
  * Build the SVG markup for an app icon. `size` is the pixel box; `radiusFraction` the corner
  * radius fraction (0 for maskable/adaptive icons which get their own mask, ~0.22 for display).
+ * A full-bleed tile (radius 0) is for a platform mask, so it never carries the edge hairline:
+ * a circle or squircle mask would cut it into grey ticks at the corners.
  */
 export function appIconSvg(icon: AppIconSpec, size = 192, radiusFraction = 0.22): string {
   const color: IconColor = isIconColor(icon.color) ? icon.color : 'terracotta';
@@ -165,8 +175,9 @@ export function appIconSvg(icon: AppIconSpec, size = 192, radiusFraction = 0.22)
     ? ''
     : `<defs><linearGradient id="${gradId}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>`;
   const sheen = flat ? '' : `<circle cx="${size * 0.78}" cy="${size * 0.22}" r="${size * 0.3}" fill="#ffffff" fill-opacity="0.08"/>`;
-  // Paper and white icons need an outline to stay visible on a white home screen.
-  const outline = OUTLINED_COLORS.has(color) ? `<rect x="1" y="1" width="${size - 2}" height="${size - 2}" rx="${Math.max(0, r - 1)}" ry="${Math.max(0, r - 1)}" fill="none" stroke="#DCE0EC" stroke-width="2"/>` : '';
+  // Paper and white tiles drawn with their own corners get a hairline so they stay visible on a
+  // white page. Full-bleed tiles are masked by the platform, so the hairline is left out there.
+  const outline = OUTLINED_COLORS.has(color) && r > 0 ? `<rect x="1" y="1" width="${size - 2}" height="${size - 2}" rx="${Math.max(0, r - 1)}" ry="${Math.max(0, r - 1)}" fill="none" stroke="#DCE0EC" stroke-width="2"/>` : '';
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">` +
     defs +

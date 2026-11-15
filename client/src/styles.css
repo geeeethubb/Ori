@@ -87,7 +87,7 @@ a { color: var(--blue-ink); text-decoration: none; }
 a:hover { text-decoration: underline; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
-:focus-visible { outline: 3px solid rgba(49, 71, 242, 0.5); outline-offset: 2px; border-radius: 8px; }
+:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; border-radius: 8px; }
 h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; line-height: 1.12; margin: 0; letter-spacing: -0.02em; }
 h1 { font-size: clamp(1.75rem, 1.2vw + 1.3rem, 2.4rem); }
 h2 { font-size: clamp(1.3rem, 0.6vw + 1.1rem, 1.7rem); letter-spacing: -0.015em; }
@@ -135,21 +135,32 @@ p { margin: 0; }
   padding-top: var(--safe-top);
 }
 .topbar-inner { max-width: var(--content-w); margin: 0 auto; display: flex; align-items: center; gap: 12px; padding: 8px 16px; min-height: 60px; }
-@media (min-width: 760px) { .topbar-inner { padding: 8px 20px; gap: 18px; } }
+@media (min-width: 760px) { .topbar-inner { padding: 10px 20px; gap: 18px; min-height: 72px; } }
 .brand { display: flex; align-items: center; gap: 10px; min-height: 44px; font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; letter-spacing: -0.01em; color: var(--ink); }
 .brand:hover { text-decoration: none; }
 .brand svg { flex: none; }
+/* Signed in: the lockup beside the desktop pills (01, 03), the wordmark alone on phones (compact navigation). */
+.brand .brand-wide { display: none; }
+@media (min-width: 760px) { .brand .brand-wide { display: block; } .brand .brand-compact { display: none; } }
+/* Focus in the shell: a solid cobalt ring (about 6:1 on the canvas; the translucent default is 2.3:1). */
+.topbar :focus-visible, .bottomnav :focus-visible { outline-color: var(--blue); }
 @media (max-width: 419px) { .topbar-public .brand-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } }
-.topnav { display: none; gap: 4px; }
-.topnav a { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 14px; border-radius: 999px; color: var(--ink-2); font-weight: 600; font-size: 0.95rem; }
-.topnav a svg { width: 18px; height: 18px; }
-.topnav a.active { background: var(--blue-soft); color: var(--blue-ink); }
-.topnav a:hover:not(.active) { text-decoration: none; background: var(--surface-2); color: var(--ink); }
+/* Desktop destinations (references 01 and 03): text pills after a hairline; the current one is a cobalt pill. */
+.topnav { display: none; align-items: center; gap: 6px; padding-left: 18px; border-left: 1px solid var(--line-2); }
+.topnav a { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 20px; border-radius: 999px; color: var(--ink); font-family: var(--font-display); font-weight: 700; font-size: 1rem; letter-spacing: -0.01em; }
+.topnav a.active { background: var(--blue); color: #fff; }
+.topnav a:hover:not(.active) { text-decoration: none; background: var(--surface-2); }
 .topbar-spacer { flex: 1; }
 .topbar-actions { display: flex; align-items: center; gap: 6px; }
+.topbar-actions .btn { min-height: 44px; }
+/* Small phones use each public page's own sign-up link (the landing's hero, the auth card, pricing)
+   instead of a second one up here, so the bar never overflows at 320px. */
+.topbar-actions .topbar-cta { display: none; }
+@media (min-width: 400px) { .topbar-actions .topbar-cta:not(.topbar-cta-landing) { display: inline-flex; } }
+@media (min-width: 560px) { .topbar-actions .topbar-cta-landing { display: inline-flex; } }
 @media (min-width: 760px) { .topnav { display: flex; } }
 
-.avatar-btn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--surface); font-family: var(--font-display); font-weight: 800; font-size: 0.95rem; color: var(--blue-ink); }
+.avatar-btn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--surface); font-family: var(--font-display); font-weight: 800; font-size: 1rem; color: var(--blue-ink); }
 .avatar-btn[aria-expanded='true'] { background: var(--blue-soft); border-color: var(--blue-soft); }
 .menu-anchor { position: relative; }
 .menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 230px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-l); padding: 6px; z-index: 40; display: flex; flex-direction: column; }
@@ -161,6 +172,8 @@ p { margin: 0; }
 .menu .menu-head { display: flex; flex-direction: column; padding: 8px 12px 6px; font-size: 0.82rem; color: var(--ink-3); overflow-wrap: anywhere; }
 .menu .menu-head strong { color: var(--ink); font-size: 0.95rem; }
 .menu .menu-sep { border-top: 1px solid var(--line); margin: 4px 6px; }
+.menu .menu-list { display: flex; flex-direction: column; }
+.menu.menu-account { min-width: 264px; }
 .menu-trigger { color: var(--ink-2); }
 
 .bottomnav {
@@ -171,10 +184,11 @@ p { margin: 0; }
   border-top: 1px solid var(--line);
   padding-bottom: var(--safe-bottom);
 }
-.bottomnav a { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: var(--nav-h); color: var(--ink-3); font-size: 0.72rem; font-weight: 700; font-family: var(--font-display); }
-.bottomnav a.active { color: var(--blue); }
-.bottomnav a.active::before { content: ''; position: absolute; top: 0; width: 28px; height: 3px; border-radius: 0 0 3px 3px; background: var(--blue); }
+/* Phone destinations (reference 03): icon over label; the current one sits in a soft pill. */
+.bottomnav a { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: calc(var(--nav-h) - 8px); margin: 4px 6px; border-radius: 16px; color: var(--ink-3); font-size: 0.78rem; font-weight: 700; font-family: var(--font-display); }
+.bottomnav a.active { color: var(--blue); background: var(--blue-soft); }
 .bottomnav a:hover { text-decoration: none; }
+.bottomnav a:hover:not(.active) { color: var(--ink); }
 .bottomnav svg { width: 22px; height: 22px; }
 @media (min-width: 760px) { .bottomnav { display: none; } }
 
@@ -298,10 +312,16 @@ pre.code { font-family: var(--font-mono); font-size: 0.8rem; background: var(--s
 .tabs button[aria-selected='true'] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-s); }
 
 /* ---------- sheet / modal ---------- */
-.sheet-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(22, 32, 57, 0.45); display: flex; align-items: flex-end; justify-content: center; animation: fade 0.15s ease; }
-.sheet { width: 100%; max-width: 640px; max-height: calc(100dvh - 24px); overflow: auto; background: var(--surface); border-radius: var(--radius-l) var(--radius-l) 0 0; padding: 12px 16px calc(20px + var(--safe-bottom)); box-shadow: var(--shadow-l); animation: rise 0.2s ease; color: var(--ink); }
+/* Opaque from the first frame: the scrim fades its colour (never its opacity, which would show the page
+   through the sheet) and the sheet only slides. */
+.sheet-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(22, 32, 57, 0.45); display: flex; align-items: flex-end; justify-content: center; animation: sheet-scrim 0.15s ease; }
+.sheet { width: 100%; max-width: 640px; max-height: calc(100dvh - 24px); overflow: auto; overscroll-behavior: contain; background: var(--surface); border-radius: var(--radius-l) var(--radius-l) 0 0; padding: 12px 16px calc(20px + var(--safe-bottom)); box-shadow: var(--shadow-l); animation: sheet-rise 0.2s ease; color: var(--ink); }
+.sheet:focus, .sheet:focus-visible { outline: none; }
 .sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--line-2); margin: 0 auto 12px; }
 .sheet-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.sheet-title h2 { font-size: 1.35rem; min-width: 0; overflow-wrap: anywhere; }
+@keyframes sheet-scrim { from { background-color: rgba(22, 32, 57, 0); } }
+@keyframes sheet-rise { from { transform: translateY(24px); } }
 .sheet-actions { position: sticky; bottom: 0; display: flex; gap: 10px; justify-content: flex-end; padding-top: 12px; margin-top: 8px; background: linear-gradient(to top, var(--surface) 70%, transparent); }
 @media (min-width: 720px) { .sheet-backdrop { align-items: center; padding: 24px; } .sheet { border-radius: var(--radius-l); max-height: calc(100vh - 48px); } }
 @keyframes rise { from { transform: translateY(24px); opacity: 0.6; } to { transform: none; opacity: 1; } }
@@ -311,8 +331,23 @@ pre.code { font-family: var(--font-mono); font-size: 0.8rem; background: var(--s
 .toast-host { position: fixed; left: 0; right: 0; bottom: calc(var(--nav-h) + var(--safe-bottom) + 12px); z-index: 60; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; padding: 0 16px; }
 .toast { pointer-events: auto; background: var(--ink); color: #fff; padding: 12px 16px; border-radius: 12px; box-shadow: var(--shadow-l); font-size: 0.92rem; display: flex; gap: 12px; align-items: center; max-width: 520px; animation: rise 0.2s ease; }
 .toast-error { background: var(--danger); }
-.toast .btn { min-height: 32px; padding: 4px 10px; background: rgba(255, 255, 255, 0.18); color: #fff; }
+.toast-message { flex: 1; min-width: 0; }
+.toast .btn { min-height: 44px; padding: 4px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); color: #fff; }
+/* A server-confirmed result: lime with ink text (14:1), a still companion, an outlined action. */
+.toast-success { background: var(--lime); color: var(--ink); border: 1px solid rgba(22, 32, 57, 0.12); }
+.toast-success .btn { background: transparent; color: var(--ink); border: 1.5px solid var(--ink); }
+.toast-success .btn:hover { background: rgba(22, 32, 57, 0.08); }
+.toast .btn:focus-visible { outline: 3px solid currentColor; outline-offset: 2px; }
 @media (min-width: 760px) { .toast-host { bottom: 24px; } }
+/* While a sheet is open, toasts sit at the top, so they never cover its fields or the actions it keeps
+   at its bottom; a sheet tall enough to reach under them makes room while one shows (title and close
+   stay clear). The !important outranks the bottom offsets pages set for their own bottom actions
+   (runtime.css, appViews.css), which only apply without a sheet. */
+body:has(.sheet-backdrop) .toast-host { top: calc(var(--safe-top) + 12px); bottom: auto !important; }
+body:has(.sheet-backdrop) .toast { animation-name: toast-drop; }
+body:has(.toast-host .toast) .sheet { max-height: calc(100dvh - 100px - var(--safe-top)); transition: max-height 0.2s ease; }
+@media (min-width: 720px) { body:has(.toast-host .toast) .sheet { max-height: calc(100vh - 200px); } }
+@keyframes toast-drop { from { transform: translateY(-16px); opacity: 0.6; } to { transform: none; opacity: 1; } }
 
 /* ---------- auth card ---------- */
 .auth-card { max-width: 440px; margin: 24px auto; padding: 28px 24px; }

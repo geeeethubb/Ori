@@ -3,13 +3,16 @@
  * The concept supplies a genuinely different base app; instructions are applied through the shared
  * heuristics; choices (time budget, look, goal) are applied directly; the result is always validated
  * against AppSpecSchema before it is returned, and falls back to the untouched base app if an
- * instruction would have broken it.
+ * instruction would have broken it. A length the person asked for (their choice on the Make page, or
+ * the proposal's suggestedMinutes) is the timer's first preset, and the copy says that length too.
  */
 import { AppSpecSchema, type AppSpec, type AppSpecInput } from '../../../shared/appSpec.ts';
 import type { GeneratedApp, RecommendationDraft } from '../../../shared/context.ts';
 import { ModelOutputError, type GenerateSpecInput } from '../types.ts';
 import { ALL_CONCEPTS, CONCEPTS, conceptById, conceptByTitle, type Concept } from './catalog.ts';
+import { rewriteMinutes } from './durations.ts';
 import { applyInstructionHeuristics, type Unsupported } from './heuristics.ts';
+import { alignSpecDurations, defaultSessionMinutes } from './revisionCopy.ts';
 import { findUnsupported } from './unsupported.ts';
 import { clip, joinNatural } from './text.ts';
 
@@ -75,9 +78,19 @@ export function generateSpec(input: GenerateSpecInput): GeneratedApp & { spec: A
   }
   if (rec.design) base.design = { ...(base.design ?? {}), ...rec.design };
 
-  const choiceChanges = applyChoices(base, input.choices);
+  // A length the person asked for outranks the template's default: their choice on the Make page, else
+  // the proposal's suggestedMinutes ("a ten-minute session", "half an hour"). Copy that states the
+  // template's length says the new one (tagline, hint, tab names, buttons, prompt titles, description).
+  const templateMinutes = defaultSessionMinutes(base);
+  const asked = input.choices?.timeBudgetMinutes ?? rec.suggestedMinutes;
+  const choices = asked ? { ...(input.choices ?? {}), timeBudgetMinutes: asked } : input.choices;
+  const choiceChanges = applyChoices(base, choices);
+  const afterChoices = defaultSessionMinutes(base);
+  if (templateMinutes && afterChoices) alignSpecDurations(base, templateMinutes, afterChoices);
   const instructions = (input.instructions ?? '').slice(0, 4000);
   const result = applyInstructionHeuristics(base, instructions, concept.id);
+  const finalMinutes = defaultSessionMinutes(result.spec);
+  if (afterChoices && finalMinutes) alignSpecDurations(result.spec, afterChoices, finalMinutes);
   let changes = [...choiceChanges, ...result.changes];
   const unsupported: Unsupported[] = [...result.unsupported];
   for (const cap of input.captures ?? []) {
@@ -94,23 +107,27 @@ export function generateSpec(input: GenerateSpecInput): GeneratedApp & { spec: A
     unsupported.push({
       request: clip(instructions, 400),
       reason: 'Those changes could not be applied safely to this app.',
-      alternative: 'Make the app first, then ask for the change with “Make this more me”.',
+      alternative: 'Make the app first, then ask for the change with Edit with Ori.',
     });
     changes = choiceChanges;
   }
   const spec = parsed.data;
-  return { spec, description: describe(spec, concept, changes, unsupported.length), unsupported };
+  const chose = Boolean(input.choices && Object.values(input.choices).some((v) => v !== undefined && v !== ''));
+  let description = describe(spec, concept, changes, unsupported.length, chose ? 'From your choices' : 'From what you asked');
+  const startsAt = defaultSessionMinutes(spec);
+  if (templateMinutes && startsAt) description = rewriteMinutes(description, templateMinutes, startsAt).text;
+  return { spec, description, unsupported };
 }
 
-function describe(spec: AppSpec, concept: Concept, changes: string[], unsupportedCount: number): string {
+function describe(spec: AppSpec, concept: Concept, changes: string[], unsupportedCount: number, lead: string): string {
   const what = concept.description.replace(/\.$/, '');
   const first = /^(?:a|an)\s/i.test(what)
     ? `${spec.name} is ${what[0]?.toLowerCase()}${what.slice(1)}.`
     : `${spec.name}: ${what}.`;
   let second: string;
-  if (changes.length) second = `From your choices, we ${joinNatural(changes)}.`;
+  if (changes.length) second = `${lead}, we ${joinNatural(changes)}.`;
   else if (unsupportedCount) second = 'The requested extras are not supported yet, so it starts as shown; see the note below.';
-  else second = 'It starts as shown, and you can change anything later with “Make this more me”.';
+  else second = 'It starts as shown, and you can change anything later with Edit with Ori.';
   if (changes.length && unsupportedCount) second += ' One request is not supported yet; see the note below.';
   return clip(`${first} ${second}`, 600);
 }

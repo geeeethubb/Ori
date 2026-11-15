@@ -353,7 +353,9 @@ describe('a proposal counts as made only while its app exists (finding 35)', () 
     expect(open.recommendation.builtAppId).toBeNull();
     expect(open.stale).toBeNull();
     const card = await threadProposal(me.token, r.capture.id, proposal.id);
-    expect(proposalAction(card)).toMatchObject({ label: 'Make mine', to: `/make/${proposal.id}` });
+    // Ori's card says "Preview <App>" and leads to Make mine again (not to the deleted app).
+    expect(proposalAction(card)).toMatchObject({ to: `/make/${proposal.id}`, emphasis: 'primary' });
+    expect(proposalAction(card).label).toMatch(/^Preview\b/);
 
     const again = await client.request<BuildResponseDto>(`/api/recommendations/${proposal.id}/build`, { body: { spec: draft.json.spec }, token: me.token });
     expect(again.status).toBe(201);

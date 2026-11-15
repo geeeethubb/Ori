@@ -6,17 +6,22 @@
  * - "success" only follows a server-confirmed result, shows briefly, then returns to idle;
  * - "discovery" means a valid proposal arrived: one short arrival, then it stays put (settled);
  * - error and clarification of the active operation win over ambient focus;
- * - composer focus gives "attentive" only when nothing is pending, failed or waiting on a choice.
+ * - composer focus gives "attentive" only when nothing is pending, failed or waiting on a choice;
+ * - a discovery also wins over focus that was already in the composer when the proposal arrived
+ *   (Enter keeps focus there). Typing shows "attentive" at once; focusing the composer again shows
+ *   it once the arrival has settled.
  *
  * Every operation gets an id. begin() returns it as a token and only the current token can resolve
  * the operation, so a late response from an older request never changes the mood. After about ten
  * seconds of pending the character settles (stops moving) while the UI keeps its truthful pending
- * label. Cancel, reset (route change) and unmount clear every timer.
+ * label. Settled belongs to the mood it settled: when focus or typing shows "attentive" instead,
+ * that pose plays its one lean. Cancel, reset (route change) and unmount clear every timer.
  *
- * Layers: a pure reducer (oriMoodReducer + moodOf), a framework-free controller that owns the one
- * timer, and a small React hook. Tests drive the reducer and controller with fake timers.
+ * Layers: a pure reducer (oriMoodReducer + moodOf + settledOf), a framework-free controller that
+ * owns the one timer, a mount lifecycle that survives React StrictMode's simulated remount, and a
+ * small React hook. Tests drive the reducer, controller and lifecycle with fake timers.
  */
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { OriMood } from '@shared/oriArt.ts';
 
 export const ORI_MOOD_TIMING = {
@@ -48,13 +53,24 @@ export interface OriMoodState {
   /** The current operation, or null when nothing is in flight or being acknowledged. */
   op: { id: OriToken; kind: OriOperationKind } | null;
   phase: OriPhase;
-  /** True once motion should stop: pending for too long, or the discovery arrival is over. */
+  /**
+   * True once the phase's own motion is over: pending for too long, or the discovery arrival is
+   * done. It describes that phase's mood only; see settledOf for the mood on show.
+   */
   settled: boolean;
   /** Composer focus. Only ever shows as "attentive" when idle or after a discovery. */
   focused: boolean;
+  /**
+   * How the person turned to the composer since the current operation began: focused it ('focus')
+   * or typed ('typing'). Focus already held when a proposal arrives is 'none', so it cannot hide
+   * that proposal.
+   */
+  engaged: OriEngagement;
 }
 
-export const initialOriMoodState: OriMoodState = { seq: 0, op: null, phase: 'idle', settled: false, focused: false };
+export type OriEngagement = 'none' | 'focus' | 'typing';
+
+export const initialOriMoodState: OriMoodState = { seq: 0, op: null, phase: 'idle', settled: false, focused: false, engaged: 'none' };
 
 type OperationAction = 'succeed' | 'fail' | 'clarify' | 'discover' | 'cancel' | 'settle' | 'expire';
 
@@ -62,6 +78,7 @@ export type OriMoodAction =
   | { type: 'begin'; kind: OriOperationKind }
   | { type: OperationAction; token: OriToken }
   | { type: 'focus' }
+  | { type: 'typing' }
   | { type: 'blur' }
   | { type: 'reset' };
 
@@ -73,12 +90,15 @@ export function oriMoodReducer(state: OriMoodState, action: OriMoodAction): OriM
     case 'begin': {
       // A new operation supersedes whatever was current (including an error: that is a retry).
       const id = state.seq + 1;
-      return { ...state, seq: id, op: { id, kind: action.kind }, phase: 'pending', settled: false };
+      return { ...state, seq: id, op: { id, kind: action.kind }, phase: 'pending', settled: false, engaged: 'none' };
     }
     case 'focus':
-      return state.focused ? state : { ...state, focused: true };
+      // A fresh focus is the person turning to the composer; a repeated focus changes nothing.
+      return state.focused ? state : { ...state, focused: true, engaged: 'focus' };
+    case 'typing':
+      return state.focused && state.engaged === 'typing' ? state : { ...state, focused: true, engaged: 'typing' };
     case 'blur':
-      return state.focused ? { ...state, focused: false } : state;
+      return state.focused || state.engaged !== 'none' ? { ...state, focused: false, engaged: 'none' } : state;
     case 'reset':
       return { ...initialOriMoodState, seq: state.seq };
     default:
@@ -90,7 +110,8 @@ export function oriMoodReducer(state: OriMoodState, action: OriMoodAction): OriM
     case 'succeed':
       return state.phase === 'pending' ? { ...state, phase: 'success', settled: false } : state;
     case 'discover':
-      return state.phase === 'pending' ? { ...state, phase: 'discovery', settled: false } : state;
+      // The proposal is news: focus held from before (e.g. after Enter) does not count as turning to it.
+      return state.phase === 'pending' ? { ...state, phase: 'discovery', settled: false, engaged: 'none' } : state;
     case 'clarify':
       return state.phase === 'pending' ? { ...state, phase: 'clarify', settled: false } : state;
     case 'fail':
@@ -117,10 +138,22 @@ export function moodOf(state: OriMoodState): OriMood {
       // A short, server-confirmed acknowledgement; focus does not hide it.
       return 'success';
     case 'discovery':
-      return state.focused ? 'attentive' : 'discovery';
+      // "Found something" holds over focus that was already there. Typing shows Listening at once;
+      // focusing the composer again does once the arrival has played (settled).
+      if (!state.focused) return 'discovery';
+      return state.engaged === 'typing' || (state.engaged === 'focus' && state.settled) ? 'attentive' : 'discovery';
     case 'idle':
       return state.focused ? 'attentive' : 'idle';
   }
+}
+
+/**
+ * Whether the mood on show has finished moving. `settled` belongs to the phase's own mood (a long
+ * pending, a discovery that has arrived); when focus or typing shows "attentive" instead, its one
+ * lean plays, so this is false. Back on the discovery it is settled again, so it does not replay.
+ */
+export function settledOf(state: OriMoodState): boolean {
+  return state.settled && moodOf(state) !== 'attentive';
 }
 
 export interface OriMoodController {
@@ -139,7 +172,10 @@ export interface OriMoodController {
   cancel(token: OriToken): void;
   /** Whether a token is still the current operation (use it to drop stale results elsewhere too). */
   isCurrent(token: OriToken): boolean;
+  /** The composer gained focus. */
   focus(): void;
+  /** The person typed in the composer (call it from the composer's onChange). */
+  typing(): void;
   blur(): void;
   /** Route change: forget the operation and focus, clear the timer. */
   reset(): void;
@@ -210,6 +246,7 @@ export function createOriMoodController(timing: OriMoodTiming = ORI_MOOD_TIMING)
     cancel: (token) => dispatch({ type: 'cancel', token }),
     isCurrent: (token) => token !== NO_ORI_TOKEN && state.op?.id === token,
     focus: () => dispatch({ type: 'focus' }),
+    typing: () => dispatch({ type: 'typing' }),
     blur: () => dispatch({ type: 'blur' }),
     reset() {
       clearTimer();
@@ -230,9 +267,40 @@ export function createOriMoodController(timing: OriMoodTiming = ORI_MOOD_TIMING)
   };
 }
 
+export interface OriMoodLifecycle {
+  /** The owning component mounted (or StrictMode remounted it). */
+  mount(): void;
+  /** The owning component unmounted, or StrictMode is simulating that. */
+  unmount(): void;
+}
+
+/**
+ * Mount bookkeeping for useOriMood. In development, React StrictMode unmounts and remounts every
+ * new component once, synchronously, and children run their effects before their parent's. A
+ * dispose on that simulated unmount would drop an operation a child began in its own mount effect
+ * and refuse one begun before the parent re-activates. So unmount only schedules the dispose (a
+ * microtask) and the remount cancels it: the controller stays live through StrictMode, and a real
+ * unmount still clears every timer straight after.
+ */
+export function createOriMoodLifecycle(controller: OriMoodController): OriMoodLifecycle {
+  let generation = 0;
+  return {
+    mount() {
+      generation += 1;
+      controller.activate();
+    },
+    unmount() {
+      const mine = ++generation;
+      queueMicrotask(() => {
+        if (generation === mine) controller.dispose();
+      });
+    },
+  };
+}
+
 export interface OriMoodHandle {
   mood: OriMood;
-  /** Stop motion (OriCompanion motion="none") while keeping the mood and any pending label. */
+  /** The mood on show has stopped moving (OriCompanion motion="none"); the mood and any pending label stay. */
   settled: boolean;
   phase: OriPhase;
   /** Kind of the pending operation, for a truthful label ("Making Light yours…"). */
@@ -247,22 +315,27 @@ export interface OriMoodHandle {
   cancel: OriMoodController['cancel'];
   isCurrent: OriMoodController['isCurrent'];
   focus: OriMoodController['focus'];
+  /** Call from the composer's onChange: typing shows "attentive" even over a proposal. */
+  typing: OriMoodController['typing'];
   blur: OriMoodController['blur'];
   reset: OriMoodController['reset'];
 }
 
 /**
  * Companion mood for one surface. Pass the route (or another key) as `resetKey` so a route change
- * forgets the operation and clears its timer; unmount does the same.
+ * forgets the operation and clears its timer; unmount does the same. Wire the composer with
+ * onFocus={focus}, onBlur={blur} and onChange={() => typing()}.
  */
 export function useOriMood(options: { resetKey?: unknown } = {}): OriMoodHandle {
   const [controller] = useState(() => createOriMoodController());
+  const [lifecycle] = useState(() => createOriMoodLifecycle(controller));
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState);
 
-  useEffect(() => {
-    controller.activate();
-    return () => controller.dispose();
-  }, [controller]);
+  // A layout effect re-activates before any passive effect of the (re)mounted tree runs.
+  useLayoutEffect(() => {
+    lifecycle.mount();
+    return () => lifecycle.unmount();
+  }, [lifecycle]);
 
   const lastKey = useRef(options.resetKey);
   useEffect(() => {
@@ -273,12 +346,13 @@ export function useOriMood(options: { resetKey?: unknown } = {}): OriMoodHandle 
 
   return useMemo(() => {
     const mood = moodOf(state);
+    const settled = settledOf(state);
     return {
       mood,
-      settled: state.settled,
+      settled,
       phase: state.phase,
       pendingKind: state.phase === 'pending' ? (state.op?.kind ?? null) : null,
-      companion: { mood, motion: state.settled ? 'none' : 'auto' },
+      companion: { mood, motion: settled ? 'none' : 'auto' },
       begin: controller.begin,
       succeed: controller.succeed,
       fail: controller.fail,
@@ -287,6 +361,7 @@ export function useOriMood(options: { resetKey?: unknown } = {}): OriMoodHandle 
       cancel: controller.cancel,
       isCurrent: controller.isCurrent,
       focus: controller.focus,
+      typing: controller.typing,
       blur: controller.blur,
       reset: controller.reset,
     };

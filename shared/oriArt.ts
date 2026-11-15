@@ -449,9 +449,14 @@ export function oriCompanionSvg(opts: OriCompanionSvgOptions): string {
 /**
  * Ori's own app icon: the static idle companion on a lilac tile. Non-maskable icons get a rounded
  * square; maskable ones are full-bleed with the companion inside the central 80% safe zone so
- * platform masks (circle, squircle) never crop the curl.
+ * platform masks (circle, squircle) never crop the curl. Browser-tab sizes use oriFaviconSvg.
  */
 export function oriAppIconSvg(size: number, opts: { maskable?: boolean } = {}): string {
+  return svgDocument(size, size, '0 0 100 100', serializeOriNodes(oriAppIconNodes(size, opts)));
+}
+
+/** The app icon's elements, in a 0 0 100 100 frame (`size` only picks the small drawing). */
+function oriAppIconNodes(size: number, opts: { maskable?: boolean } = {}): OriNode[] {
   const maskable = opts.maskable === true;
   const bodyHeight = maskable ? 54 : 68; // share of the tile, in units of 100
   const k = bodyHeight / ORI_BODY_BOX.height;
@@ -467,7 +472,97 @@ export function oriAppIconSvg(size: number, opts: { maskable?: boolean } = {}): 
     attrs: { transform: `translate(${num(tx)} ${num(ty)}) scale(${Math.round(k * 1000) / 1000})` },
     children: oriCompanionNodes({ mood: 'idle', simplified: size * (bodyHeight / 100) < 30, accents: false }),
   };
-  return svgDocument(size, size, '0 0 100 100', serializeOriNodes([tile, art]));
+  return [tile, art];
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* Favicon: a dedicated tiny drawing for browser tabs                                          */
+/* ------------------------------------------------------------------------------------------ */
+
+/**
+ * At 16 px the app icon's eyes merge into one pale smear: its body fills only 68% of the tile and
+ * its oval eyes fall between pixels. The favicon is drawn on its own pixel grids instead (spec
+ * section 3: preserve the silhouette and legible eyes at 16–24 px). The same body path fills 85%
+ * of the box; the eyes are whole-pixel bars with a clear cobalt gap; the lime cheek stays.
+ * Coordinates below are pixels of each grid.
+ */
+export interface OriFaviconSpec {
+  tileRadius: number;
+  /** Top-left pixel of each eye. */
+  eyes: readonly (readonly [number, number])[];
+  /** Eye width and height in whole pixels. */
+  eyeSize: readonly [number, number];
+  eyeRadius: number;
+  /** A whole-pixel cheek, or null to scale the art's own oval. */
+  cheek: { readonly x: number; readonly y: number; readonly width: number; readonly height: number } | null;
+}
+
+export type OriFaviconGrid = 16 | 32;
+
+export const ORI_FAVICON_GRIDS: Readonly<Record<OriFaviconGrid, OriFaviconSpec>> = {
+  16: { tileRadius: 3.5, eyes: [[6, 8], [9, 8]], eyeSize: [1, 2], eyeRadius: 0, cheek: { x: 11, y: 11, width: 2, height: 1 } },
+  32: { tileRadius: 7, eyes: [[12, 17], [17, 17]], eyeSize: [2, 4], eyeRadius: 1, cheek: null },
+};
+
+/** Share of the favicon box the body's height fills. */
+const FAVICON_BODY_SHARE = 0.85;
+
+/** The favicon drawn on one grid, in that grid's pixel units (a `0 0 grid grid` frame). */
+function faviconNodes(grid: OriFaviconGrid): OriNode[] {
+  const spec = ORI_FAVICON_GRIDS[grid];
+  const k = (FAVICON_BODY_SHARE * grid) / ORI_BODY_BOX.height;
+  // Centre the body box in the grid; frame units → grid pixels.
+  const tx = (grid - ORI_BODY_BOX.width * k) / 2 - ORI_BODY_BOX.x * k;
+  const ty = (grid - ORI_BODY_BOX.height * k) / 2 - ORI_BODY_BOX.y * k;
+  const [ew, eh] = spec.eyeSize;
+  const r = spec.eyeRadius || undefined;
+  const cheek: OriNode = spec.cheek
+    ? { tag: 'rect', attrs: { ...spec.cheek, fill: ORI_COLORS.lime } }
+    : (() => {
+        const [ccx, ccy, crx, cry, rot] = CHEEK;
+        const cx = tx + ccx * k;
+        const cy = ty + ccy * k;
+        return { tag: 'ellipse', attrs: { cx, cy, rx: crx * k, ry: cry * k, transform: `rotate(${num(rot)} ${num(cx)} ${num(cy)})`, fill: ORI_COLORS.lime } };
+      })();
+  return [
+    { tag: 'rect', attrs: { width: grid, height: grid, rx: spec.tileRadius, ry: spec.tileRadius, fill: ORI_COLORS.lilac } },
+    { tag: 'path', attrs: { class: 'ori-body', d: ORI_BODY_PATH, transform: `translate(${num(tx)} ${num(ty)}) scale(${Math.round(k * 10000) / 10000})`, fill: ORI_COLORS.cobalt } },
+    { tag: 'g', attrs: { class: 'ori-eyes', fill: ORI_COLORS.white }, children: spec.eyes.map(([x, y]) => ({ tag: 'rect' as const, attrs: { x, y, width: ew, height: eh, rx: r, ry: r } })) },
+    cheek,
+  ];
+}
+
+/** The grid a favicon of `size` px is drawn on: 16 below 24 px, 32 from there. */
+export function oriFaviconGrid(size: number): OriFaviconGrid {
+  return size < 24 ? 16 : 32;
+}
+
+/**
+ * The favicon as a standalone SVG of `size` px (the 16 and 32 px PNGs). Exact at 16 and 32;
+ * other sizes scale the nearer grid.
+ */
+export function oriFaviconSvg(size: number): string {
+  const px = Math.max(1, size);
+  const grid = oriFaviconGrid(px);
+  return svgDocument(px, px, `0 0 ${grid} ${grid}`, serializeOriNodes(faviconNodes(grid)));
+}
+
+/**
+ * The parent favicon document (/icons/store.svg): the 16 px drawing by default, the 32 px drawing
+ * from 24 px and the full app icon from 48 px. Browsers evaluate an SVG image's media queries
+ * against the size they draw it at, so a tab gets the tiny drawing and a large tile the full icon.
+ * A renderer without CSS shows the 16 px drawing (the others start hidden by attribute).
+ */
+export function oriFaviconDocument(): string {
+  const style =
+    '<style>@media (min-width:24px){.ori-fav-16{display:none}.ori-fav-32{display:inline}}' +
+    '@media (min-width:48px){.ori-fav-32{display:none}.ori-fav-full{display:inline}}</style>';
+  const groups: OriNode[] = [
+    { tag: 'g', attrs: { class: 'ori-fav-16', transform: 'scale(2)' }, children: faviconNodes(16) },
+    { tag: 'g', attrs: { class: 'ori-fav-32', display: 'none' }, children: faviconNodes(32) },
+    { tag: 'g', attrs: { class: 'ori-fav-full', display: 'none', transform: 'scale(0.32)' }, children: oriAppIconNodes(256) },
+  ];
+  return svgDocument(32, 32, '0 0 32 32', style + serializeOriNodes(groups));
 }
 
 /* ------------------------------------------------------------------------------------------ */
@@ -496,10 +591,14 @@ const WORDMARK = {
   dot: { cx: 439, cy: 57.5, ring: 54, inner: 37 },
 } as const;
 
+/**
+ * Every variant frames the lime dot in cobalt (spec section 3: "a lime dot framed in blue"); on ink
+ * the white letters carry the name and the cobalt ring reads as the dot's frame, as on the board.
+ */
 const WORDMARK_PAINT: Readonly<Record<OriWordmarkVariant, { letters: string; ring: string; dot: string }>> = {
   ink: { letters: ORI_COLORS.ink, ring: ORI_COLORS.cobalt, dot: ORI_COLORS.lime },
   cobalt: { letters: ORI_COLORS.cobalt, ring: ORI_COLORS.cobalt, dot: ORI_COLORS.lime },
-  light: { letters: ORI_COLORS.white, ring: ORI_COLORS.white, dot: ORI_COLORS.lime },
+  light: { letters: ORI_COLORS.white, ring: ORI_COLORS.cobalt, dot: ORI_COLORS.lime },
 };
 
 export function oriWordmarkNodes(variant: OriWordmarkVariant = 'ink'): OriNode[] {
@@ -553,22 +652,40 @@ export const ORI_LOCKUP_VIEWBOX = {
 export const ORI_LOCKUP_COMPANION_TRANSFORM =
   `translate(${num(LOCKUP_BODY_LEFT - ORI_BODY_BOX.x * LOCKUP_SCALE)} ${num(3.5 - ORI_BODY_BOX.y * LOCKUP_SCALE)}) scale(${Math.round(LOCKUP_SCALE * 1000) / 1000})`;
 
+/** Single colour of the lockup's companion on ink: cobalt there is only about 2.5:1. */
+const LOCKUP_LIGHT_COMPANION = ORI_COLORS.white;
+
+export interface OriLockupOptions {
+  variant: OriWordmarkVariant;
+  height: number;
+  mood?: OriMood;
+  /** Prefix for the light variant's eye-mask id when several lockups share one document. */
+  idPrefix?: string;
+}
+
 /**
- * The lockup's elements (children of an svg with ORI_LOCKUP_VIEWBOX). The companion is static and
- * keeps its cobalt colours in every variant; it switches to the small drawing when, at `height`
- * px, its frame would be under ORI_SIMPLIFIED_BELOW_PX.
+ * The lockup's elements (children of an svg with ORI_LOCKUP_VIEWBOX). The companion is static: in
+ * full colour beside the ink and cobalt wordmarks, and the white single-colour companion (eyes cut
+ * out, no cheek) beside the light wordmark on ink. It switches to the small drawing when, at
+ * `height` px, its frame would be under ORI_SIMPLIFIED_BELOW_PX.
  */
-export function oriLockupNodes(opts: { variant: OriWordmarkVariant; height: number; mood?: OriMood }): OriNode[] {
+export function oriLockupNodes(opts: OriLockupOptions): OriNode[] {
   const framePx = (Math.max(1, opts.height) * LOCKUP_SCALE * ORI_FRAME) / ORI_LOCKUP_VIEWBOX.height;
   const companion: OriNode = {
     tag: 'g',
     attrs: { class: 'ori-lockup-companion', transform: ORI_LOCKUP_COMPANION_TRANSFORM },
-    children: oriCompanionNodes({ mood: opts.mood, accents: false, simplified: framePx < ORI_SIMPLIFIED_BELOW_PX }),
+    children: oriCompanionNodes({
+      mood: opts.mood,
+      accents: false,
+      simplified: framePx < ORI_SIMPLIFIED_BELOW_PX,
+      mono: opts.variant === 'light' ? LOCKUP_LIGHT_COMPANION : undefined,
+      idPrefix: opts.idPrefix ?? 'ori-lockup',
+    }),
   };
   return [companion, ...oriWordmarkNodes(opts.variant)];
 }
 
-export function oriLockupSvg(opts: { variant: OriWordmarkVariant; height: number; mood?: OriMood }): string {
+export function oriLockupSvg(opts: OriLockupOptions): string {
   const vb = ORI_LOCKUP_VIEWBOX;
   const h = Math.max(1, opts.height);
   return svgDocument((h * vb.width) / vb.height, h, `${num(vb.x)} ${vb.y} ${num(vb.width)} ${num(vb.height)}`,

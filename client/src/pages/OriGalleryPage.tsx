@@ -1,13 +1,16 @@
 /**
  * /ori: the isolated companion gallery. Every mood at every reference size on the real surfaces,
- * the wordmark and lockup, the parent and reference-app icons, the operation-bound mood logic and
- * an accessible "Edit Light with Ori" control. Built-in art only: this page sends no requests,
- * invokes no model and reads no account data, so it is safe for visual review and screenshots.
+ * the wordmark and lockup, the parent and reference-app icons, the favicon, the operation-bound
+ * mood logic and an accessible "Edit Light with Ori" control. Built-in art only: the page's own
+ * code calls no API and no model and shows no account data, so it is safe for visual review and
+ * screenshots. As on every route, the app-wide sign-in check (GET /api/auth/me) still runs, and the
+ * browser may fetch the parent favicon and manifest that useInstallMeta links.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { ORI_MOODS, ORI_MOOD_LABELS, oriAppIconSvg, oriCompanionSvg, type OriMood } from '@shared/oriArt.ts';
-import { BRAND, BRAND_COLORS, REFERENCE_APP_ICONS, referenceIcon, type ReferenceAppKey } from '@shared/brand.ts';
+import { ORI_MOODS, ORI_MOOD_LABELS, oriAppIconSvg, oriCompanionSvg, oriFaviconDocument, oriFaviconSvg, type OriMood } from '@shared/oriArt.ts';
+import { BRAND, BRAND_COLORS, REFERENCE_APP_ICONS, referenceIcon, supersededIcons, type ReferenceAppKey } from '@shared/brand.ts';
+import { appIconSvg } from '@shared/icons.ts';
 import { AppIcon } from '../components/AppIcon.tsx';
 import { OriCompanion } from '../components/ori/OriCompanion.tsx';
 import { OriLockup, OriWordmark } from '../components/ori/OriWordmark.tsx';
@@ -35,7 +38,13 @@ const SIZES = [24, 40, 80, 160] as const;
 const SURFACES: readonly { key: string; label: string; color: string; dark: boolean; note?: string }[] = [
   { key: 'canvas', label: 'Canvas', color: BRAND_COLORS.canvas, dark: false },
   { key: 'white', label: 'White', color: BRAND_COLORS.surface, dark: false },
-  { key: 'lilac', label: 'Lilac', color: BRAND_COLORS.lilac, dark: false },
+  {
+    key: 'lilac',
+    label: 'Lilac',
+    color: BRAND_COLORS.lilac,
+    dark: false,
+    note: 'On lilac the Making orbit ring (about 1.5:1) and the lime dots (about 1.3:1) are faint, so a state never rests on them: its text label stays beside the companion.',
+  },
   {
     key: 'ink',
     label: 'Ink',
@@ -93,7 +102,8 @@ export function OriGalleryPage() {
             <p className="eyebrow">Design system</p>
             <h1 id="og-title">Ori companion</h1>
             <p className="og-lede">
-              Every mood, size, surface and icon in one place. The art is built in: this page sends no requests and reads no account data.
+              Every mood, size, surface and icon in one place. The art is drawn by the page itself: nothing here calls a model or the app&rsquo;s data, and no account data is shown.
+              As on every page, the app still checks whether you are signed in, and your browser may fetch Ori&rsquo;s favicon and manifest.
             </p>
           </div>
           <div className="og-motion">
@@ -175,7 +185,7 @@ export function OriGalleryPage() {
               <div className="og-word-stage">
                 <OriWordmark variant="light" height={44} />
               </div>
-              <figcaption><strong>Light, 44 px</strong> On ink surfaces</figcaption>
+              <figcaption><strong>Light, 44 px</strong> On ink surfaces; the lime dot keeps its cobalt ring</figcaption>
             </figure>
             <figure className="og-word-card og-word-card-wide">
               <div className="og-word-stage og-word-stage-row">
@@ -188,7 +198,7 @@ export function OriGalleryPage() {
               <div className="og-word-stage">
                 <OriLockup size={52} variant="light" />
               </div>
-              <figcaption><strong>Lockup, light</strong> On ink surfaces</figcaption>
+              <figcaption><strong>Lockup, light</strong> On ink surfaces: the white single-colour companion, as cobalt on ink is only about 2.5:1</figcaption>
             </figure>
           </div>
         </section>
@@ -307,7 +317,7 @@ function MoodLab({ motion }: { motion: Motion }) {
       <div className="og-lab-controls">
         <label className="og-field">
           <span>Composer</span>
-          <input className="input" placeholder="Focus here for Listening" onFocus={ori.focus} onBlur={ori.blur} />
+          <input className="input" placeholder="Focus or type here for Listening" onFocus={ori.focus} onBlur={ori.blur} onChange={() => ori.typing()} />
         </label>
         <div className="og-btn-row" role="group" aria-label="Start an operation">
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => start('capture')}>Share a thought</button>
@@ -342,11 +352,45 @@ function MoodLab({ motion }: { motion: Motion }) {
   );
 }
 
+/**
+ * A favicon drawn at its true pixel size, then shown magnified with hard pixel edges, so the whole-
+ * pixel eyes can be checked by eye. Local art only (a data URI); nothing is fetched.
+ */
+function PixelZoom({ src, px, scale, label }: { src: string; px: number; scale: number; label: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    let live = true;
+    const img = new Image();
+    img.onload = () => {
+      if (!live) return;
+      ctx.clearRect(0, 0, px, px);
+      ctx.drawImage(img, 0, 0, px, px);
+    };
+    img.src = src;
+    return () => {
+      live = false;
+    };
+  }, [src, px]);
+  return (
+    <span className="og-size">
+      <canvas ref={ref} width={px} height={px} className="og-favicon-zoom" style={{ width: px * scale, height: px * scale }} aria-hidden="true" />
+      <span className="og-cap">{label}</span>
+    </span>
+  );
+}
+
 function IconShowcase() {
   const ori = useMemo(
     () => ({
       tile: svgDataUri(oriAppIconSvg(128)),
       maskable: svgDataUri(oriAppIconSvg(128, { maskable: true })),
+      // The very document served at /icons/store.svg: it picks its own drawing for the size it is shown at.
+      favicon: svgDataUri(oriFaviconDocument()),
+      favicon16: svgDataUri(oriFaviconSvg(16)),
+      favicon32: svgDataUri(oriFaviconSvg(32)),
     }),
     [],
   );
@@ -377,9 +421,26 @@ function IconShowcase() {
             <span className="og-cap">maskable, full bleed</span>
           </span>
         </div>
+        <div className="og-icon-row og-favicons">
+          {[16, 32, 64].map((size) => (
+            <span key={size} className="og-size">
+              <img src={ori.favicon} width={size} height={size} alt={size === 32 ? 'Ori favicon' : ''} />
+              <span className="og-cap">{size}</span>
+            </span>
+          ))}
+          <PixelZoom src={ori.favicon16} px={16} scale={4} label="16 px, 4×" />
+          <PixelZoom src={ori.favicon32} px={32} scale={2} label="32 px, 2×" />
+        </div>
+        <p className="og-note">
+          Browser tabs get their own drawing: a bigger body and whole-pixel eyes with a gap, so they stay two eyes at 16 and 32 px.
+          From 48 px the same favicon file shows the app icon.
+        </p>
       </div>
       {REFERENCE_KEYS.map((key) => {
         const ref = REFERENCE_APP_ICONS[key];
+        const earlier = supersededIcons(key);
+        // The home-screen PNG is this full-bleed tile (no rounded corners, no hairline); the platform masks it.
+        const homeScreen = svgDataUri(appIconSvg(referenceIcon(key), 128, 0));
         return (
           <div key={key} className="og-icon-card">
             <h3>{ref.name}</h3>
@@ -399,11 +460,29 @@ function IconShowcase() {
                 </span>
               ))}
             </div>
+            <div className="og-icon-row og-masks" data-testid={`ori-home-icon-${key}`}>
+              <span className="og-size">
+                <img className="og-mask-circle" src={homeScreen} width={64} height={64} alt="" />
+                <span className="og-cap">circle</span>
+              </span>
+              <span className="og-size">
+                <img className="og-mask-squircle" src={homeScreen} width={64} height={64} alt="" />
+                <span className="og-cap">squircle</span>
+              </span>
+              <span className="og-cap og-mask-note">Home-screen PNG under platform masks: full bleed, no edge line</span>
+            </div>
             <p className="og-note">
-              Apps created before Ori stored <code>{ref.legacy.symbol} / {ref.legacy.color}</code>
-              <AppIcon icon={{ symbol: ref.legacy.symbol, color: ref.legacy.color }} size={24} title="" className="og-inline-icon" />
-              and now show <AppIcon icon={{ symbol: ref.legacy.symbol, color: ref.legacy.color }} name={ref.name} size={24} title="" className="og-inline-icon" />
-              for display only. Icons people choose never change.
+              {earlier.length > 1 ? 'Earlier defaults' : 'The earlier default'}{' '}
+              {earlier.map((old, i) => (
+                <span key={`${old.symbol}-${old.color}`}>
+                  {i > 0 && (i === earlier.length - 1 ? ' and ' : ', ')}
+                  <code>{old.symbol} / {old.color}</code>
+                  <AppIcon icon={old} size={24} title="" className="og-inline-icon" />
+                </span>
+              ))}
+              {earlier.length > 1 ? ' now show ' : ' now shows '}
+              <AppIcon icon={earlier[0]!} name={ref.name} size={24} title="" className="og-inline-icon" />
+              for an app named {ref.name}, for display only. Icons people choose never change.
             </p>
           </div>
         );

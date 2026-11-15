@@ -26,10 +26,14 @@ export function ModeBadge({ mode, testId }: { mode: 'anthropic' | 'sample' | nul
   return null;
 }
 
-export function FactStatusChip({ status }: { status: FactStatus }) {
-  if (status === 'confirmed') return <span className="badge badge-ok">Confirmed</span>;
+/**
+ * Confirmed / Inferred / Needs a decision. A fact that only the example profile states says so, so a
+ * fictional profile never reads as something confirmed about the person (audit P1-04).
+ */
+export function FactStatusChip({ status, example = false }: { status: FactStatus; example?: boolean }) {
+  if (status === 'confirmed') return <span className={`badge ${example ? 'badge-sample' : 'badge-ok'}`}>{example ? 'Example · confirmed' : 'Confirmed'}</span>;
   if (status === 'conflict') return <span className="badge badge-warn">Needs a decision</span>;
-  if (status === 'inferred') return <span className="badge">Inferred</span>;
+  if (status === 'inferred') return <span className={`badge${example ? ' badge-sample' : ''}`}>{example ? 'Example · inferred' : 'Inferred'}</span>;
   return null;
 }
 

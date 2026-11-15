@@ -45,26 +45,26 @@
 .og-section-head h2 { font-size: clamp(1.35rem, 0.8vw + 1.1rem, 1.75rem); }
 .og-sub { margin: 6px 0 0; color: var(--ink-2); max-width: 70ch; }
 
-/* moods on surfaces */
-.og-surface { border-radius: 24px; border: 1px solid var(--line); padding: 16px; }
-.og-surface-dark { border-color: transparent; color: #fff; }
+/* moods on surfaces: every companion sits on the surface colour itself (no tint behind it), so
+   what you see is what each surface really gives. Cells are outlined, never filled. Secondary text
+   gets a per-surface colour that keeps AA (ink-2 on lilac is only 4.1:1). */
+.og-surface { --og-muted: var(--ink-2); border-radius: 24px; border: 1px solid var(--line); padding: 16px; }
+.og-surface[data-surface='lilac'] { --og-muted: #3E4660; border-color: transparent; }
+.og-surface-dark { --og-muted: #C9CEDD; border-color: transparent; color: #fff; }
 .og-surface-title { font-size: 1rem; margin: 0 0 12px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.og-surface-title span { font-family: var(--font-mono); font-size: 0.78rem; font-weight: 500; opacity: 0.75; }
-.og-surface-note { margin: -4px 0 12px; font-size: 0.875rem; max-width: 70ch; color: var(--ink-2); }
-.og-surface-dark .og-surface-note { color: #C9CEDD; }
+.og-surface-title span { font-family: var(--font-mono); font-size: 0.78rem; font-weight: 500; color: var(--og-muted); }
+.og-surface-note { margin: -4px 0 12px; font-size: 0.875rem; max-width: 70ch; color: var(--og-muted); }
 .og-mood-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); }
-.og-mood { border-radius: 18px; padding: 14px; background: rgba(255, 255, 255, 0.55); border: 1px solid rgba(22, 32, 57, 0.08); min-width: 0; }
-.og-surface[data-surface='white'] .og-mood { background: var(--canvas); }
-.og-surface-dark .og-mood { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.12); }
+.og-mood { border-radius: 18px; padding: 14px; background: transparent; border: 1px solid rgba(22, 32, 57, 0.14); min-width: 0; }
+.og-surface-dark .og-mood { border-color: rgba(255, 255, 255, 0.18); }
 .og-mood-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .og-mood-head strong { font-family: var(--font-display); font-size: 1rem; }
-.og-mood-head code { font-family: var(--font-mono); font-size: 0.78rem; opacity: 0.75; }
-.og-mood-trigger { margin: 2px 0 10px; font-size: 0.85rem; color: var(--ink-2); }
-.og-surface-dark .og-mood-trigger { color: #C9CEDD; }
+.og-mood-head code { font-family: var(--font-mono); font-size: 0.78rem; color: var(--og-muted); }
+.og-mood-trigger { margin: 2px 0 10px; font-size: 0.85rem; color: var(--og-muted); }
 .og-sizes { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
 .og-size { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; margin: 0; min-width: 0; }
 .og-size figcaption, .og-cap { font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-2); }
-.og-surface-dark .og-size figcaption { color: #C9CEDD; }
+.og-surface .og-size figcaption { color: var(--og-muted); }
 
 .og-extra { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
 .og-extra-card { margin: 0; border-radius: 20px; border: 1px solid var(--line); background: var(--surface); padding: 16px; display: grid; gap: 10px; }
@@ -105,11 +105,16 @@
 .og-icon-card h3 { font-size: 1.05rem; }
 .og-icon-row { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; padding: 12px; border-radius: 16px; background: var(--canvas); }
 .og-icon-row img { display: block; max-width: 100%; height: auto; }
-.og-icon-row-dark { background: #1B1E2B; }
+.og-icon-row-dark { background: var(--ink); }
 .og-icon-row-dark .og-cap { color: #C9CEDD; }
+/* The favicon at its real tab sizes, then the 16 px drawing magnified so its pixel grid shows. */
+.og-favicons { align-items: center; }
+.og-favicons .og-size { justify-content: flex-end; }
+.og-favicon-zoom { image-rendering: pixelated; }
 .og-masks { background: var(--surface-2); }
 .og-mask-circle { border-radius: 50%; }
 .og-mask-squircle { border-radius: 24%; }
+.og-mask-note { align-self: center; flex: 1 1 140px; min-width: 0; line-height: 1.4; }
 .og-inline-icon { display: inline-block; vertical-align: middle; margin: 0 4px; }
 .og-icon-card .og-note code { font-family: var(--font-mono); font-size: 0.8rem; }
 
@@ -118,13 +123,13 @@
 .og-label-stage { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .og-edit-btn {
   display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 16px 6px 8px;
-  border-radius: 999px; border: 1.5px solid #B9A6F2; background: var(--surface); color: var(--ink);
+  border-radius: 999px; border: 1.5px solid #8C7BD9; background: var(--surface); color: var(--ink);
   font: inherit; font-weight: 700; font-size: 0.95rem; cursor: pointer;
 }
 .og-edit-btn:hover { background: var(--lilac-soft); }
 .og-edit-icon {
   display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0;
-  border-radius: 50%; border: 1.5px solid #B9A6F2; background: var(--surface); cursor: pointer;
+  border-radius: 50%; border: 1.5px solid #8C7BD9; background: var(--surface); cursor: pointer;
 }
 .og-edit-icon:hover { background: var(--lilac-soft); }
 .og-label-facts { margin: 0; display: grid; gap: 8px; }

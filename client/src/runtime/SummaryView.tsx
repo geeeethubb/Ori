@@ -6,6 +6,7 @@ import { computeMetric } from '@shared/rules.ts';
 import { friendlyDate } from '@shared/time.ts';
 import { pressable } from './runtimeUtils.ts';
 import { recentRecords, recordDate, type SummaryViewSpec } from './viewLogic.ts';
+import './appViews.css';
 
 interface Props {
   spec: AppSpec;
@@ -17,8 +18,9 @@ interface Props {
 export function SummaryView({ spec, view, records, onEdit }: Props) {
   const results = useMemo(() => view.metrics.map((m) => computeMetric(records, m)), [view, records]);
   const other = spec.views.find((v) => v.type === 'journal' || v.type === 'list');
-  const recent = useMemo(() => (other ? recentRecords(records, 3) : []), [other, records]);
-  const dateFieldId = other?.type === 'journal' ? other.dateFieldId : undefined;
+  // Entries are dated by their own date (a journal's date field, else the app's first date field), not by when they were typed in.
+  const dateFieldId = other?.type === 'journal' ? other.dateFieldId : spec.fields.find((f) => f.type === 'date' && !f.hidden)?.id;
+  const recent = useMemo(() => (other ? recentRecords(records, 3, dateFieldId) : []), [other, records, dateFieldId]);
 
   return (
     <div className="rt-summary" data-testid="rt-summary">

@@ -53,8 +53,8 @@ export function DataSection({ appId, name }: Props) {
   };
 
   return (
-    <section className="rt-section card card-pad" data-testid="rt-data">
-      <h2>Your data</h2>
+    <section className="rt-section card card-pad" data-testid="rt-data" id="data" aria-labelledby="rt-data-heading">
+      <h2 id="rt-data-heading">Your data</h2>
       <p className="muted small">Export is a complete copy of this app's definition history and entries. Importing a file creates a new app in your collection; the original is untouched.</p>
       <div className="row">
         <a className="btn btn-secondary" href={exportHref} download onClick={(e) => void onExport(e)} data-testid="rt-export">

@@ -5,10 +5,11 @@
 import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { AppSpecSchema, designFor } from '@shared/appSpec.ts';
+import { AppSpecSchema } from '@shared/appSpec.ts';
 import { FIXTURES } from '../../../server/fixtures/specs.ts';
 import { previewRecords } from '../../../server/services/previewContent.ts';
 import { AppPreview } from './AppPreview.tsx';
+import { resolveTheme } from './theme.ts';
 
 const RENDERER_IDS: Record<string, string> = {
   journal: 'rt-journal', board: 'rt-board', list: 'rt-list', summary: 'rt-summary',
@@ -22,13 +23,16 @@ describe('AppPreview', () => {
       const records = previewRecords(spec);
       expect(records.length).toBeGreaterThan(0);
       const html = renderToString(createElement(AppPreview, { spec, records }));
-      const design = designFor(spec);
+      // The look the app shows (a reference app that still stores its legacy look shows its Ori one).
+      const attrs = resolveTheme(spec).attrs;
       expect(html).toContain('data-testid="make-preview"');
       expect(html).toContain('data-testid="make-preview-example-banner"');
       expect(html).toContain('Example content');
-      expect(html).toContain(`data-theme="${design.theme}"`);
-      expect(html).toContain(`data-typography="${design.typography}"`);
-      expect(html).toContain(`data-density="${design.density}"`);
+      expect(html).toContain(`data-theme="${attrs['data-theme']}"`);
+      expect(html).toContain(`data-typography="${attrs['data-typography']}"`);
+      expect(html).toContain(`data-density="${attrs['data-density']}"`);
+      // People wears its Ori identity, clean white with orange (spec section 6), whatever look it stores.
+      if (spec.name === 'People') expect(html).toContain('data-theme="bright"');
       expect(html).toContain(`data-testid="${RENDERER_IDS[spec.views[0]!.type]}"`);
       expect(html).toContain(spec.name);
       // Read-only: no record actions, no settings link, no way to add.

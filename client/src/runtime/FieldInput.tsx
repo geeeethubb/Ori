@@ -17,11 +17,14 @@ interface Props {
   onChange: (value: FieldValue) => void;
   error?: string;
   autoFocus?: boolean;
+  /** The label this form shows instead of the field's own (a task-specific wording); the field keeps its label. */
+  label?: string;
 }
 
 const str = (v: unknown): string => (v === null || v === undefined ? '' : String(v));
 
-export function FieldInput({ field, value, onChange, error, autoFocus }: Props) {
+export function FieldInput({ field, value, onChange, error, autoFocus, label: labelOverride }: Props) {
+  const label = labelOverride ?? field.label;
   const id = `rt-f-${field.id}`;
   const labelId = `${id}-label`;
   const helpId = field.help ? `${id}-help` : undefined;
@@ -63,7 +66,7 @@ export function FieldInput({ field, value, onChange, error, autoFocus }: Props) 
             autoFocus={autoFocus}
           />
           <label htmlFor={id} className="field-label">
-            {field.label}
+            {label}
           </label>
         </div>
         {meta}
@@ -244,7 +247,7 @@ export function FieldInput({ field, value, onChange, error, autoFocus }: Props) 
   return (
     <div className="field rt-field" data-testid={`rt-field-${field.id}`}>
       <label className="field-label" id={labelId} htmlFor={isGroup ? undefined : id}>
-        {field.label}
+        {label}
         {field.required && (
           <span className="rt-required" aria-hidden="true">
             {' '}

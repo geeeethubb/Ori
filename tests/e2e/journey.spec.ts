@@ -1,12 +1,15 @@
 /**
  * The guitar slice, end to end in sample mode:
- * sign up → share a sound with the Agent → honest read status and a grounded proposal → Make mine
- * with the 15-minute choice → the practice app at its own URL → run the timer, save a session →
- * reload keeps it → "Make this more me" adds a field, the session survives → undo.
+ * sign up → share a sound with the Agent → honest read status and a grounded proposal ("Preview Riff",
+ * with "Keep inspiration") → the Make page designs its preview by itself, starting at the length the
+ * share asked for, and follows a length choice → Make mine → Ready on the same URL (Open, Add to home
+ * screen, Copy app link) → the practice app at its own URL → run the timer, save a session → reload
+ * keeps it → a change from the app's Settings ('...' menu) adds a field, the session survives → undo →
+ * My apps has it selected and opens it.
  * Second test: two contrasting sample profiles give materially different Playground sets.
  */
 import { test, expect, type Page } from '@playwright/test';
-import { PASSWORD, appDetail, expectNoHorizontalOverflow, listRecords, signupViaApi, uniqueEmail } from './helpers.ts';
+import { PASSWORD, appDetail, appIdFrom, chooseFromAppMenu, expectNoHorizontalOverflow, listRecords, showMakePreview, signupViaApi, uniqueEmail } from './helpers.ts';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -20,7 +23,7 @@ async function appVersion(page: Page, appId: string): Promise<number> {
   return ((await res.json()) as { version: number }).version;
 }
 
-test('share a sound → Make mine → practise → the session survives a change and an undo', async ({ page }) => {
+test('share a sound → Preview Riff → Make mine → Ready → practise → the session survives a change and an undo', async ({ page }) => {
   test.setTimeout(240_000);
   const email = uniqueEmail('guitar');
 
@@ -35,35 +38,68 @@ test('share a sound → Make mine → practise → the session survives a change
   // Share the note: the item shows what was read, and the reply offers a new app (and a plain keep).
   await page.getByTestId('agent-text').fill('I like this sound and have 15 minutes to practice');
   await page.getByTestId('agent-send').click();
-  const item = page.getByTestId('agent-item').first();
+  // The conversation reads oldest first, newest last; this is its only exchange.
+  const item = page.getByTestId('agent-item').last();
   await expect(item).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByTestId('agent-item')).toHaveCount(1);
   await expect(item.getByTestId('agent-read-status')).toHaveAttribute('data-status', 'read');
   const reply = item.getByTestId('agent-reply');
   await expect(reply).toBeVisible({ timeout: 60_000 });
   const card = reply.locator('[data-testid="proposal-card"][data-kind="new_app"]').first();
   await expect(card).toBeVisible();
-  // Sample mode always offers "just keep it"; the live model offers it only when the share reads like a passing save.
-  if (!LIVE) await expect(reply.locator('[data-testid="proposal-card"][data-kind="keep"]')).toHaveCount(1);
+  await expect(card.getByTestId('proposal-action')).toHaveText(/^Preview\b/);
+  // Sample mode always offers "just keep it": the lead card's "Keep inspiration" (a separate keep card
+  // only when a reply has no lead). The live model offers it only when the share reads like a passing save.
+  if (!LIVE) {
+    await expect(reply.getByTestId('proposal-keep')).toHaveCount(1);
+    await expect(card.getByTestId('proposal-keep')).toHaveText('Keep inspiration');
+  }
   await expectNoHorizontalOverflow(page);
 
-  // Make mine, with one meaningful choice: the 15-minute preset. The preview is the real renderer,
-  // labelled as example content, and the CTA only arms once the preview is ready.
+  // Preview Riff: the Make page designs the preview by itself (the real renderer, labelled as example
+  // content; on a phone behind "Show the whole preview"), starting at the length the share asked for.
   await card.getByTestId('proposal-action').click();
-  await expect(page).toHaveURL(/\/make\/[A-Za-z0-9_-]{8,40}/);
-  await page.getByTestId('make-choice-minutes-15').click();
-  // Preview is an explicit step (it spends a model call in Live mode): the real renderer appears,
-  // labelled as example content.
-  await page.getByTestId('make-preview-button').click();
-  await expect(page.getByTestId('make-preview')).toBeVisible({ timeout: 90_000 });
-  await expect(page.getByTestId('make-preview-example-banner')).toBeVisible();
+  await expect(page).toHaveURL(/\/make\/[A-Za-z0-9_-]{8,40}$/);
+  const makeUrl = page.url();
+  const preview = await showMakePreview(page);
   await expectNoHorizontalOverflow(page);
+  const fifteen = page.getByTestId('make-choice-minutes-15');
+  if (LIVE) await fifteen.click();
+  else await expect(fifteen).toHaveAttribute('aria-pressed', 'true');
+  const firstPreset = preview.locator('[data-testid^="rt-practice-preset-"]').first();
+  if (!LIVE) {
+    await expect(firstPreset).toHaveAttribute('data-testid', 'rt-practice-preset-15');
+    // One meaningful choice, and the preview follows it: 25 minutes is designed (its timer starts at 25),
+    // then back to 15. Make mine, pressed while that design may still be on its way, makes the design
+    // of the last choice, never the one that happened to be on show.
+    const twentyFive = page.getByTestId('make-choice-minutes-25');
+    await twentyFive.click();
+    await expect(twentyFive).toHaveAttribute('aria-pressed', 'true');
+    await expect(firstPreset).toHaveAttribute('data-testid', 'rt-practice-preset-25', { timeout: 30_000 });
+    await fifteen.click();
+    await expect(fifteen).toHaveAttribute('aria-pressed', 'true');
+  }
   const makeMine = page.getByTestId('make-mine');
   await expect(makeMine).toBeEnabled({ timeout: 90_000 });
   await makeMine.click();
-  await expect(page).toHaveURL(/\/apps\/[A-Za-z0-9_-]{8,32}\/?$/, { timeout: 60_000 });
+
+  // Ready on the same URL, only once the server returned the app: Open, Add to home screen, Copy app link.
+  await expect(page.getByTestId('make-ready')).toBeVisible({ timeout: 60_000 });
+  await expect(page).toHaveURL(makeUrl);
+  await expect(page.getByTestId('make-ready-title')).toContainText('is yours');
+  const openApp = page.getByTestId('make-ready-open');
+  const appId = appIdFrom(await openApp.getAttribute('href'));
+  expect(appId, 'Open goes to the app at its own URL').not.toBe('');
+  await expect(openApp).toHaveAttribute('href', `/apps/${appId}/`);
+  await expect(page.getByTestId('make-ready-install')).toHaveAttribute('href', `/apps/${appId}/?install=1`);
+  await expect(page.getByTestId('make-ready-copy')).toContainText('Copy app link');
+  await expectNoHorizontalOverflow(page);
+  // One proposal, one app, however the choices went.
+  const mine = ((await (await page.request.get('/api/apps')).json()) as { apps: { id: string }[] }).apps;
+  expect(mine.map((a) => a.id)).toEqual([appId]);
+  await openApp.click();
+  await expect(page).toHaveURL(new RegExp(`/apps/${appId}/?$`));
   const appUrl = page.url();
-  const appId = /\/apps\/([A-Za-z0-9_-]+)/.exec(appUrl)?.[1] ?? '';
-  expect(appId).not.toBe('');
 
   // The choice landed in the app: the timer offers 15 minutes first.
   const detail = await appDetail(page.request, appId);
@@ -103,14 +139,22 @@ test('share a sound → Make mine → practise → the session survives a change
   await page.goto(appUrl);
   await expect(page.getByTestId('rt-session')).toHaveCount(1);
 
-  // Make this more me: add a field for the song; the session survives.
-  await page.getByTestId('rt-settings-link').click();
+  // Make this more me, from the app's Settings in its '...' menu: add a field for the song; the session survives.
+  await chooseFromAppMenu(page, 'rt-settings-link');
+  await expect(page).toHaveURL(new RegExp(`/apps/${appId}/settings$`));
+  await expect(page.getByTestId('rt-settings')).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await page.getByTestId('rt-revise-input').fill('Add a field for which song I practised');
   await page.getByTestId('rt-revise-preview').click();
   await expect(page.getByTestId('rt-revise-changes')).toContainText(LIVE ? /song/i : /which song/i, { timeout: 90_000 });
+  // The review says the saved session is kept, and offers exactly the two decisions.
+  await expect(page.getByTestId('rt-revise-keeps')).toBeVisible();
+  await expect(page.getByTestId('rt-revise-decline')).toHaveText('Keep current version');
+  await expect(page.getByTestId('rt-revise-accept')).toHaveText('Apply change');
   await page.getByTestId('rt-revise-accept').click();
   await expect.poll(() => appVersion(page, appId), { timeout: 30_000 }).toBe(2);
+  // The review and its Apply button are gone: focus lands on the section's heading, not the top of the page.
+  await expect(page.locator('#rt-edit-heading')).toBeFocused();
   const revised = await appDetail(page.request, appId);
   expect(revised.spec.fields.some((f) => /song/i.test(f.label))).toBe(true);
   await page.goto(appUrl);
@@ -129,7 +173,8 @@ test('share a sound → Make mine → practise → the session survives a change
   await expect(page.getByTestId('rt-record-form')).toHaveCount(0);
 
   // Undo shows what it restores and keeps, then restores the previous definition and keeps the session.
-  await page.getByTestId('rt-settings-link').click();
+  await chooseFromAppMenu(page, 'rt-settings-link');
+  await expect(page).toHaveURL(new RegExp(`/apps/${appId}/settings$`));
   await page.getByTestId('rt-undo').click();
   await expect(page.getByTestId('rt-undo-plan')).toContainText('Your entries stay');
   await page.getByTestId('rt-undo-confirm').click();
@@ -139,10 +184,17 @@ test('share a sound → Make mine → practise → the session survives a change
   await page.goto(appUrl);
   await expect(page.getByTestId('rt-session')).toHaveCount(1);
 
-  // My apps lists it.
+  // My apps lists it, already selected with its actions ready; tapping the selected tile opens it.
   await page.goto('/apps');
-  await expect(page.locator(`[data-testid="app-tile"][data-app-id="${appId}"]`)).toBeVisible();
+  const tile = page.locator(`[data-testid="app-tile"][data-app-id="${appId}"]`);
+  await expect(tile).toBeVisible();
+  await expect(tile).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByTestId('app-actions')).toHaveAttribute('data-app-id', appId);
+  await expect(page.getByTestId('app-action-open')).toHaveAttribute('href', `/apps/${appId}/`);
   await expectNoHorizontalOverflow(page);
+  await tile.click();
+  await expect(page).toHaveURL(new RegExp(`/apps/${appId}/?$`));
+  await expect(page.getByTestId('rt-session')).toHaveCount(1);
 });
 
 test('two contrasting sample profiles produce different, visibly grounded Playground sets', async ({ browser }) => {
@@ -159,11 +211,14 @@ test('two contrasting sample profiles produce different, visibly grounded Playgr
       .poll(async () => ((await (await page.request.get('/api/context')).json()) as { facts: unknown[] }).facts.length, { timeout: 60_000 })
       .toBeGreaterThanOrEqual(8);
 
+    // The first visit makes ideas by itself once something is shared; "Update app ideas" only when none came.
     await page.goto('/playground');
     const cards = page.getByTestId('pg-card');
-    await cards.first().or(page.getByTestId('pg-refresh')).or(page.getByTestId('pg-empty')).first().waitFor({ timeout: 60_000 });
+    await cards.first().or(page.getByTestId('pg-empty')).first().waitFor({ timeout: 120_000 });
     if ((await cards.count()) === 0) await page.getByTestId('pg-refresh').click();
     await expect(cards.first()).toBeVisible({ timeout: 120_000 });
+    // No update is running, so the cards on the page are the server's current set.
+    await expect(page.getByTestId('pg-updating')).toHaveCount(0, { timeout: 120_000 });
     expect(await cards.count()).toBeGreaterThanOrEqual(3);
     await expect(cards.first().getByTestId('pg-why')).toBeVisible(); // the grounding is on the card
     if (!LIVE) await expect(page.getByTestId('pg-sample-badge').first()).toBeVisible(); // Sample mode is always visible

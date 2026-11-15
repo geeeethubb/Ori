@@ -6,7 +6,12 @@
  * Every text/fill pair below was checked for WCAG AA (≥ 4.5:1) against the surfaces it is used on.
  */
 import { designFor, type AppDesign, type AppSpec, type AppTheme } from '@shared/appSpec.ts';
+import { displayDesign } from '@shared/brand.ts';
 import type { IconColor } from '@shared/icons.ts';
+
+// The People look mapping lives with the brand (shared/brand.ts), so the install metadata (theme-color,
+// manifest background) shows what the runtime shows. Re-exported for callers that read it from here.
+export { displayDesign, LEGACY_PEOPLE_LOOK } from '@shared/brand.ts';
 
 export interface ThemeInfo {
   /** Dark themes flip which accent variant is readable as text. */
@@ -68,6 +73,18 @@ export function resolveAccent(theme: AppTheme, accent: IconColor | undefined): I
   return accent;
 }
 
+/**
+ * The fill of primary actions when a theme has its own chrome instead of the accent: photography
+ * (paper) uses charcoal with paper text, so the photographs carry the color. Other themes act in
+ * their accent.
+ */
+export const THEME_ACTION: Partial<Record<AppTheme, { fill: string; onFill: string }>> = {
+  paper: { fill: '#181A1F', onFill: '#FAF8F4' },
+};
+
+/** Keyboard focus ring: ink on light themes, lime on the dark ones (both at least 3:1 on every surface). */
+export const FOCUS_RING = { light: '#162039', dark: '#DFFF76' } as const;
+
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '');
   const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
@@ -90,18 +107,25 @@ export interface ResolvedTheme {
   style: Record<string, string>;
 }
 
-/** Everything the runtime root needs to wear this app's identity. */
-export function resolveTheme(spec: Pick<AppSpec, 'design' | 'pattern' | 'icon' | 'purpose'>): ResolvedTheme {
-  const design = designFor(spec);
+/**
+ * Everything the runtime root needs to wear this app's identity. Pass the app's name (a full spec
+ * has it) so a reference app that still carries its legacy look shows its Ori identity.
+ */
+export function resolveTheme(spec: Pick<AppSpec, 'design' | 'pattern' | 'icon' | 'purpose'> & { name?: string }): ResolvedTheme {
+  const design = displayDesign(spec.name, designFor(spec));
   const accent = resolveAccent(design.theme, design.accent);
   const swatch = ACCENTS[accent];
   const dark = THEMES[design.theme].dark;
+  const action = THEME_ACTION[design.theme] ?? { fill: swatch.fill, onFill: swatch.onFill };
   const style: Record<string, string> = {
     '--app-accent': swatch.fill,
     '--app-accent-ink': swatch.onFill,
     '--app-accent-text': dark ? swatch.textDark : swatch.textLight,
     '--app-accent-soft': rgba(swatch.fill, dark ? 0.2 : 0.14),
     '--app-accent-glow': rgba(swatch.fill, dark ? 0.45 : 0.3),
+    '--app-action': action.fill,
+    '--app-action-ink': action.onFill,
+    '--app-focus': dark ? FOCUS_RING.dark : FOCUS_RING.light,
   };
   return {
     design,

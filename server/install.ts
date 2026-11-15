@@ -10,10 +10,11 @@ import { fileURLToPath } from 'node:url';
 import { Hono } from 'hono';
 import { config } from './config.ts';
 import { APP_ID_PATTERN } from '../shared/ids.ts';
-import { BRAND, BRAND_ASSETS, BRAND_COLORS, displayIcon } from '../shared/brand.ts';
-import { ICON_GRADIENTS, appIconSvg, isIconColor, isIconSymbol, type AppIconSpec } from '../shared/icons.ts';
-import { oriAppIconSvg } from '../shared/oriArt.ts';
+import { APP_THEME_BACKGROUND, BRAND, BRAND_ASSETS, BRAND_COLORS, appThemeColor, displayDesign, displayIcon } from '../shared/brand.ts';
+import { appIconSvg, isIconColor, isIconSymbol, type AppIconSpec } from '../shared/icons.ts';
+import { oriAppIconSvg, oriFaviconDocument, oriFaviconSvg } from '../shared/oriArt.ts';
 import { getAppPublicMeta } from './repos/apps.ts';
+import { getAppPublicLook } from './repos/appLook.ts';
 
 /**
  * Boot payload icon for parent routes (the client reads boot icons only for personal apps). The
@@ -22,10 +23,8 @@ import { getAppPublicMeta } from './repos/apps.ts';
 const STORE_ICON: AppIconSpec = { symbol: 'compass', color: 'blue' };
 const CANVAS = BRAND_COLORS.canvas;
 
-/** Manifest background per app theme (splash color on Android / iOS). */
-const THEME_BACKGROUND: Record<string, string> = {
-  bright: '#F7F8FC', paper: '#FAF8F4', charcoal: '#181A1F', ink: '#162039', mint: '#F3FBF7', lilac: '#F6F1FF', sunset: '#FFF4EF',
-};
+/** Manifest background per app theme (splash color on Android / iOS); shared with the client. */
+const THEME_BACKGROUND: Readonly<Record<string, string>> = APP_THEME_BACKGROUND;
 
 type Resvg = typeof import('@resvg/resvg-js').Resvg;
 let resvgCtor: Resvg | null | undefined;
@@ -74,9 +73,29 @@ export async function renderOriIconPng(size: number, maskable = false): Promise<
   return png;
 }
 
+/** Browser-tab sizes of the parent icon: up to this many px, PNGs use the favicon drawing. */
+const FAVICON_MAX_PX = 32;
+
 /**
- * The icon an app SHOWS: its stored icon, except that a reference app still carrying its pre-Ori
- * default shows the canonical icon (display only; the stored spec is untouched).
+ * The parent favicon as a PNG (16 or 32 px): the dedicated tiny drawing with whole-pixel eyes. A tab
+ * shows it as drawn, so its rounded corners stay transparent.
+ */
+export async function renderOriFaviconPng(size: number): Promise<Buffer | null> {
+  const key = `ori-favicon:${size}`;
+  const cached = pngCache.get(key);
+  if (cached) return cached;
+  const R = await loadResvg();
+  if (!R) return null;
+  const png = Buffer.from(new R(oriFaviconSvg(size), { fitTo: { mode: 'width', value: size } }).render().asPng());
+  if (pngCache.size > 500) pngCache.clear();
+  pngCache.set(key, png);
+  return png;
+}
+
+/**
+ * The icon an app SHOWS: its stored icon, except that a reference app still carrying a superseded
+ * default (pre-Ori, or Riff's interim wave) shows the canonical icon (display only; the stored spec
+ * is untouched).
  */
 function iconFor(meta: { name: string; iconSymbol: string; iconColor: string } | null): AppIconSpec {
   if (!meta) return STORE_ICON;
@@ -84,11 +103,19 @@ function iconFor(meta: { name: string; iconSymbol: string; iconColor: string } |
   return displayIcon(meta.name, stored);
 }
 
-/** Browser chrome color: the app's own surface when its theme is known, else the icon color. */
-function themeColor(icon: AppIconSpec, theme?: string | null): string {
-  if (theme && THEME_BACKGROUND[theme] && theme !== 'bright') return THEME_BACKGROUND[theme] as string;
-  return ICON_GRADIENTS[icon.color][1];
+/**
+ * The theme an app SHOWS: its stored design through displayDesign, exactly as the runtime resolves
+ * it, so the manifest background and theme-color match the app a home-screen icon opens (a People
+ * app on its legacy mint + blue look shows, and so installs, as white with orange). Falls back to the
+ * stored theme when the design cannot be read.
+ */
+function shownTheme(appId: string, meta: { name: string; theme: string | null }): string | null {
+  const look = getAppPublicLook(appId);
+  return look ? displayDesign(meta.name, look).theme : meta.theme;
 }
+
+/** Browser chrome color: the app's own surface when its theme is known, else the icon color (shared/brand.ts). */
+const themeColor = appThemeColor;
 
 function shortName(name: string): string {
   return name.length <= 12 ? name : name.slice(0, 12).trim();
@@ -105,7 +132,7 @@ export function appManifest(appId: string, name: string, icon: AppIconSpec, them
     scope: base,
     display: 'standalone',
     orientation: 'portrait',
-    background_color: THEME_BACKGROUND[theme ?? 'bright'] ?? CANVAS,
+    background_color: (theme && Object.hasOwn(THEME_BACKGROUND, theme) ? THEME_BACKGROUND[theme] : undefined) ?? CANVAS,
     theme_color: themeColor(icon, theme),
     icons: [
       { src: `${base}icon-192.png`, sizes: '192x192', type: 'image/png', purpose: 'any' },
@@ -157,19 +184,25 @@ const ICON_FILE = /^(?:icon|store)-(\d+)(-maskable)?\.png$/;
 installRoutes.get('/icons/:file{store-\\d+(?:-maskable)?\\.png}', async (c) => {
   const m = ICON_FILE.exec(c.req.param('file') ?? '');
   if (!m) return c.notFound();
-  const size = clampSize(m[1] as string);
   const maskable = Boolean(m[2]);
+  const requested = Number(m[1]);
+  if (!maskable && requested <= FAVICON_MAX_PX) {
+    // store-16.png and store-32.png: the favicon drawing, at exactly that size (at least 16 px).
+    const small = Math.max(16, requested);
+    return iconResponse(await renderOriFaviconPng(small), () => oriFaviconSvg(small));
+  }
+  const size = clampSize(m[1] as string);
   return iconResponse(await renderOriIconPng(size, maskable), () => oriAppIconSvg(size, { maskable }));
 });
-// The parent favicon: the companion on its lilac tile (the same art as the launcher icon).
-installRoutes.get('/icons/store.svg', (c) => c.body(oriAppIconSvg(256), 200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' }));
+// The parent favicon: the tiny drawing at tab sizes (16 and 32 px), the full app icon from 48 px.
+installRoutes.get('/icons/store.svg', (c) => c.body(oriFaviconDocument(), 200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' }));
 
 installRoutes.get('/apps/:appId/manifest.webmanifest', (c) => {
   const appId = c.req.param('appId');
   if (!APP_ID_PATTERN.test(appId)) return c.notFound();
   const meta = getAppPublicMeta(appId);
   if (!meta) return c.notFound();
-  return c.body(JSON.stringify(appManifest(appId, meta.name, iconFor(meta), meta.theme)), 200, { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-cache' });
+  return c.body(JSON.stringify(appManifest(appId, meta.name, iconFor(meta), shownTheme(appId, meta))), 200, { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-cache' });
 });
 
 installRoutes.get('/apps/:appId/icon.svg', (c) => {
@@ -255,7 +288,7 @@ export function renderIndex(html: string, boot: BootInfo): string {
 export function bootForApp(appId: string | undefined): BootInfo {
   if (appId && APP_ID_PATTERN.test(appId)) {
     const meta = getAppPublicMeta(appId);
-    if (meta) return { appId, name: meta.name, icon: iconFor(meta), purpose: meta.purpose, theme: meta.theme };
+    if (meta) return { appId, name: meta.name, icon: iconFor(meta), purpose: meta.purpose, theme: shownTheme(appId, meta) };
   }
   return { appId: null, name: BRAND.name, icon: STORE_ICON };
 }

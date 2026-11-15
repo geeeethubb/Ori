@@ -1,9 +1,11 @@
 /**
  * The custom lowercase "ori" wordmark and the companion + wordmark lockup, as inline SVG drawn from
  * the paths in shared/oriArt.ts (no font). Variants (spec section 3): ink for compact headers on light
- * surfaces, cobalt for large brand treatments, light for ink surfaces. The i's dot stays lime.
+ * surfaces, cobalt for large brand treatments, light for ink surfaces. The i's dot stays lime in a
+ * cobalt ring; the light lockup pairs white letters with the white single-colour companion.
  * Both are images named "Ori" unless `title=""` marks them decorative (e.g. inside a named link).
  */
+import { useId, useMemo } from 'react';
 import { ORI_LOCKUP_VIEWBOX, ORI_WORDMARK_VIEWBOX, oriLockupNodes, oriWordmarkNodes, type OriMood, type OriWordmarkVariant } from '@shared/oriArt.ts';
 import { renderOriNodes } from './renderOriNodes.ts';
 
@@ -52,6 +54,9 @@ export interface OriLockupProps {
 export function OriLockup({ size, variant = 'ink', mood = 'idle', className, title = 'Ori' }: OriLockupProps) {
   const vb = ORI_LOCKUP_VIEWBOX;
   const h = px(size, 40);
+  // The light lockup's companion has cut-out eyes (a mask): its id must be unique per instance.
+  const idPrefix = `ori-lockup${useId().replace(/[^A-Za-z0-9_-]/g, '')}`;
+  const art = useMemo(() => renderOriNodes(oriLockupNodes({ variant, mood, height: h, idPrefix })), [variant, mood, h, idPrefix]);
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -63,7 +68,7 @@ export function OriLockup({ size, variant = 'ink', mood = 'idle', className, tit
       data-mood={mood}
       {...named(title)}
     >
-      {renderOriNodes(oriLockupNodes({ variant, mood, height: h }))}
+      {art}
     </svg>
   );
 }

@@ -1,21 +1,23 @@
 /** Loading, not-found, error and offline states for the runtime shell. */
 import { Link } from 'react-router';
 import { EmptyState, ErrorBanner, Icons, Skeleton } from '../components/ui.tsx';
-import { COLLECTION_LABEL, formatSavedAt } from './runtimeUtils.ts';
+import { formatSavedAt } from './runtimeUtils.ts';
+import './shell.css';
 
+/** The app's own outline while it loads: header bar, headline, content. No parent chrome. */
 export function RuntimeSkeleton() {
   return (
     <div className="rt-root">
       <div className="rt-page" aria-busy="true" aria-label="Loading your app">
-        <div className="rt-identity">
-          <Skeleton h={48} w={48} style={{ borderRadius: 12, flex: 'none' }} />
-          <div className="rt-identity-text stack" style={{ gap: 8 }}>
-            <Skeleton h={26} w="60%" />
-            <Skeleton h={16} w="40%" />
+        <div className="rt-head-bar rt-skel-bar">
+          <div className="rt-head-id">
+            <Skeleton h={36} w={36} style={{ borderRadius: 10, flex: 'none' }} />
+            <Skeleton h={24} w={110} />
           </div>
+          <Skeleton h={44} w={44} style={{ borderRadius: 999, flex: 'none' }} />
         </div>
-        <Skeleton h={88} />
-        <Skeleton h={120} />
+        <Skeleton h={34} w="70%" />
+        <Skeleton h={160} />
         <Skeleton h={120} />
       </div>
     </div>
@@ -36,7 +38,7 @@ export function NotFoundScreen({ kind }: { kind: 'invalid' | 'missing' }) {
           }
           action={
             <Link to="/apps" className="btn btn-primary">
-              Go to your apps
+              Open My apps
             </Link>
           }
         />
@@ -53,7 +55,7 @@ export function LoadErrorScreen({ message, onRetry, busy }: { message: string; o
         <p className="small muted">Nothing you saved is lost. Your entries live in your account and will show as soon as we can reach it.</p>
         <Link to="/apps" className="rt-backlink">
           {Icons.back}
-          <span>{COLLECTION_LABEL}</span>
+          <span>My apps</span>
         </Link>
       </div>
     </div>

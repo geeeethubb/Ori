@@ -5,6 +5,7 @@ import { recordTitle, type AppRecord } from '@shared/records.ts';
 import { FieldList, ValueDisplay } from './ValueDisplay.tsx';
 import { pressable, useMediaQuery } from './runtimeUtils.ts';
 import { listColumns, listRows, type ListViewSpec } from './viewLogic.ts';
+import './appViews.css';
 
 interface Props {
   spec: AppSpec;

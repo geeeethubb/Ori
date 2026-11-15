@@ -7,6 +7,7 @@ import { normalize } from './text.ts';
 import { EXPLORE_CONCEPTS } from './concepts-explore.ts';
 import { WORK_CONCEPTS } from './concepts-work.ts';
 import { PLAYGROUND_CONCEPTS } from './concepts-playground.ts';
+import { SKETCH_PRACTICE } from './concepts-sketch.ts';
 
 export type { Concept, MatchedFact } from './concept.ts';
 import type { Concept } from './concept.ts';
@@ -30,8 +31,11 @@ export const CONCEPTS: Concept[] = interleave(WORK_CONCEPTS, EXPLORE_CONCEPTS);
 /** The redesign's reference concepts, used by the Agent and by builds that name them. */
 export { PLAYGROUND_CONCEPTS };
 
+/** Concepts only the Agent proposes (a domain's app that the Playground does not score): sketching practice. */
+export const AGENT_CONCEPTS: Concept[] = [SKETCH_PRACTICE];
+
 /** Every concept that can be looked up or built. */
-export const ALL_CONCEPTS: Concept[] = [...CONCEPTS, ...PLAYGROUND_CONCEPTS];
+export const ALL_CONCEPTS: Concept[] = [...CONCEPTS, ...PLAYGROUND_CONCEPTS, ...AGENT_CONCEPTS];
 
 /** Shown when the context says too little to match anything: the three reference experiences. */
 export const DEFAULT_CONCEPT_IDS = ['people-queue', 'light-gallery', 'riff-practice'] as const;

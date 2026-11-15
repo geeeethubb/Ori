@@ -1,7 +1,9 @@
 /**
- * What you've shared (/settings/memory): everything the agent and the Playground work from, grouped
- * as interests, current needs, routines & tools, recent changes and open questions; then sources and
- * the things you shared with the agent. Edit, remove or forget; apps keep their own records.
+ * What you've shared (/settings/memory): everything Ori and the Playground work from, grouped as
+ * interests, current needs, routines & tools, recent changes and open questions; then sources and the
+ * things you shared with Ori. Confirmed and inferred stay distinct, facts only the example profile states
+ * say so, conflicts ask for a decision, and anything can be edited, removed or forgotten. Apps keep
+ * their own records.
  */
 import { BRAND } from '@shared/brand.ts';
 import { useMemo, useState } from 'react';
@@ -10,6 +12,7 @@ import type { ContextOverviewDto } from '@shared/api.ts';
 import type { ProfileFact } from '@shared/context.ts';
 import { api, describeError } from '../api.ts';
 import { ErrorBanner, Icons, Skeleton, useToast } from '../components/ui.tsx';
+import { ExampleTag } from './parts/badges.tsx';
 import { groupFactsForMemory, pluralize } from './parts/helpers.ts';
 import { AddInterestForm, CaptureRow, ConflictCard, FactRow, SourceRow } from './parts/MemoryParts.tsx';
 import { useLoad } from './parts/useLoad.ts';
@@ -112,6 +115,8 @@ export function MemoryPage() {
   }
 
   const nothing = total === 0 && sources.length === 0 && captures.length === 0;
+  // When only the example profile is here, say it once for the page.
+  const onlyExample = sources.length > 0 && sources.every((s) => s.kind === 'sample') && captures.length === 0;
   const questions = groups.find((g) => g.key === 'questions');
   const showQuestions = conflicts.length > 0 || (questions?.facts.length ?? 0) > 0;
 
@@ -123,8 +128,14 @@ export function MemoryPage() {
         <p className="lede" data-testid="memory-count">
           {nothing
             ? 'Nothing yet. Everything you share stays editable here, and suggestions only use what you keep.'
-            : `${pluralize(total, 'thing', 'things')} the agent works from, out of ${pluralize(sources.length, 'source')} and ${pluralize(captures.length, 'thing', 'things')} you shared. Edit or remove anything; apps keep their own records.`}
+            : `${pluralize(total, 'thing', 'things')} Ori works from, out of ${pluralize(sources.length, 'source')} and ${pluralize(captures.length, 'thing', 'things')} you shared. Edit or remove anything; apps keep their own records.`}
         </p>
+        {onlyExample && (
+          <p className="me-example" data-testid="memory-example-note">
+            <ExampleTag />
+            <span>Everything here comes from the example profile, not from you. Remove it under Sources whenever you like.</span>
+          </p>
+        )}
       </header>
 
       {importNote && !noteDismissed && (
@@ -191,7 +202,7 @@ export function MemoryPage() {
         <section className="me-group" aria-labelledby="me-captures">
           <div className="me-group-head">
             <h2 id="me-captures">Things you shared</h2>
-            <span className="small muted">Notes, links and screenshots given to the agent, with what was actually read.</span>
+            <span className="small muted">Notes, links and photos you gave Ori, with what was actually read.</span>
           </div>
           <ul className="me-list card">
             {captures.map((c) => <CaptureRow key={c.id} capture={c} onForget={forgetCapture} />)}
@@ -207,8 +218,8 @@ export function MemoryPage() {
       </aside>
 
       <div className="row">
-        <Link to="/settings/import" className="btn btn-secondary">{Icons.upload} Bring more context</Link>
-        <Link to="/agent" className="btn btn-ghost">{Icons.agent} Share something</Link>
+        <Link to="/settings/import" className="btn btn-secondary">{Icons.upload} Bring context from your AI</Link>
+        <Link to="/agent?start=new" className="btn btn-ghost">{Icons.agent} Share something with Ori</Link>
         {total > 0 && <Link to="/playground" className="btn btn-ghost" data-testid="memory-go-playground">See the Playground {Icons.arrowRight}</Link>}
       </div>
     </div>

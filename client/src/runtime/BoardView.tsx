@@ -11,6 +11,7 @@ import { ErrorBanner } from '../components/ui.tsx';
 import { FieldList } from './ValueDisplay.tsx';
 import { pressable } from './runtimeUtils.ts';
 import { boardCardFields, boardLayout, dueBadgeClass, dueSummaryLine, type BoardColumn, type BoardViewSpec, type SelectFieldSpec } from './viewLogic.ts';
+import './appViews.css';
 
 interface Props {
   spec: AppSpec;

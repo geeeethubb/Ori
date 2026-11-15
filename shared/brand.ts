@@ -5,7 +5,8 @@
  * export format id, Android package) keep their original values so existing sessions, exports and
  * installs stay valid.
  */
-import type { AppIconSpec } from './icons.ts';
+import type { AppDesign, AppTheme } from './appSpec.ts';
+import { ICON_GRADIENTS, type AppIconSpec } from './icons.ts';
 
 // Messaging hierarchy. Use one headline and one explanatory line per surface, never all of them.
 const PROMISE = 'Your AI companion. Your world, in your pocket.';
@@ -82,13 +83,16 @@ export const NAV = [
  * Canonical icons of the three reference apps (spec section 3): one icon per app across cards,
  * previews, launcher, manifests, shortcuts and install guides. Only Ori itself uses the companion.
  * `legacy` is the default these apps were created with before the rebrand; existing apps still store
- * it, and displayIcon maps it for display only.
+ * it, and displayIcon maps it for display only. `interim` lists defaults that shipped for a while
+ * after the rebrand: Riff was made with waveform/ink from the Ori foundation (eb2f82c) until its level
+ * bars became their own symbol ('levels'). An app named anything else whose stored icon is
+ * 'waveform' keeps the wave it chose.
  */
 export const REFERENCE_APP_ICONS = {
-  light: { name: 'Light', icon: { symbol: 'camera', color: 'charcoal' }, legacy: { symbol: 'aperture', color: 'charcoal' } },
-  riff: { name: 'Riff', icon: { symbol: 'waveform', color: 'ink' }, legacy: { symbol: 'guitar', color: 'ink' } },
-  people: { name: 'People', icon: { symbol: 'people', color: 'white' }, legacy: { symbol: 'contact', color: 'mint' } },
-} as const satisfies Record<string, { name: string; icon: AppIconSpec; legacy: AppIconSpec }>;
+  light: { name: 'Light', icon: { symbol: 'camera', color: 'charcoal' }, legacy: { symbol: 'aperture', color: 'charcoal' }, interim: [] },
+  riff: { name: 'Riff', icon: { symbol: 'levels', color: 'ink' }, legacy: { symbol: 'guitar', color: 'ink' }, interim: [{ symbol: 'waveform', color: 'ink' }] },
+  people: { name: 'People', icon: { symbol: 'people', color: 'white' }, legacy: { symbol: 'contact', color: 'mint' }, interim: [] },
+} as const satisfies Record<string, { name: string; icon: AppIconSpec; legacy: AppIconSpec; interim: readonly AppIconSpec[] }>;
 
 export type ReferenceAppKey = keyof typeof REFERENCE_APP_ICONS;
 
@@ -98,16 +102,65 @@ export function referenceIcon(key: ReferenceAppKey): AppIconSpec {
   return { symbol, color };
 }
 
+/** Every superseded default of a reference app: the pre-rebrand one, then any interim ones. */
+export function supersededIcons(key: ReferenceAppKey): AppIconSpec[] {
+  const ref = REFERENCE_APP_ICONS[key];
+  const all: readonly AppIconSpec[] = [ref.legacy, ...ref.interim];
+  return all.map(({ symbol, color }) => ({ symbol, color }));
+}
+
 /**
- * The icon to SHOW for an app. A reference app that still carries its exact pre-rebrand default
- * (same name, same symbol, same color) shows its canonical icon. Every other icon, including any icon
- * a person chose, comes back unchanged. Display only: stored specs are never rewritten.
+ * The icon to SHOW for an app. A reference app that still carries one of its exact superseded
+ * defaults (same name, same symbol, same color: the pre-rebrand default or an interim one) shows its
+ * canonical icon. Every other icon, including any icon a person chose, comes back unchanged. Display
+ * only: stored specs are never rewritten.
  */
 export function displayIcon(name: string | null | undefined, icon: AppIconSpec): AppIconSpec {
   if (!name) return icon;
   for (const key of Object.keys(REFERENCE_APP_ICONS) as ReferenceAppKey[]) {
-    const ref = REFERENCE_APP_ICONS[key];
-    if (ref.name === name && ref.legacy.symbol === icon.symbol && ref.legacy.color === icon.color) return referenceIcon(key);
+    if (REFERENCE_APP_ICONS[key].name !== name) continue;
+    if (supersededIcons(key).some((old) => old.symbol === icon.symbol && old.color === icon.color)) return referenceIcon(key);
   }
   return icon;
+}
+
+/**
+ * The look People apps were created with before Ori (mint surface, blue accent). The Ori People
+ * identity is white with orange accents (spec section 6), so that exact default is shown as
+ * bright + orange.
+ */
+export const LEGACY_PEOPLE_LOOK = { theme: 'mint', accent: 'blue' } as const;
+
+/** People's Ori look (spec section 6): clean white (the bright theme) with orange accents. */
+export const PEOPLE_LOOK = { theme: 'bright', accent: 'orange' } as const;
+
+/**
+ * The design to SHOW for an app. Like displayIcon: only an app named People that still carries the
+ * exact legacy reference look (theme mint, accent blue) is shown in the Ori People look (theme
+ * bright, accent orange); any look a person chose (another theme or accent, or a revision that
+ * changed either) and every other app come back unchanged, as the very same object. Display only:
+ * stored specs are never rewritten. The runtime theme and the install metadata (theme-color,
+ * manifest background) both use it, so a home-screen splash matches the app it opens.
+ */
+export function displayDesign<D extends Pick<AppDesign, 'theme' | 'accent'>>(name: string | null | undefined, design: D): D {
+  if (name === REFERENCE_APP_ICONS.people.name && design.theme === LEGACY_PEOPLE_LOOK.theme && design.accent === LEGACY_PEOPLE_LOOK.accent) {
+    return { ...design, theme: PEOPLE_LOOK.theme, accent: PEOPLE_LOOK.accent };
+  }
+  return design;
+}
+
+/** Each app theme's page colour: a personal app's manifest background (its splash on Android and iOS). */
+export const APP_THEME_BACKGROUND: Readonly<Record<AppTheme, string>> = {
+  bright: '#F7F8FC', paper: '#FAF8F4', charcoal: '#181A1F', ink: '#162039', mint: '#F3FBF7', lilac: '#F6F1FF', sunset: '#FFF4EF',
+};
+
+/**
+ * The browser chrome colour (theme-color) of a personal app: its own page colour on a themed
+ * surface, its icon colour on the parent's bright canvas. Pass the SHOWN icon and theme
+ * (displayIcon, displayDesign), as the server's install metadata does, so the chrome matches the
+ * app it frames and the page and its manifest agree.
+ */
+export function appThemeColor(icon: AppIconSpec, theme?: string | null): string {
+  if (theme && theme !== 'bright' && Object.hasOwn(APP_THEME_BACKGROUND, theme)) return APP_THEME_BACKGROUND[theme as AppTheme];
+  return ICON_GRADIENTS[icon.color]?.[1] ?? BRAND_COLORS.cobalt;
 }

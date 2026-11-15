@@ -19,6 +19,8 @@ import { resolveTheme } from './theme.ts';
 import { appHomePath, bootTarget, postEvent, readCache } from './runtimeUtils.ts';
 import { useAppData, type AppData } from './useAppData.ts';
 import './runtime.css';
+// The app's own header, sheets and home-screen guide (after runtime.css, so its rules win ties).
+import './shell.css';
 
 export function AppRuntimePage() {
   const params = useParams();
@@ -63,10 +65,11 @@ export function AppRuntimePage() {
       return <NotFoundScreen kind="missing" />;
     case 'error':
       return <LoadErrorScreen message={state.message} onRetry={() => void reload()} busy={data.reloading} />;
+    // Keyed by app: sheets, offers and companion state never carry over from one app to another.
     case 'offline':
-      return <Shell appId={appId} detail={state.detail} records={state.records} offline savedAt={state.savedAt} onRetry={() => void reload()} busy={data.reloading} />;
+      return <Shell key={appId} appId={appId} detail={state.detail} records={state.records} offline savedAt={state.savedAt} onRetry={() => void reload()} busy={data.reloading} />;
     case 'ready':
-      return <Shell appId={appId} detail={state.detail} records={state.records} data={data} />;
+      return <Shell key={appId} appId={appId} detail={state.detail} records={state.records} data={data} />;
     default:
       return <RuntimeSkeleton />;
   }
@@ -93,8 +96,8 @@ function Shell({ appId, detail, records, data, offline = false, savedAt, onRetry
     <div className="rt-root" data-testid="rt-app" data-offline={offline || undefined} {...theme.attrs} style={theme.style as CSSProperties}>
       {offline && savedAt && onRetry && <OfflineBanner savedAt={savedAt} onRetry={onRetry} busy={busy} />}
       <Routes>
-        <Route path="/" element={<AppHome appId={appId} detail={detail} records={records} actions={actions} />} />
-        <Route path="settings" element={<AppSettingsPage appId={appId} detail={detail} recordCount={records.length} offline={offline} onDetail={data?.setDetail ?? noop} />} />
+        <Route path="/" element={<AppHome appId={appId} detail={detail} records={records} actions={actions} onDetail={actions ? data?.setDetail : undefined} />} />
+        <Route path="settings" element={<AppSettingsPage appId={appId} detail={detail} records={records} offline={offline} onDetail={data?.setDetail ?? noop} />} />
         <Route path="*" element={<Navigate to={appHomePath(appId)} replace />} />
       </Routes>
     </div>

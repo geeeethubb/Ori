@@ -1,14 +1,15 @@
 /**
- * Saved sources (songs, lessons, articles): host and title, a note on why it mattered, a kind chip,
- * and a link out in a new tab. Nothing is fetched or embedded; the person opens the source themselves.
+ * Saved sources (songs, lessons, articles): one row each with a small glyph for its kind, the title,
+ * the kind and host, a note on why it mattered, and Open (a new tab). Nothing is fetched, embedded or
+ * played here; the person opens the source themselves.
  */
 import { useMemo, type ReactNode } from 'react';
 import { fieldById, type AppSpec } from '@shared/appSpec.ts';
-import { ICON_GRADIENTS } from '@shared/icons.ts';
 import type { AppRecord } from '@shared/records.ts';
-import { EmptyState, Icons } from '../components/ui.tsx';
+import { EmptyState, Glyph, Icons } from '../components/ui.tsx';
 import { ValueDisplay } from './ValueDisplay.tsx';
-import { linkHost, linkRows, type LinksViewSpec } from './viewLogic.ts';
+import { linkHost, linkRows, sourceGlyph, type LinksViewSpec } from './viewLogic.ts';
+import './appViews.css';
 
 interface Props {
   spec: AppSpec;
@@ -25,44 +26,41 @@ export function LinksView({ spec, view, records, onEdit, action }: Props) {
   const tagsField = fieldById(spec, view.tagsFieldId);
 
   if (!rows.length) {
-    return <EmptyState title="Nothing saved yet" body="Keep the songs, lessons and riffs you want to come back to. A link and one line about why is enough." action={action} />;
+    return <EmptyState title="Nothing saved yet" body="Keep the links you want to come back to. A link and one line about why is enough." action={action} />;
   }
 
   return (
-    <ul className="rt-links" data-testid="rt-links" aria-label={view.title ?? 'Saved sources'}>
+    <ul className="rt-links src-cards" data-testid="rt-links" aria-label={view.title ?? 'Saved sources'}>
       {rows.map((r) => {
         const url = typeof r.values[view.urlFieldId] === 'string' ? (r.values[view.urlFieldId] as string).trim() : '';
         const host = linkHost(url);
         const titleRaw = view.titleFieldId ? r.values[view.titleFieldId] : undefined;
         const title = typeof titleRaw === 'string' && titleRaw.trim() ? titleRaw.trim() : host || 'Saved link';
         const note = view.noteFieldId ? r.values[view.noteFieldId] : undefined;
-        const kind = kindField?.type === 'select' ? kindField.options.find((o) => o.value === r.values[kindField.id]) : undefined;
+        const kind = kindField?.type === 'select' ? kindField.options.find((o) => o.value === r.values[kindField.id])?.label : undefined;
+        const meta = [kind, host && host !== title ? host : ''].filter(Boolean).join(' · ');
+        const glyph = sourceGlyph(kind);
         const safe = /^https?:\/\//i.test(url);
         return (
-          <li key={r.id} className="card rt-link-item" data-testid="rt-link-item">
-            <div className="rt-link-main">
-              <div className="rt-link-meta">
-                {kind && (
-                  <span className="rt-kind-chip">
-                    {kind.color && <span className="rt-dot" style={{ background: ICON_GRADIENTS[kind.color][0] }} aria-hidden="true" />}
-                    {kind.label}
-                  </span>
-                )}
-                {host && title !== host && <span className="rt-link-host">{host}</span>}
-              </div>
-              <h4 className="rt-link-title">{title}</h4>
-              {typeof note === 'string' && note.trim() && <p className="rt-link-note">{note}</p>}
+          <li key={r.id} className="src-card" data-testid="rt-link-item">
+            <span className="src-thumb" data-glyph={glyph} aria-hidden="true">
+              <Glyph symbol={glyph} size={20} />
+            </span>
+            <div className="src-text">
+              <h4 className="src-title">{title}</h4>
+              {meta && <span className="src-meta">{meta}</span>}
+              {typeof note === 'string' && note.trim() && <p className="src-note">{note}</p>}
               {tagsField && <ValueDisplay field={tagsField} value={r.values[tagsField.id]} />}
             </div>
-            <div className="rt-link-actions">
+            <div className="src-actions">
               {safe && (
-                <a className="btn btn-secondary rt-link-open" href={url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${title} in a new tab`} data-testid="rt-link-open">
+                <a className="btn btn-secondary btn-sm src-open" href={url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${title} in a new tab`} data-testid="rt-link-open">
                   {Icons.external}
                   Open
                 </a>
               )}
               {onEdit && (
-                <button type="button" className="btn btn-ghost" onClick={() => onEdit(r)} aria-label={`Edit ${title}`}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => onEdit(r)} aria-label={`Edit ${title}`}>
                   Edit
                 </button>
               )}

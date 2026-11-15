@@ -1,5 +1,5 @@
 /**
- * Bring more context (/settings/import): optional accelerators. Paste a profile another AI wrote,
+ * Bring context from your AI (/settings/import): optional accelerators. Paste a profile another AI wrote,
  * upload a file, or answer four short questions. The long export prompt sits behind a copy control;
  * the sample profiles are labelled. Success lands on What you've shared.
  */
@@ -29,7 +29,7 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export function ImportPage() {
-  usePageTitle(`Bring more context · ${BRAND.name}`);
+  usePageTitle(`Bring context from your AI · ${BRAND.name}`);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { refresh } = useAuth();
@@ -77,9 +77,9 @@ export function ImportPage() {
     <div className="container-narrow im">
       <header className="im-head">
         <Link to="/settings" className="st-back">{Icons.back} Settings</Link>
-        <h1>Bring more context</h1>
+        <h1>Bring context from your AI</h1>
         <p className="lede">
-          Optional. The agent learns from what you share as you go; this is a shortcut if another AI already knows what you are working on and curious about.
+          Optional. {BRAND.name} learns from what you share as you go; this is a shortcut if another AI already knows what you are working on and curious about.
         </p>
         <p className="small muted">Only what you add here is used. Nothing is read from your accounts or other chats.</p>
       </header>
@@ -87,7 +87,7 @@ export function ImportPage() {
       {isBusy && (
         <div className="banner banner-info" role="status" aria-live="polite" data-testid="store-import-busy">
           <Spinner />
-          <span>{busy === 'sample' ? 'Adding example context…' : 'Reading what you brought… this usually takes 10 to 30 seconds.'}</span>
+          <span>{busy === 'sample' ? 'Adding the example profile…' : `${BRAND.name} is reading what you brought. This usually takes 10 to 30 seconds.`}</span>
         </div>
       )}
       {error && <ErrorBanner message={error} onRetry={() => void lastAttempt.current?.()} />}

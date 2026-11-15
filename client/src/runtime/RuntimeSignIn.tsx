@@ -51,10 +51,10 @@ export function RuntimeSignIn({ appId }: { appId: string }) {
       <div className="rt-page rt-page-center">
         <div className="card card-pad rt-signin" data-testid="rt-signin">
           <div className="rt-signin-head">
-            {boot && <AppIcon icon={boot.icon} size={56} title={`${boot.name} icon`} />}
+            {boot && <AppIcon icon={boot.icon} name={boot.name} size={56} title={`${boot.name} icon`} />}
             <h1>{mode === 'login' ? 'Sign in' : 'Create your account'}</h1>
             <p className="muted">
-              {boot ? `to open ${boot.name}.` : 'to open your app.'} Your apps and entries are saved to your account, so they come back on any device.
+              {boot ? `to open ${boot.name}. It opens right here once you’re in.` : 'to open your app. It opens right here once you’re in.'} Your entries are saved to your account.
             </p>
           </div>
           {auth.offline && (

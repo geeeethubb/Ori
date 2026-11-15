@@ -4,13 +4,14 @@
  * edits, and the example flag on Agent shares. The components call these helpers.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { AppSpecSchema } from '@shared/appSpec.ts';
+import { AppSpecSchema, formFieldsFor, type AppSpecInput } from '@shared/appSpec.ts';
 import { FIELD_ID_PATTERN, SHORT_ID_PATTERN } from '@shared/ids.ts';
 import { validateValues, type AppRecord, type RecordValues } from '@shared/records.ts';
-import { PEOPLE_QUEUE } from '../../../server/fixtures/specs.ts';
+import { FOLLOW_UP_BOARD, PEOPLE_QUEUE } from '../../../server/fixtures/specs.ts';
 import { ApiError } from '../api.ts';
 import { isUnchangedExample } from '../pages/AgentPage.tsx';
-import { undoPatch } from './QueueView.tsx';
+import { saveMessageDraft, undoPatch } from './QueueView.tsx';
+import { editDraftKey, newRecordBase, shownChanges, splitEditDraft } from './RecordForm.tsx';
 import { afterConflict, createdMessage, createEntry, SAVED_AS_NEW } from './RecordSheet.tsx';
 import { changedValues, draftFor, draftKey, keepUntouched, openForm, parseDraft, readJson, serializeDraft, writeDraft } from './runtimeUtils.ts';
 import { revertKeys, upsertRecord } from './useAppData.ts';
@@ -264,6 +265,84 @@ describe('drafts on this device', () => {
     expect(readJson(editKey)).toEqual(serializeDraft({ values: { person: 'Maya B.' } }));
     writeDraft(editKey, draftFor({ person: 'Maya' }, { editing: { person: 'Maya' } }));
     expect(store.has(editKey)).toBe(false);
+  });
+});
+
+describe('a form never restores or sends a field it does not show (review finding 1)', () => {
+  const alex = { person: 'Alex', action: 'Send the article', draft: null };
+  const unsavedEdit = { action: 'Send the article AND the invoice (unsaved edit)' };
+  const onlyDraft = new Set(['draft']);
+
+  it('an unsaved Edit details change to the action is not restored in the message form, and is kept for Edit details', () => {
+    const split = splitEditDraft(stored(serializeDraft({ values: unsavedEdit })), onlyDraft);
+    expect(split.own).toBeNull();
+    expect(split.foreign).toEqual(unsavedEdit);
+    const form = openForm(alex, split.own, { editing: true, mint });
+    expect(form.restored).toBe(false);
+    expect(form.spent).toBe(false);
+  });
+
+  it('saving the message sends the message only, never the action', () => {
+    const typed = { ...alex, draft: 'Hi Alex, here is the article.' };
+    expect(shownChanges(changedValues(alex, typed), onlyDraft)).toEqual({ draft: 'Hi Alex, here is the article.' });
+    // Even values that somehow carry the other form's change send only what this form shows.
+    expect(shownChanges({ ...unsavedEdit, draft: 'Hi' }, onlyDraft)).toEqual({ draft: 'Hi' });
+  });
+
+  it('restores the shown part of a mixed draft, keeps the rest apart, and drops a format edits cannot use', () => {
+    const split = splitEditDraft(stored(serializeDraft({ values: { ...unsavedEdit, draft: 'Hi' } })), onlyDraft);
+    expect(parseDraft(split.own, true)).toEqual({ values: { draft: 'Hi' } });
+    expect(split.foreign).toEqual(unsavedEdit);
+    const old = { action: 'whole values map from an older build' };
+    expect(splitEditDraft(old, onlyDraft)).toEqual({ own: old, foreign: {} });
+    expect(splitEditDraft(null, onlyDraft)).toEqual({ own: null, foreign: {} });
+  });
+
+  it('the message form keeps its own draft, apart from Edit details (which keeps its key)', () => {
+    expect(editDraftKey('app_00000001', 'rec_alex_0001')).toBe(draftKey('app_00000001', 'rec_alex_0001'));
+    expect(editDraftKey('app_00000001', 'rec_alex_0001', 'message')).not.toBe(draftKey('app_00000001', 'rec_alex_0001'));
+  });
+});
+
+describe('the message draft after another device changed it (review finding 2)', () => {
+  const steps = () => {
+    const log: string[] = [];
+    return { log, after: { saved: () => log.push('saved'), close: () => log.push('closed') } };
+  };
+
+  it('a refusal because it changed elsewhere closes the sheet, so a second Save cannot go over the newer draft', async () => {
+    const { log, after } = steps();
+    const refused = new ApiError(409, 'This changed on another device, so nothing was overwritten.', 'record_conflict');
+    await expect(saveMessageDraft(() => Promise.reject(refused), after)).rejects.toBe(refused);
+    expect(log).toEqual(['closed']);
+  });
+
+  it('another failure keeps the sheet open with what was typed; a save says so and closes', async () => {
+    const failed = steps();
+    await expect(saveMessageDraft(() => Promise.reject(new ApiError(0, 'You appear to be offline.', 'network')), failed.after)).rejects.toBeInstanceOf(ApiError);
+    expect(failed.log).toEqual([]);
+    const ok = steps();
+    await saveMessageDraft(() => Promise.resolve(), ok.after);
+    expect(ok.log).toEqual(['saved', 'closed']);
+  });
+});
+
+describe('a new card lands in a column (review finding 3)', () => {
+  it('an optional stage without a default still starts at the first stage, so the card is not left in "Other"', () => {
+    const input: AppSpecInput = structuredClone(FOLLOW_UP_BOARD);
+    const stage = (input.fields as { id: string; required?: boolean; default?: unknown }[]).find((f) => f.id === 'stage')!;
+    delete stage.default;
+    stage.required = false;
+    const board = AppSpecSchema.parse(input);
+    const stageField = board.fields.find((f) => f.id === 'stage');
+    if (stageField?.type !== 'select') throw new Error('the board stage is a select');
+    expect(stageField.required).toBe(false);
+    expect(newRecordBase(board, formFieldsFor(board, board.views[0]!), {}).stage).toBe(stageField.options[0]!.value);
+  });
+
+  it('an optional choice no view is built on (how a person was reached) still starts unchosen', () => {
+    const people = AppSpecSchema.parse(PEOPLE_QUEUE);
+    expect(newRecordBase(people, formFieldsFor(people, people.views[0]!), {})).not.toHaveProperty('channel');
   });
 });
 

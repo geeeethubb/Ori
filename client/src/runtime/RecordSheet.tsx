@@ -8,8 +8,7 @@ import { newId } from '@shared/ids.ts';
 import type { AppRecord, RecordValues } from '@shared/records.ts';
 import { ApiError, describeError } from '../api.ts';
 import { Sheet, useToast } from '../components/ui.tsx';
-import { RecordForm } from './RecordForm.tsx';
-import { draftKey, removeKey } from './runtimeUtils.ts';
+import { RecordForm, removeEditDrafts } from './RecordForm.tsx';
 import type { RecordActions } from './useAppData.ts';
 
 export type SheetState =
@@ -54,6 +53,25 @@ export function createdMessage(result: { duplicate: boolean; updated: boolean })
 
 /** The toast when the entry under an id was deleted, so the save went to a new entry. */
 export const SAVED_AS_NEW = 'That entry was deleted, so this was saved as a new one.';
+
+/** The minutes label of a practice session typed in by hand: what was practiced, not what a timer measured. */
+export const TYPED_IN_MINUTES_LABEL = 'Minutes practiced';
+
+/** The minutes field of a practice session saved without the timer (its minutes come in empty: nothing was measured). */
+export function typedInMinutesField(sheet: SheetState): string | undefined {
+  if (sheet?.mode !== 'new' || sheet.view.type !== 'practice' || !sheet.preset) return undefined;
+  const minutes = sheet.view.minutesFieldId;
+  return minutes in sheet.preset && sheet.preset[minutes] === null ? minutes : undefined;
+}
+
+/**
+ * Labels a form shows for this task only. A practice session typed in by hand asks for the minutes
+ * practiced, so a typed-in log never reads as timed.
+ */
+export function formLabels(sheet: SheetState): Record<string, string> | undefined {
+  const minutes = typedInMinutesField(sheet);
+  return minutes ? { [minutes]: TYPED_IN_MINUTES_LABEL } : undefined;
+}
 
 /**
  * Sends a new entry under its id. When the entry under that id was deleted (409 record_deleted), the id
@@ -108,6 +126,9 @@ export function RecordSheet({ appId, spec, sheet, onClose, actions, records }: P
   const view = sheet?.view;
   const noun = spec.entryNoun.singular;
   const fields = useMemo(() => (view ? formFieldsFor(spec, view) : undefined), [spec, view]);
+  const labels = useMemo(() => formLabels(sheet), [sheet]);
+  // A session typed in by hand starts at its minutes: that is what the note asks for.
+  const focusFieldId = typedInMinutesField(sheet);
   const preset = useMemo<RecordValues | undefined>(() => {
     if (!sheet || sheet.mode !== 'new') return undefined;
     const filter = sheet.view.filter ? { [sheet.view.filter.fieldId]: sheet.view.filter.value } : {};
@@ -170,7 +191,7 @@ export function RecordSheet({ appId, spec, sheet, onClose, actions, records }: P
         setSubmitting(true);
         try {
           await actions.deleteRecord(record.id);
-          removeKey(draftKey(appId, record.id));
+          removeEditDrafts(appId, record.id);
           toast('Deleted');
           close();
         } catch (err) {
@@ -204,6 +225,8 @@ export function RecordSheet({ appId, spec, sheet, onClose, actions, records }: P
           serverErrors={serverErrors}
           submitLabel={sheet.mode === 'new' ? sheet.view.addLabel : undefined}
           note={sheet.mode === 'new' ? sheet.note : undefined}
+          labels={labels}
+          focusFieldId={focusFieldId}
         />
       )}
     </Sheet>

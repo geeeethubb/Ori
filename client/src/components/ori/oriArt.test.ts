@@ -8,7 +8,21 @@ import { describe, expect, it } from 'vitest';
 import { createElement, Fragment } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Resvg } from '@resvg/resvg-js';
-import { ORI_BODY_PATH, ORI_COLORS, ORI_MOODS, oriAppIconSvg, oriCompanionSvg, oriWordmarkSvg, type OriMood } from '@shared/oriArt.ts';
+import {
+  ORI_BODY_PATH,
+  ORI_COLORS,
+  ORI_FAVICON_GRIDS,
+  ORI_LOCKUP_COMPANION_TRANSFORM,
+  ORI_LOCKUP_VIEWBOX,
+  ORI_MOODS,
+  oriAppIconSvg,
+  oriCompanionSvg,
+  oriFaviconDocument,
+  oriFaviconSvg,
+  oriLockupSvg,
+  oriWordmarkSvg,
+  type OriMood,
+} from '@shared/oriArt.ts';
 import { OriCompanion } from './OriCompanion.tsx';
 import { OriLockup, OriWordmark } from './OriWordmark.tsx';
 
@@ -123,10 +137,11 @@ describe('Ori app icon and wordmark', () => {
 
   it('draws each wordmark variant in its colours with a lime i-dot', () => {
     const k = 64 / 321; // wordmark units → px at height 64
+    // Spec section 3: the i is "a lime dot framed in blue" in every variant, white letters on ink too.
     const cases = [
       ['ink', ORI_COLORS.ink, ORI_COLORS.cobalt],
       ['cobalt', ORI_COLORS.cobalt, ORI_COLORS.cobalt],
-      ['light', ORI_COLORS.white, ORI_COLORS.white],
+      ['light', ORI_COLORS.white, ORI_COLORS.cobalt],
     ] as const;
     for (const [variant, letters, ring] of cases) {
       const img = raster(oriWordmarkSvg({ variant, height: 64 }));
@@ -137,6 +152,66 @@ describe('Ori app icon and wordmark', () => {
       expectColor(img.at((439 + 45.5) * k, 57.5 * k), ring); // its ring
       expect(img.at(110 * k, 200 * k)[3], `${variant}: the o has an open counter`).toBe(0);
     }
+  });
+
+  it('pairs the light wordmark with the white single-colour companion (cobalt on ink is about 2.5:1)', () => {
+    const height = 160;
+    const [tx, ty, s] = /translate\(([-\d.]+) ([-\d.]+)\) scale\(([\d.]+)\)/.exec(ORI_LOCKUP_COMPANION_TRANSFORM)!.slice(1).map(Number) as [number, number, number];
+    const vb = ORI_LOCKUP_VIEWBOX;
+    const at = (img: ReturnType<typeof raster>, fx: number, fy: number) => img.at((tx + fx * s - vb.x) * (height / vb.height), (ty + fy * s - vb.y) * (height / vb.height));
+    const light = oriLockupSvg({ variant: 'light', height });
+    expect(bodies(light)).toEqual([ORI_BODY_PATH]);
+    expect(light).not.toContain('ori-cheek');
+    const img = raster(light);
+    expectColor(at(img, 35, 79), ORI_COLORS.white); // lower-left of the body
+    expect(at(img, 41.4, 59.5)[3], 'the eye is cut out, so the ink shows through').toBe(0);
+    for (const variant of ['ink', 'cobalt'] as const) {
+      const full = raster(oriLockupSvg({ variant, height }));
+      expectColor(at(full, 35, 79), ORI_COLORS.cobalt);
+      expectColor(at(full, 41.4, 59.5), ORI_COLORS.white);
+    }
+  });
+});
+
+describe('Ori favicon', () => {
+  /** The tile itself: lilac, or its see-through rounded corners. */
+  const isTile = ([r, g, b, a]: RGBA) => a < 255 || Math.abs(r - 0xdb) + Math.abs(g - 0xcb) + Math.abs(b - 0xff) < 40;
+
+  it('draws 16 and 32 px favicons with whole-pixel eyes, a clear cobalt gap and a body filling ~85%', () => {
+    for (const grid of [16, 32] as const) {
+      const spec = ORI_FAVICON_GRIDS[grid];
+      const img = raster(oriFaviconSvg(grid));
+      expect([img.width, img.height]).toEqual([grid, grid]);
+      const [w, h] = spec.eyeSize;
+      const rows = spec.eyeRadius > 0 ? [1, h - 2] : [0, h - 1]; // rounded ends soften the end rows
+      for (const [ex, ey] of spec.eyes) {
+        for (let x = ex; x < ex + w; x++) for (let y = ey + rows[0]!; y <= ey + rows[1]!; y++) expectColor(img.at(x, y), ORI_COLORS.white);
+      }
+      const [[lx], [rx]] = spec.eyes as [readonly [number, number], readonly [number, number]];
+      expect(rx - (lx + w), `${grid}: gap between the eyes`).toBeGreaterThanOrEqual(2);
+      for (let x = lx + w; x < rx; x++) expectColor(img.at(x, spec.eyes[0]![1] + 1), ORI_COLORS.cobalt);
+      // Height of everything that is not the lilac tile: the body (plus eyes and cheek) fills ~85%.
+      let top: number = grid;
+      let bottom = -1;
+      for (let y = 0; y < grid; y++) for (let x = 0; x < grid; x++) if (!isTile(img.at(x, y))) { top = Math.min(top, y); bottom = Math.max(bottom, y); }
+      expect((bottom - top + 1) / grid).toBeGreaterThanOrEqual(0.8);
+      expect((bottom - top + 1) / grid).toBeLessThanOrEqual(0.95);
+    }
+    expectColor(raster(oriFaviconSvg(16)).at(11, 11), ORI_COLORS.lime); // the cheek, a whole pixel
+  });
+
+  it('serves one parent favicon document: tiny drawings at tab sizes, the app icon from 48 px', () => {
+    const doc = oriFaviconDocument();
+    expect(doc).toMatch(/^<svg[^>]*width="32" height="32"/);
+    expect(doc).toContain('@media (min-width:24px)');
+    expect(doc).toContain('@media (min-width:48px)');
+    expect(bodies(doc)).toEqual([ORI_BODY_PATH, ORI_BODY_PATH, ORI_BODY_PATH]); // one character everywhere
+    // A renderer without CSS (resvg here) shows the 16 px drawing, pixel for pixel.
+    const plain = new Resvg(doc, { fitTo: { mode: 'width', value: 16 } }).render().pixels;
+    const tiny = new Resvg(oriFaviconSvg(16)).render().pixels;
+    let off = 0;
+    for (let i = 0; i < tiny.length; i++) off = Math.max(off, Math.abs(plain[i]! - tiny[i]!));
+    expect(off).toBeLessThanOrEqual(8);
   });
 });
 
@@ -181,5 +256,22 @@ describe('Ori components', () => {
     expect(lockup).toMatch(/^<svg[^>]*role="img"[^>]*aria-label="Ori"/);
     expect(bodies(lockup)).toEqual([ORI_BODY_PATH]);
     expect(lockup).toContain('ori-dot');
+  });
+
+  it('gives every light lockup on a page its own eye mask; the full-colour lockups need none', () => {
+    const light = () => createElement(OriLockup, { size: 52, variant: 'light' });
+    const html = renderToStaticMarkup(createElement(Fragment, null, light(), light()));
+    const ids = [...html.matchAll(/<mask id="([^"]+)"/g)].map((m) => m[1]);
+    const refs = [...html.matchAll(/mask="url\(#([^)]+)\)"/g)].map((m) => m[1]);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+    expect(refs).toEqual(ids);
+    expect(html).toContain(`fill="${ORI_COLORS.white}"`);
+    expect(html).not.toContain('ori-cheek');
+    for (const variant of ['ink', 'cobalt'] as const) {
+      const full = renderToStaticMarkup(createElement(OriLockup, { size: 52, variant }));
+      expect(full, variant).not.toContain('<mask');
+      expect(full, variant).toContain('ori-cheek');
+    }
   });
 });

@@ -1,0 +1,93 @@
+/* ------------------------------------------------------------------
+   My apps, the launcher (reference 05; ORI_DESIGN_SPEC section 6).
+   Prefix: ln-. One calm column: the companion and "Your little world",
+   "Continue in <App>", the apps as icon tiles with short names, the
+   selected app's actions, and "Make something new". Phone first;
+   nothing here may widen the page at 320px.
+   ------------------------------------------------------------------ */
+
+.ln { display: flex; flex-direction: column; gap: 20px; max-width: 760px; }
+/* A solid cobalt focus ring (about 6:1 on the canvas and on white). */
+.ln :focus-visible { outline-color: var(--blue); }
+.ln .disclosure summary { min-height: 44px; }
+
+.ln-head { display: flex; align-items: center; gap: 14px; padding-top: 4px; }
+.ln-head > .ori-companion { width: 76px; height: 76px; flex: none; }
+.ln-head h1 { font-size: clamp(1.9rem, 1.4rem + 2vw, 2.6rem); font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; max-width: 8ch; }
+@media (min-width: 560px) {
+  .ln-head > .ori-companion { width: 92px; height: 92px; }
+  .ln-head h1 { max-width: none; }
+}
+
+/* Continue in <App>: real recent use, one deliberate tap. */
+.ln-continue { display: flex; align-items: center; gap: 14px; padding: 12px 12px 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l); }
+.ln-continue > svg { flex: none; }
+.ln-continue-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ln-continue-text strong { font-family: var(--font-display); font-size: 1.05rem; line-height: 1.2; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.ln-continue-line { min-height: 1.35em; font-size: 0.9rem; color: var(--ink-2); overflow-wrap: anywhere; }
+.ln-pill { flex: none; border-radius: 999px; padding-inline: 22px; }
+@media (max-width: 359px) {
+  .ln-continue { gap: 10px; padding: 10px; }
+  .ln-continue > svg { width: 40px; height: 40px; }
+  .ln-pill { padding-inline: 16px; }
+  .ln-action { font-size: 0.8rem; }
+}
+
+/* The tiles: an icon and a short name; the selected one sits on a card with a cobalt edge and an
+   Open cue on that edge. Rows leave room for the cue, so selecting never moves the grid. */
+.ln-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px 6px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (min-width: 560px) { .ln-grid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 18px 10px; } }
+.ln-cell { display: flex; min-width: 0; }
+.ln-tile { position: relative; flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 6px 14px; border: 2px solid transparent; border-radius: 22px; background: transparent; color: var(--ink); text-align: center; transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease; scroll-margin-top: 88px; scroll-margin-bottom: calc(var(--nav-h) + var(--safe-bottom) + 24px); }
+.ln-tile:hover { background: var(--surface); }
+.ln-tile[aria-checked='true'] { background: var(--surface); border-color: var(--blue); box-shadow: 0 6px 18px rgba(49, 71, 242, 0.14); }
+.ln-tile:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; border-radius: 22px; }
+.ln-tile-icon { position: relative; display: inline-flex; }
+.ln-tile-icon > svg { width: 64px; height: 64px; }
+@media (max-width: 359px) { .ln-tile-icon > svg { width: 56px; height: 56px; } }
+.ln-tile-pin { position: absolute; right: -6px; top: -6px; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); display: inline-flex; align-items: center; justify-content: center; color: var(--ink-2); }
+.ln-tile-pin svg { width: 12px; height: 12px; }
+/* Names are never clipped: rows grow, long words hyphenate, and only a word that still cannot fit breaks anywhere. */
+.ln-tile-name { max-width: 100%; font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; line-height: 1.2; hyphens: auto; -webkit-hyphens: auto; overflow-wrap: anywhere; }
+@media (max-width: 359px) { .ln-tile-name { font-size: 0.88rem; } }
+.ln-tile-example { font-size: 0.68rem; padding: 1px 7px; }
+.ln-tile-open { position: absolute; left: 50%; bottom: -12px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 10px 0 8px; border-radius: 999px; background: var(--blue); color: #FFFFFF; box-shadow: 0 0 0 3px var(--canvas); font-family: var(--font-display); font-weight: 700; font-size: 0.74rem; line-height: 1; white-space: nowrap; }
+.ln-tile-open svg { width: 12px; height: 12px; flex: none; }
+.ln-skeleton-tile { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 6px; }
+
+/* The selected app's actions: Open, Edit with Ori, Add to home screen; the rest behind "More". */
+/* Scrolled into view clear of the tab bar and of a toast above it (Archive and Restore announce in one). */
+.ln-actions { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l); scroll-margin-top: 88px; scroll-margin-bottom: calc(var(--nav-h) + var(--safe-bottom) + 88px); }
+.ln-actions-head { display: flex; align-items: center; gap: 12px; padding: 0 52px 0 4px; min-height: 44px; }
+.ln-actions > .ln-more { position: absolute; top: 12px; right: 10px; }
+.ln-actions-head > svg { flex: none; }
+.ln-actions-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.ln-actions-text h2 { font-size: 1.1rem; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.ln-actions-text span { font-size: 0.88rem; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ln-actions-text .ln-actions-status { white-space: normal; overflow: visible; }
+.ln-actions-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); padding-top: 6px; }
+/* An archived app: Restore, then Open. */
+.ln-actions-row-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ln-action { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-height: 64px; padding: 8px 4px; border: 0; border-radius: 14px; background: transparent; color: var(--ink); font-family: var(--font-display); font-weight: 700; font-size: 0.86rem; line-height: 1.15; text-align: center; }
+.ln-action:not(:first-child)::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 1px; background: var(--line); }
+.ln-action:hover { background: var(--surface-2); text-decoration: none; }
+.ln-action:hover::before, .ln-action:hover + .ln-action::before { background: transparent; }
+.ln-action svg { width: 22px; height: 22px; flex: none; }
+.ln-action-primary { color: var(--blue-ink); }
+.ln-hint { padding: 0 4px; font-size: 0.9rem; color: var(--ink-2); }
+
+/* Make something new: starts in the Agent with the composer focused. */
+.ln-make { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 16px 10px 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-l); color: var(--ink); font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; letter-spacing: -0.01em; }
+.ln-make:hover { text-decoration: none; background: var(--blue-soft); }
+.ln-make-plus { flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--blue); color: #FFFFFF; display: inline-flex; align-items: center; justify-content: center; }
+.ln-make-plus svg { width: 22px; height: 22px; }
+
+.ln-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 28px 20px; text-align: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l); }
+.ln-empty-icons { display: flex; align-items: flex-end; gap: 12px; }
+.ln-empty-icons > svg:nth-child(2) { transform: translateY(-8px); }
+.ln-empty p { max-width: 46ch; }
+.ln-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+
+.ln-archived .ln-grid { margin-top: 8px; }
+.ln-archived .ln-tile:not([aria-checked='true']) { opacity: 0.75; }
+.ln-import { align-self: flex-start; }

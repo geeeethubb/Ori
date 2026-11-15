@@ -1,0 +1,268 @@
+/* ------------------------------------------------------------------
+   App shell (/apps/{id}/): the app's own header, Edit with Ori, the
+   home-screen guide and the one-time offer. Each app keeps its own
+   identity: Light an editorial italic serif on paper, Riff heavy sans on
+   ink, People compact sans. The parent's Agent / Playground / My apps
+   navigation never appears here. Ori's own sheets use Ori's cobalt for
+   their decisions. Phone first: 16px gutters, 44px targets, AA text.
+   Views and runtime.css belong to the app views; these rules only style
+   the shell's own classes (rt-head*, rt-view-tabs, rt-ori-*, ori-*, rt-cp-*,
+   rt-install-*).
+   ------------------------------------------------------------------ */
+
+.rt-root {
+  --rt-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, 'Times New Roman', serif;
+}
+
+/* ---------- header: icon + name, Edit with Ori, "..." ---------- */
+.rt-head { display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
+.rt-head-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; }
+.rt-head-id { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
+.rt-head-icon { flex: none; border-radius: 22%; }
+.rt-root .rt-head-name {
+  margin: 0; min-width: 0; color: var(--app-ink);
+  font-family: var(--app-font-display); font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.12;
+  overflow-wrap: break-word;
+}
+.rt-head .rt-head-tag.rt-tag { align-self: flex-start; order: 0; width: max-content; margin-bottom: -4px; }
+.rt-head-actions { display: flex; align-items: center; gap: 4px; flex: none; }
+
+/* Edit with Ori: a quiet pill with a small companion. It folds to the companion alone when space is short. */
+.rt-ori-pill {
+  position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px 0 5px;
+  border-radius: 999px; border: 1.5px solid #C9B8FF; background: #FFFFFF; color: #162039; cursor: pointer;
+  font-family: var(--app-font-display); font-size: 0.92rem; font-weight: 700; letter-spacing: -0.005em; white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.rt-ori-pill:hover { background: #F4EEFF; border-color: #A991F2; }
+.rt-ori-pill:focus-visible { outline: 3px solid #3147F2; outline-offset: 2px; }
+.rt-ori-pill-mark { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: #F1EAFF; flex: none; }
+.rt-ori-pill-mark .ori-companion { display: block; }
+/* On ink and charcoal the pill is lilac with ink text (11:1); the companion sits on white. */
+.rt-root[data-theme='ink'] .rt-ori-pill, .rt-root[data-theme='charcoal'] .rt-ori-pill { background: #DBCBFF; border-color: #DBCBFF; color: #162039; }
+.rt-root[data-theme='ink'] .rt-ori-pill:hover, .rt-root[data-theme='charcoal'] .rt-ori-pill:hover { background: #E8DDFF; border-color: #E8DDFF; }
+.rt-root[data-theme='ink'] .rt-ori-pill-mark, .rt-root[data-theme='charcoal'] .rt-ori-pill-mark { background: #FFFFFF; }
+.rt-root[data-theme='ink'] .rt-ori-pill:focus-visible, .rt-root[data-theme='charcoal'] .rt-ori-pill:focus-visible { outline-color: #DFFF76; }
+
+.rt-root .rt-head-menu-btn.btn { width: 44px; height: 44px; color: var(--app-ink); }
+.rt-root .rt-head-menu-btn.btn svg { width: 22px; height: 22px; }
+.rt-root .rt-head-menu-btn.btn:hover { background: var(--app-surface-2); color: var(--app-ink); }
+.rt-root .rt-head-menu-btn.btn:focus-visible { outline: 3px solid var(--app-accent-text); outline-offset: 1px; }
+.rt-root .rt-head-menu .menu { min-width: 232px; }
+.rt-root .rt-head-menu .menu a:focus-visible, .rt-root .rt-head-menu .menu button:focus-visible { outline: 2px solid var(--app-accent-text); outline-offset: -2px; }
+
+@media (max-width: 380px) {
+  .rt-ori-pill { width: 44px; padding: 0; justify-content: center; }
+  .rt-ori-pill-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+@media (max-width: 440px) {
+  .rt-head[data-name='long'] .rt-ori-pill { width: 44px; padding: 0; justify-content: center; }
+  .rt-head[data-name='long'] .rt-ori-pill-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+/* The app's headline: its tagline, large, in the app's own type. */
+.rt-root .rt-headline {
+  margin: 2px 0 0; max-width: 22ch; color: var(--app-ink); text-wrap: balance;
+  font-family: var(--app-font-display); font-size: clamp(1.9rem, 1.15rem + 3.4vw, 2.75rem); font-weight: 800; line-height: 1.08; letter-spacing: -0.03em;
+}
+/* Light (a photo gallery in editorial type): a restrained italic serif for its name and headline. */
+.rt-root[data-typography='editorial'] .rt-page[data-pattern='gallery'] .rt-head-name,
+.rt-root[data-typography='editorial'] .rt-page[data-pattern='gallery'] .rt-headline { font-family: var(--rt-serif); font-style: italic; font-weight: 500; letter-spacing: -0.01em; }
+.rt-root[data-typography='editorial'] .rt-page[data-pattern='gallery'] .rt-head-name { font-size: 1.9rem; line-height: 1; }
+.rt-root[data-typography='editorial'] .rt-page[data-pattern='gallery'] .rt-headline { font-size: clamp(2.15rem, 1.3rem + 3.6vw, 3.3rem); line-height: 1.04; }
+/* Riff: strong sans, two firm lines. */
+.rt-root[data-typography='display'] .rt-headline { font-size: clamp(2rem, 1.2rem + 3.6vw, 3rem); letter-spacing: -0.035em; max-width: 19ch; }
+/* People: compact and readable. */
+.rt-root[data-typography='compact'] .rt-head-name { font-size: 1.45rem; }
+.rt-root[data-typography='compact'] .rt-headline { font-size: clamp(1.75rem, 1.2rem + 2.6vw, 2.4rem); letter-spacing: -0.025em; }
+@media (min-width: 760px) {
+  .rt-root .rt-head-name { font-size: 1.7rem; }
+  .rt-root[data-typography='editorial'] .rt-page[data-pattern='gallery'] .rt-head-name { font-size: 2.15rem; }
+}
+/* A long name (more than 12 characters) stays a name, not a second headline: smaller in every type
+   (these come after the type rules and outrank them), balanced across lines, hyphenated inside one
+   long word, never clipped. */
+.rt-root .rt-page .rt-head[data-name='long'] .rt-head-name {
+  font-size: 1.2rem; line-height: 1.15; text-wrap: balance; -webkit-hyphens: auto; hyphens: auto; overflow-wrap: break-word;
+}
+.rt-root[data-typography='editorial'] .rt-page[data-pattern='gallery'] .rt-head[data-name='long'] .rt-head-name { font-size: 1.35rem; line-height: 1.08; }
+@media (min-width: 760px) {
+  .rt-root .rt-page .rt-head[data-name='long'] .rt-head-name { font-size: 1.45rem; }
+  .rt-root[data-typography='editorial'] .rt-page[data-pattern='gallery'] .rt-head[data-name='long'] .rt-head-name { font-size: 1.7rem; }
+}
+/* Inside a preview (Make, Edit with Ori) the header stays small. */
+.rt-root-preview .rt-head-bar { min-height: 40px; }
+
+/* View tabs: a light row of labels with a bar under the open one, so they never read as a second
+   pill stacked on a view's own switch (People's Today | Upcoming, Riff's session lengths). */
+.rt-root .rt-view-tabs { display: flex; flex-wrap: nowrap; gap: 2px; overflow-x: auto; scrollbar-width: none; min-width: 0; margin: 0 -4px; padding: 0; background: none; }
+.rt-root .rt-view-tabs::-webkit-scrollbar { display: none; }
+.rt-root .rt-view-tabs button {
+  position: relative; flex: none; min-height: 44px; padding: 8px 10px 10px; border: 0; border-radius: 10px; background: transparent; cursor: pointer;
+  color: var(--app-ink-2); font-family: var(--app-font-display); font-size: 0.95rem; font-weight: 700; letter-spacing: -0.005em; white-space: nowrap;
+}
+.rt-root .rt-view-tabs button:hover { color: var(--app-ink); background: var(--app-surface-2); }
+.rt-root .rt-view-tabs button[aria-selected='true'] { color: var(--app-ink); }
+.rt-root .rt-view-tabs button[aria-selected='true']::after {
+  content: ''; position: absolute; left: 10px; right: 10px; bottom: 2px; height: 3px; border-radius: 3px; background: var(--app-accent-text);
+}
+.rt-root .rt-view-tabs button:focus-visible { outline-offset: -2px; }
+
+/* Loading outline (RuntimeSkeleton). */
+.rt-skel-bar { margin-bottom: 4px; }
+
+/* ---------- one-time offer: Add to home screen after the first saved action ---------- */
+.rt-install-offer {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 6px 10px 12px;
+  border-radius: 16px; border: 1px solid var(--app-line); background: var(--app-surface); color: var(--app-ink);
+}
+.rt-install-offer > svg { flex: none; }
+.rt-install-offer-text { flex: 1 1 140px; margin: 0; font-weight: 600; font-size: 0.95rem; }
+.rt-root .rt-install-offer .rt-install-offer-close.btn { width: 44px; height: 44px; color: var(--app-ink-2); }
+
+/* ---------- Ori's sheets: light surface, Ori's cobalt for the decision ---------- */
+.sheet.ori-sheet { max-width: 560px; }
+.rt-root .sheet.ori-sheet .sheet-title h2, .sheet.ori-sheet .sheet-title h2 { font-family: 'Manrope Variable', 'Manrope', 'Avenir Next', 'Segoe UI', system-ui, sans-serif; font-weight: 800; font-size: 1.4rem; letter-spacing: -0.02em; color: #162039; }
+.rt-root .sheet.ori-sheet .btn-primary, .sheet.ori-sheet .btn-primary { background: #3147F2; color: #FFFFFF; border-color: transparent; box-shadow: none; }
+.rt-root .sheet.ori-sheet .btn-primary:hover:not(:disabled), .sheet.ori-sheet .btn-primary:hover:not(:disabled) { background: #2436C9; filter: none; }
+.rt-root .sheet.ori-sheet .btn-primary:disabled, .sheet.ori-sheet .btn-primary:disabled { background: #DCE0EC; color: #59617A; opacity: 1; }
+.rt-root .sheet.ori-sheet .btn-secondary, .sheet.ori-sheet .btn-secondary { background: #FFFFFF; border: 1.5px solid #C9CEDD; color: #162039; }
+.rt-root .sheet.ori-sheet .btn-secondary:hover:not(:disabled), .sheet.ori-sheet .btn-secondary:hover:not(:disabled) { border-color: #162039; background: #FFFFFF; }
+.sheet.ori-sheet .btn-lg { border-radius: 16px; }
+.sheet.ori-sheet :focus-visible { outline: 3px solid #3147F2; outline-offset: 2px; }
+
+/* Ask. Text on the surface itself reads the app's tokens: ink in a sheet (always a light scope), the
+   app's own ink on a settings card (light on Riff's dark card). Panels below keep their light fills. */
+.ori-ask { display: flex; flex-direction: column; gap: 12px; }
+.ori-ask-label { font-weight: 600; font-size: 0.95rem; color: var(--app-ink, #162039); }
+.ori-ask-row { display: flex; align-items: flex-start; gap: 10px; }
+.ori-ask-ori { margin-top: 4px; }
+.ori-ask-row .ori-ask-input { flex: 1; min-width: 0; min-height: 92px; border-radius: 16px; font-size: 1rem; background: #FFFFFF; border: 1.5px solid #C9CEDD; color: #162039; }
+.ori-ask-row .ori-ask-input:focus { border-color: #3147F2; box-shadow: 0 0 0 3px rgba(49, 71, 242, 0.18); }
+.ori-examples { display: flex; flex-wrap: wrap; gap: 8px; }
+.ori-chip {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px; max-width: 100%;
+  border-radius: 999px; border: 1px solid #D9CBF5; background: #F1EAFF; color: #3A2470; cursor: pointer;
+  font-family: inherit; font-size: 0.9rem; font-weight: 600; line-height: 1.25; text-align: left; white-space: normal;
+}
+.ori-chip:hover:not(:disabled) { background: #E8DDFF; border-color: #B9A6F5; }
+.ori-chip[aria-pressed='true'] { background: #162039; border-color: #162039; color: #FFFFFF; }
+.ori-chip:disabled { opacity: 0.55; cursor: not-allowed; }
+.ori-pending { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 0.92rem; color: var(--app-ink-2, #59617A); }
+.ori-error { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.ori-error .banner { align-self: stretch; }
+.ori-go svg { margin-left: 2px; }
+
+/* Review */
+.ori-review { display: flex; flex-direction: column; gap: 14px; }
+.ori-review-head { display: flex; align-items: center; gap: 12px; }
+.ori-review-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
+.ori-review-title h3 { margin: 0; font-family: 'Manrope Variable', 'Manrope', system-ui, sans-serif; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; color: var(--app-ink, #162039); }
+.ori-review-title h3:focus { outline: none; }
+.ori-review-title h3:focus-visible { outline: 3px solid #3147F2; outline-offset: 3px; border-radius: 6px; }
+.ori-checklist { list-style: none; margin: 0; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; border-radius: 16px; background: #F4F1FF; color: #162039; }
+.ori-checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: 0.98rem; line-height: 1.4; }
+.ori-check { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 24px; height: 24px; margin-top: -1px; border-radius: 50%; background: #DFFF76; color: #162039; }
+.ori-check svg { width: 15px; height: 15px; }
+.ori-before-after { margin: 0; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px; border-radius: 14px; border: 1px solid #DCE0EC; background: #FFFFFF; }
+.ori-ba-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 0.95rem; }
+.ori-ba-row dt { font-weight: 700; color: #162039; }
+.ori-ba-row dt::after { content: ':'; }
+.ori-ba-row dd { margin: 0; display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 6px; color: #162039; }
+.ori-ba-before { color: #59617A; text-decoration: line-through; text-decoration-color: rgba(89, 97, 122, 0.6); }
+.ori-ba-arrow { color: #59617A; }
+.ori-preview { margin: 0; display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 18px; background: #F4F1FF; }
+.ori-preview-cap { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-family: 'Manrope Variable', 'Manrope', system-ui, sans-serif; font-weight: 800; font-size: 1.05rem; color: #162039; }
+.ori-new-tag { padding: 4px 10px; border-radius: 999px; background: #DFFF76; color: #162039; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.01em; }
+.ori-preview-note { margin: 0; font-size: 0.85rem; color: #59617A; }
+.ori-review-footer { display: flex; flex-direction: column; gap: 10px; }
+.ori-review-actions { display: flex; flex-direction: column; gap: 10px; padding-top: 2px; }
+/* In a sheet the decisions stay in reach while the content scrolls (a compact bar, not a cover). */
+.sheet.ori-sheet .ori-review-footer, .sheet.ori-sheet .ori-ask-footer, .sheet.ori-sheet .rt-install-actions {
+  position: sticky; bottom: calc(-20px - var(--safe-bottom)); z-index: 2;
+  margin: 0 -16px calc(-20px - var(--safe-bottom)); padding: 12px 16px calc(14px + var(--safe-bottom));
+  background: #FFFFFF; border-top: 1px solid #DCE0EC;
+}
+.sheet.ori-sheet .ori-review-footer .banner { font-size: 0.88rem; padding: 8px 10px; }
+@media (max-width: 719px) {
+  .sheet.ori-sheet .ori-review-actions { flex-direction: row-reverse; }
+  .sheet.ori-sheet .ori-review-actions .btn { flex: 1; min-width: 0; white-space: normal; padding-left: 10px; padding-right: 10px; }
+}
+@media (min-width: 720px) {
+  .ori-review-actions { flex-direction: row-reverse; }
+  .ori-review-actions .btn { flex: 1; }
+}
+
+/* The affected entry, drawn in the app's own look (inert: nothing here can be used or saved). */
+.rt-root.rt-change-preview {
+  flex: none; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px; width: 100%; max-width: 400px; margin: 0 auto;
+  border-radius: 16px; border: 1px solid var(--app-line); background: var(--app-bg); color: var(--app-ink);
+  box-shadow: 0 1px 2px rgba(22, 32, 57, 0.06); pointer-events: none; user-select: none;
+}
+.rt-cp-bar { display: flex; align-items: center; gap: 8px; min-height: 28px; }
+.rt-cp-name { font-family: var(--app-font-display); font-weight: 800; font-size: 1rem; color: var(--app-ink); }
+.rt-root[data-typography='editorial'] .rt-cp-name { font-family: var(--rt-serif); font-style: italic; font-weight: 500; font-size: 1.15rem; }
+.rt-cp-example { margin-left: auto; padding: 3px 8px; border-radius: 999px; background: #FFF3C4; color: #5C4200; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.rt-change-preview .rt-cp-photo { width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; object-fit: cover; display: block; background: var(--app-surface-2); }
+.rt-cp-headline { margin: 0; font-size: 1rem; color: var(--app-ink); }
+.rt-root[data-typography='editorial'] .rt-cp-headline { font-family: var(--rt-serif); font-style: italic; font-size: 1.1rem; }
+.rt-cp-fields { display: flex; flex-direction: column; gap: 10px; }
+.rt-cp-field .field { gap: 4px; }
+/* Short fields read as the reference's label | box rows. */
+.rt-cp-field .field:has(> .input) { display: grid; grid-template-columns: minmax(5.5rem, 34%) 1fr; align-items: center; column-gap: 10px; }
+.rt-cp-field .field-label { font-size: 0.9rem; }
+.rt-cp-field .input, .rt-cp-field .textarea, .rt-cp-field .select { min-height: 40px; padding: 8px 12px; }
+.rt-cp-field .textarea { min-height: 64px; }
+/* A field the change hides: its name struck through, and what was saved in it, kept. */
+.rt-cp-hidden {
+  margin: 0; display: grid; grid-template-columns: minmax(5.5rem, 34%) 1fr; align-items: baseline; column-gap: 10px;
+  padding: 9px 12px; border-radius: 12px; border: 1px dashed var(--app-line-2); color: var(--app-ink-2); font-size: 0.9rem; line-height: 1.35;
+}
+.rt-cp-hidden-label { font-weight: 700; color: var(--app-ink); text-decoration: line-through; text-decoration-thickness: 1.5px; overflow-wrap: anywhere; }
+.ori-hidden-tag { background: #E9E2FF; color: #3A2470; }
+/* The whole proposed app, when the change is a look, a timer default or a tab: a small window onto the
+   part that changes (the headline and prompt are left out so the view itself is in sight). */
+.rt-cp-app { position: relative; max-height: 380px; overflow: hidden; border-radius: 18px; pointer-events: none; user-select: none; }
+.rt-cp-app .rt-root-preview { zoom: 0.82; }
+.rt-cp-app .rt-headline, .rt-cp-app .rt-prompt, .rt-cp-app .rt-view-prompt, .rt-cp-app .rt-head-tag { display: none; }
+.rt-cp-app::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 48px; background: linear-gradient(to bottom, rgba(244, 241, 255, 0), #F4F1FF); }
+
+/* Settings: the same flow inside a card, with the same cobalt decision as the sheet. */
+.ori-settings-edit .ori-review-head .ori-companion { flex: none; }
+.rt-root .ori-settings-edit .btn-primary { background: #3147F2; color: #FFFFFF; border-color: transparent; }
+.rt-root .ori-settings-edit .btn-primary:hover:not(:disabled) { background: #2436C9; filter: none; }
+.rt-root .ori-settings-edit .btn-primary:disabled { background: #DCE0EC; color: #59617A; opacity: 1; }
+.rt-root .ori-settings-edit :focus-visible { outline: 3px solid #3147F2; outline-offset: 2px; }
+/* On a dark app's card: the chosen example is lime (an ink chip would vanish into the card) and the
+   focus ring is the app's lime, as cobalt is too dark there. */
+.rt-root[data-theme='ink'] .ori-settings-edit .ori-chip[aria-pressed='true'],
+.rt-root[data-theme='charcoal'] .ori-settings-edit .ori-chip[aria-pressed='true'] { background: #DFFF76; border-color: #DFFF76; color: #162039; box-shadow: 0 0 0 2px var(--app-surface), 0 0 0 4px #DFFF76; }
+.rt-root[data-theme='ink'] .ori-settings-edit :focus-visible,
+.rt-root[data-theme='charcoal'] .ori-settings-edit :focus-visible { outline-color: #DFFF76; }
+
+/* ---------- Add to home screen ---------- */
+.rt-install-app { display: flex; align-items: center; gap: 12px; margin: 2px 0 14px; }
+.rt-install-name { font-family: 'Manrope Variable', 'Manrope', system-ui, sans-serif; font-weight: 800; font-size: 1.3rem; color: #162039; }
+.rt-install-body { display: flex; flex-direction: column; gap: 12px; }
+.rt-install-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.rt-install-steps li { display: flex; align-items: center; gap: 12px; font-size: 1rem; line-height: 1.35; color: var(--ink); }
+.rt-install-num {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; width: 30px; height: 30px; border-radius: 50%;
+  background: #F1EAFF; color: #3A2470; font-family: 'Manrope Variable', 'Manrope', system-ui, sans-serif; font-weight: 800; font-size: 0.9rem;
+}
+.rt-install-lead { margin: 0; font-size: 1rem; }
+.rt-install-url { font-family: var(--font-mono); font-size: 0.85rem; }
+.rt-install-note { margin: 4px 0 0; padding-top: 12px; border-top: 1px solid var(--line); text-align: center; font-size: 0.9rem; color: var(--ink-2); }
+.rt-install-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+.sheet.ori-sheet .rt-install-actions { display: grid; margin-top: 16px; }
+.sheet.ori-sheet .ori-ask-footer { margin-top: 0; }
+.ori-ask-footer { display: flex; }
+.rt-install-actions .btn { width: 100%; padding-left: 12px; padding-right: 12px; }
+@media (max-width: 340px) { .rt-install-actions { grid-template-columns: 1fr; } }
+.rt-install-section .rt-install-body { margin: 6px 0 12px; }
+
+/* ---------- settings header (no parent chrome) ---------- */
+.rt-settings-head { display: flex; align-items: center; gap: 12px; }
+.rt-settings-head-text { min-width: 0; }
+.rt-root .rt-settings-title { margin: 0; font-family: var(--app-font-display); font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.rt-settings-app { margin: 2px 0 0; color: var(--app-ink-2); font-size: 0.95rem; }

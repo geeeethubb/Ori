@@ -7,7 +7,7 @@
 import { z } from 'zod';
 import {
   AppIconSchema, AppSpecSchema, DesignPatchSchema, DesignSchema, FieldSchema, RuleSchema, SelectOptionSchema, ViewSchema,
-  designFor, fieldTypeLabel, recordMatchesView, viewRoles, viewTypeLabel, type AppSpec, type FieldSpec, type FieldType,
+  designFor, fieldTypeLabel, recordMatchesView, viewRoles, viewTypeLabel, type AppSpec, type FieldSpec, type FieldType, type RuleSpec, type ViewSpec,
 } from './appSpec.ts';
 import { FIELD_ID_PATTERN } from './ids.ts';
 
@@ -73,6 +73,52 @@ const THEME_WORDS: Record<string, string> = {
   bright: 'the bright theme', paper: 'the paper theme', charcoal: 'the charcoal theme', ink: 'the ink theme', mint: 'the mint theme', lilac: 'the lilac theme', sunset: 'the sunset theme',
 };
 
+const dayCount = (n: number) => `${n} day${n === 1 ? '' : 's'}`;
+
+function joinList(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? '';
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+/** A hint quoted back in a change line, shortened at a word and without its closing full stop. */
+function quoteHint(s: string): string {
+  const t = s.trim().replace(/[.!]+$/, '');
+  return t.length <= 90 ? t : `${t.slice(0, 89).replace(/\s+\S*$/, '')}…`;
+}
+
+/** What the person will notice when a view is replaced: before → after for its defaults, tab name and button. */
+function viewChangeLines(prev: ViewSpec, next: ViewSpec): string[] {
+  const generic = `Update the ${viewTypeLabel(next.type)} view.`;
+  if (prev.type !== next.type) return [generic];
+  const lines: string[] = [];
+  if (prev.type === 'practice' && next.type === 'practice') {
+    if (prev.presets[0] !== next.presets[0]) lines.push(`Default session: ${prev.presets[0]} min → ${next.presets[0]} min.`);
+    const sameSet = prev.presets.length === next.presets.length && prev.presets.every((p) => next.presets.includes(p));
+    if (!sameSet) lines.push(`Timer presets: ${prev.presets.join(', ')} → ${next.presets.join(', ')} min.`);
+    if (prev.defaultTempo !== next.defaultTempo) lines.push(`Metronome: ${prev.defaultTempo} bpm → ${next.defaultTempo} bpm.`);
+    if (prev.tempoHelper !== next.tempoHelper) lines.push(`Metronome: ${prev.tempoHelper ? 'on' : 'off'} → ${next.tempoHelper ? 'on' : 'off'}.`);
+  }
+  if (next.title && prev.title !== next.title) lines.push(`Tab name: “${prev.title ?? viewTypeLabel(prev.type)}” → “${next.title}”.`);
+  if (next.addLabel && prev.addLabel !== next.addLabel) lines.push(`Button: “${prev.addLabel ?? 'Add'}” → “${next.addLabel}”.`);
+  return lines.length ? lines : [generic];
+}
+
+/** Before → after for a replaced rule: the due-soon window, or the prompts' rhythm and title. */
+function ruleChangeLines(prev: RuleSpec | undefined, next: RuleSpec): string[] {
+  if (next.type === 'due_soon') {
+    return [prev?.type === 'due_soon' && prev.withinDays !== next.withinDays
+      ? `Due-soon window: ${dayCount(prev.withinDays)} → ${dayCount(next.withinDays)}.`
+      : `Change the due-soon window to ${dayCount(next.withinDays)}.`];
+  }
+  const lines: string[] = [];
+  if (prev?.type === 'prompt_rotation') {
+    if (prev.cadence !== next.cadence) lines.push(`Prompts: ${prev.cadence} → ${next.cadence}.`);
+    if (prev.title !== next.title) lines.push(`Prompt title: “${prev.title}” → “${next.title}”.`);
+    if (prev.prompts.join('\n') !== next.prompts.join('\n')) lines.push(`Update the ${next.cadence} prompts.`);
+  }
+  return lines.length ? lines : [`Update the ${next.cadence} prompts.`];
+}
+
 /**
  * Field ids a view role, a view filter or a due rule depends on. Hiding one would break the app (a
  * queue without its person, a timer without its minutes), so every revision refuses it.
@@ -119,6 +165,8 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[], options: Appl
   const changes: string[] = [];
   const errors: string[] = [];
   const find = (id: string) => spec.fields.find((f) => f.id === id);
+  /** Where each added field's line sits, so several new fields read as one line. */
+  const added: { at: number; field: FieldSpec }[] = [];
 
   for (const op of ops) {
     switch (op.op) {
@@ -133,13 +181,19 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[], options: Appl
         if (idx >= 0) spec.fields.splice(idx + 1, 0, op.field); else spec.fields.push(op.field);
         // Make the field visible in views that enumerate fields explicitly. Forms: every unfiltered view,
         // plus the primary form-bearing view (summaries have no form) so the field is always reachable.
+        // In a form it sits right after afterFieldId when the form has that field (Light's camera details
+        // under the caption), otherwise at the end.
         const primaryForm = spec.views.find((v) => v.type !== 'summary');
         for (const v of spec.views) {
           if (v.type === 'journal' && v.showFieldIds) v.showFieldIds.push(op.field.id);
           if (v.type === 'list' && v.columnFieldIds && v.columnFieldIds.length < 8) v.columnFieldIds.push(op.field.id);
           const takesForm = !v.filter || v === primaryForm;
-          if (takesForm && v.formFieldIds && !v.formFieldIds.includes(op.field.id)) v.formFieldIds.push(op.field.id);
+          if (takesForm && v.formFieldIds && !v.formFieldIds.includes(op.field.id)) {
+            const at = op.afterFieldId ? v.formFieldIds.indexOf(op.afterFieldId) : -1;
+            if (at >= 0) v.formFieldIds.splice(at + 1, 0, op.field.id); else v.formFieldIds.push(op.field.id);
+          }
         }
+        added.push({ at: changes.length, field: op.field });
         changes.push(`Add ${describeField(op.field)}. Existing ${spec.entryNoun.plural} keep their data; this field starts empty for them${op.field.required ? ` and stays optional when you edit them (required only for new ${spec.entryNoun.plural})` : ''}.`);
         break;
       }
@@ -193,9 +247,13 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[], options: Appl
       }
       case 'rename_app': {
         const before = spec.name;
+        const beforeTagline = spec.tagline;
         spec.name = op.name;
         if (op.tagline !== undefined) spec.tagline = op.tagline;
-        changes.push(before === op.name ? 'Update the tagline.' : `Rename the app from “${before}” to “${op.name}”.`);
+        if (before !== op.name) changes.push(`Rename the app from “${before}” to “${op.name}”.`);
+        if (op.tagline !== undefined && op.tagline !== (beforeTagline ?? '')) {
+          changes.push(!op.tagline ? 'Remove the tagline.' : beforeTagline ? `Tagline: “${beforeTagline}” → “${op.tagline}”.` : `Tagline: “${op.tagline}”.`);
+        }
         break;
       }
       case 'set_icon':
@@ -223,8 +281,9 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[], options: Appl
       case 'replace_view': {
         const i = spec.views.findIndex((v) => v.id === op.viewId);
         if (i < 0) { errors.push(`Unknown view "${op.viewId}"`); break; }
+        const prev = spec.views[i] as ViewSpec;
         spec.views[i] = op.view;
-        changes.push(`Update the ${viewTypeLabel(op.view.type)} view.`);
+        changes.push(...viewChangeLines(prev, op.view));
         break;
       }
       case 'remove_view': {
@@ -244,8 +303,9 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[], options: Appl
       case 'replace_rule': {
         const i = spec.rules.findIndex((r) => r.id === op.ruleId);
         if (i < 0) { errors.push(`Unknown rule "${op.ruleId}"`); break; }
+        const prevRule = spec.rules[i];
         spec.rules[i] = op.rule;
-        changes.push(op.rule.type === 'due_soon' ? `Change the due-soon window to ${op.rule.withinDays} days.` : `Update the ${op.rule.cadence} prompts.`);
+        changes.push(...ruleChangeLines(prevRule, op.rule));
         break;
       }
       case 'remove_rule': {
@@ -256,7 +316,7 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[], options: Appl
       }
       case 'set_empty_state_hint':
         spec.emptyStateHint = op.hint;
-        changes.push('Update the empty-state hint.');
+        changes.push(op.hint ? `Update the hint shown before the first ${spec.entryNoun.singular}: “${quoteHint(op.hint)}”.` : `Remove the hint shown before the first ${spec.entryNoun.singular}.`);
         break;
       case 'set_entry_noun':
         spec.entryNoun = { singular: op.singular, plural: op.plural };
@@ -265,12 +325,53 @@ export function applyRevision(current: AppSpec, ops: RevisionOp[], options: Appl
     }
   }
 
+  // Several new fields read as one line: "Add “Camera”, “Shutter” and “Aperture” (short text). …"
+  if (added.length > 1) {
+    const first = added[0] as { at: number; field: FieldSpec };
+    const sameType = added.every((a) => a.field.type === first.field.type);
+    const names = joinList(added.map((a) => (sameType ? `“${a.field.label}”` : describeField(a.field))));
+    const required = added.some((a) => a.field.required);
+    const noun = spec.entryNoun.plural;
+    const line = `Add ${names}${sameType ? ` (${fieldTypeLabel(first.field.type)})` : ''}. Existing ${noun} keep their data; these fields start empty for them${required ? ` and stay optional when you edit them (required only for new ${noun})` : ''}.`;
+    const lines = new Set(added.map((a) => a.at));
+    const merged = changes.flatMap((c, i) => (i === first.at ? [line] : lines.has(i) ? [] : [c]));
+    changes.splice(0, changes.length, ...merged);
+  }
+
   if (errors.length) return { ok: false, changes, errors };
   const parsed = AppSpecSchema.safeParse(spec);
   if (!parsed.success) {
     return { ok: false, changes, errors: parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`) };
   }
   return { ok: true, spec: parsed.data, changes, errors: [] };
+}
+
+/**
+ * The line version history keeps for an applied change, built from applyRevision's change lines. Those
+ * lines are imperative or before → after ("Add “Camera” … (short text).", "Default session: 10 min → 5 min."),
+ * so they still read correctly after the change; a proposal's summary is a preview in the future tense and
+ * is not a history line. Whole lines only, within `max` characters (an export allows 300), with a count of
+ * the lines left out.
+ */
+export function changeHistoryLine(changes: string[], max = 300): string {
+  const lines = changes.map((c) => c.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  if (!lines.length) return 'No visible change.';
+  const more = (n: number) => (n > 0 ? ` And ${n} more change${n === 1 ? '' : 's'}.` : '');
+  let text = '';
+  let kept = 0;
+  for (const line of lines) {
+    const next = text ? `${text} ${line}` : line;
+    if (next.length + more(lines.length - kept - 1).length > max) break;
+    text = next;
+    kept++;
+  }
+  if (!kept) {
+    const tail = more(lines.length - 1);
+    const first = lines[0] ?? '';
+    text = `${first.slice(0, Math.max(1, max - tail.length - 1)).replace(/\s+\S*$/, '')}…`;
+    kept = 1;
+  }
+  return `${text}${more(lines.length - kept)}`;
 }
 
 export interface RecordLike {

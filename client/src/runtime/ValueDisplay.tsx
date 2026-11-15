@@ -3,6 +3,7 @@ import type { FieldSpec } from '@shared/appSpec.ts';
 import { ICON_GRADIENTS } from '@shared/icons.ts';
 import { formatValue, type RecordValues } from '@shared/records.ts';
 import { friendlyDate } from '@shared/time.ts';
+import { AuthImage } from './AuthImage.tsx';
 import { isEmptyValue } from './viewLogic.ts';
 
 export function ValueDisplay({ field, value }: { field: FieldSpec | undefined; value: unknown }) {
@@ -58,6 +59,9 @@ export function ValueDisplay({ field, value }: { field: FieldSpec | undefined; v
     }
     case 'date':
       return <span>{friendlyDate(String(value))}</span>;
+    case 'image':
+      // The photo itself, small (owner-only media through AuthImage), never the word "Photo" under the label "Photo".
+      return <AuthImage value={value} alt={field.label} fit="cover" className="rt-value-thumb" />;
     default:
       return <span>{formatValue(field, value)}</span>;
   }

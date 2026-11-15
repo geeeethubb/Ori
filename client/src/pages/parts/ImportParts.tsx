@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent } from 'react';
 import { MAX_SOURCE_CHARS, MAX_UPLOAD_BYTES } from '@shared/context.ts';
-import { Disclosure, Icons, useToast } from '../../components/ui.tsx';
+import { Disclosure, Glyph, Icons, useToast } from '../../components/ui.tsx';
 import { ExampleTag } from './badges.tsx';
 import { EXPORT_PROMPT } from './exportPrompt.ts';
 import { composeManualProfile, flattenJsonText, looksLikeText } from './helpers.ts';
@@ -48,7 +48,7 @@ export function PromptBox() {
           <span className="small muted">Copy the prompt, paste it into ChatGPT, Claude, Gemini or any assistant you use, review the answer, then paste it below.</span>
         </div>
         <button type="button" className="btn btn-secondary" onClick={() => void copy()} data-testid="store-copy-prompt">
-          {Icons.paperclip} Copy the prompt
+          {Icons.copy} Copy the prompt
         </button>
       </div>
       <Disclosure summary="Show the prompt">
@@ -258,7 +258,7 @@ export function SampleCard({ busy, onPick }: { busy: boolean; onPick: (profile: 
           {Icons.camera} Founder who loves photography
         </button>
         <button type="button" className="btn btn-secondary btn-wrap" data-testid="store-sample-student" disabled={busy} onClick={() => onPick('student-musician')}>
-          {Icons.play} Student learning guitar
+          <Glyph symbol="guitar" /> Student learning guitar
         </button>
       </div>
     </section>

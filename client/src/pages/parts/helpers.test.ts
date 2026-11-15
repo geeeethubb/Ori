@@ -122,16 +122,20 @@ import type { ProfileFact } from '@shared/context.ts';
 import { defaultLook, firstSentence, groupFactsForMemory, pickFeatured, proposalAction, wantsTimeBudget } from './helpers.ts';
 
 describe('proposalAction', () => {
-  it('offers one action per kind and status', () => {
-    expect(proposalAction({ id: 'r1', kind: 'new_app', status: 'fresh' })).toEqual({ label: 'Make mine', to: '/make/r1', emphasis: 'primary' });
-    expect(proposalAction({ id: 'r1', kind: 'new_app', status: 'built', builtAppId: 'app12345' })).toMatchObject({ label: 'Open', to: '/apps/app12345/' });
-    expect(proposalAction({ id: 'r2', kind: 'explore', status: 'fresh' })).toMatchObject({ label: 'Explore', to: '/make/r2' });
-    expect(proposalAction({ id: 'r3', kind: 'update_app', status: 'fresh', targetAppId: 'app12345' })).toMatchObject({ label: 'Preview change', to: '/make/r3' });
+  it("offers one action per kind and status, in Ori's words", () => {
+    expect(proposalAction({ id: 'r1', kind: 'new_app', status: 'fresh', title: 'Light' })).toEqual({ label: 'Preview Light', short: 'Preview', to: '/make/r1', emphasis: 'primary' });
+    // A long outcome-led title stays out of the button; the card names it.
+    expect(proposalAction({ id: 'r1', kind: 'new_app', status: 'fresh', title: 'Find the light on your weekend walks' })).toMatchObject({ label: 'Preview', to: '/make/r1' });
+    expect(proposalAction({ id: 'r1', kind: 'new_app', status: 'built', builtAppId: 'app12345', title: 'Light' })).toMatchObject({ label: 'Open Light', to: '/apps/app12345/' });
+    expect(proposalAction({ id: 'r2', kind: 'explore', status: 'fresh' })).toMatchObject({ label: 'Try it', to: '/make/r2' });
+    expect(proposalAction({ id: 'r3', kind: 'update_app', status: 'fresh', targetAppId: 'app12345' }, 'Light')).toMatchObject({ label: 'Preview change', to: '/make/r3' });
     // Using an app you have opens it (with the suggestion, while it is fresh); it never goes through a design change.
+    expect(proposalAction({ id: 'r5', kind: 'use_app', status: 'fresh', targetAppId: 'app12345' }, 'Riff')).toMatchObject({ label: 'Open Riff', short: 'Open', to: '/apps/app12345/?from=r5' });
+    expect(proposalAction({ id: 'r5', kind: 'use_app', status: 'stale', targetAppId: 'app12345' }, 'Riff').to).toBe('/apps/app12345/?from=r5');
+    expect(proposalAction({ id: 'r5', kind: 'use_app', status: 'applied', targetAppId: 'app12345' }, 'Riff')).toMatchObject({ label: 'Open Riff', to: '/apps/app12345/' });
     expect(proposalAction({ id: 'r5', kind: 'use_app', status: 'fresh', targetAppId: 'app12345' })).toMatchObject({ label: 'Open', to: '/apps/app12345/?from=r5' });
-    expect(proposalAction({ id: 'r5', kind: 'use_app', status: 'applied', targetAppId: 'app12345' })).toMatchObject({ label: 'Open', to: '/apps/app12345/' });
-    expect(proposalAction({ id: 'r3', kind: 'update_app', status: 'applied', targetAppId: 'app12345' })).toMatchObject({ label: 'Open', to: '/apps/app12345/' });
-    expect(proposalAction({ id: 'r4', kind: 'keep', status: 'fresh' })).toMatchObject({ label: 'Keep', emphasis: 'secondary' });
+    expect(proposalAction({ id: 'r3', kind: 'update_app', status: 'applied', targetAppId: 'app12345' }, 'Light')).toMatchObject({ label: 'Open Light', to: '/apps/app12345/' });
+    expect(proposalAction({ id: 'r4', kind: 'keep', status: 'fresh' })).toMatchObject({ label: 'Keep inspiration', emphasis: 'secondary' });
     expect(proposalAction({ id: 'r4', kind: 'keep', status: 'kept' }).label).toBe('Kept');
   });
 });

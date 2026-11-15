@@ -2,13 +2,17 @@
  * Pure logic behind the redesign renderers: gallery tile ordering, queue grouping and completion,
  * practice timer maths, and the theme tables (every text/fill pair must pass WCAG AA).
  */
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { APP_THEMES, AppSpecSchema, type AppSpec } from '@shared/appSpec.ts';
+import { APP_THEMES, AppSpecSchema, type AppSpec, type AppSpecInput } from '@shared/appSpec.ts';
 import { ICON_COLORS } from '@shared/icons.ts';
 import type { AppRecord } from '@shared/records.ts';
 import { addDays, friendlyDate, todayIso } from '@shared/time.ts';
-import { LIGHT_GALLERY, PEOPLE_QUEUE, RIFF_PRACTICE } from '../../../server/fixtures/specs.ts';
+import { LIGHT_GALLERY, PEOPLE_QUEUE, PHOTO_WALK_JOURNAL, RIFF_PRACTICE } from '../../../server/fixtures/specs.ts';
+import { JournalView } from './JournalView.tsx';
 import { elapsedMs, pauseTimer, readTimer, remainingMs, resetTimer, selectPreset, settleTimer, startTimer } from './practiceTimer.ts';
+import { QueueView } from './QueueView.tsx';
 import { draftKey } from './runtimeUtils.ts';
 import { ACCENTS, contrastRatio, resolveAccent, resolveTheme, THEME_SURFACES, THEMES } from './theme.ts';
 import {
@@ -273,5 +277,69 @@ describe('theme', () => {
         }
       }
     }
+  });
+});
+
+describe('queue cards as rendered', () => {
+  const noop = async () => undefined;
+  const render = (spec: AppSpec, view: QueueViewSpec, records: AppRecord[], props: Record<string, unknown> = {}) =>
+    renderToStaticMarkup(createElement(QueueView, { spec, view, records, onPatch: noop, ...props }));
+
+  it('a queue that leaves its dates to the due rule still shows each card’s chip and offers the suggested date (review finding 4)', () => {
+    const { dueFieldId: _own, ...rest } = queueView;
+    const replies: AppSpec = { ...people, name: 'Replies', views: [rest, ...people.views.slice(1)] };
+    const ruled = replies.views[0] as QueueViewSpec;
+    const html = render(replies, ruled, [
+      rec({ person: 'Ollie', action: 'Reply about the invoice', due: day(-1) }),
+      rec({ person: 'Noor', action: 'Send the notes', due: today }),
+    ]);
+    expect(html).toContain('<span class="sr-only">Overdue since yesterday</span>');
+    expect(html).toContain('<span class="sr-only">Due today</span>');
+    const words = render(replies, ruled, [rec({ person: 'Jamie', action: 'Plan a coffee', due_words: 'Thursday' })]);
+    expect(words).toMatch(/data-testid="rt-queue-set-date-r\d+"/);
+  });
+
+  it('a message draft shows whole, line breaks and all, so what Draft message copies can be read first (review finding 6)', () => {
+    const draft = 'Hi Noa,\n\nGreat to meet you at the mixer yesterday.\n\nTalk soon,\nRev';
+    const context = 'Met at the mixer.\nWants the prototype link.';
+    const html = render(people, queueView, [rec({ person: 'Noa', action: 'Send the summary', due: today, draft, context })]);
+    expect(html).toContain(`>${draft}</p>`);
+    expect(html).toContain(`>${context}</p>`);
+    expect(html).toMatch(/class="que-draft-text rt-prewrap is-clamped"/);
+  });
+
+  it('a queue grouped by person keeps each person’s items together under their name (review finding 11)', () => {
+    const byPerson: AppSpec = { ...people, views: [{ ...queueView, groupBy: 'person' }, ...people.views.slice(1)] };
+    const html = render(byPerson, byPerson.views[0] as QueueViewSpec, [
+      rec({ person: 'Maya', action: 'Share the prototype', due: today }),
+      rec({ person: 'Alex', action: 'Send the article', due: today }),
+      rec({ person: 'Maya, from the mixer', action: 'Book the demo', due: today }),
+    ]);
+    const sections = html.split('data-testid="rt-queue-person"').slice(1);
+    expect(sections).toHaveLength(2);
+    const maya = sections.find((s) => s.includes('Share the prototype'))!;
+    expect(maya).toContain('Book the demo');
+    expect(maya).not.toContain('Send the article');
+    // Grouped by due (the default) stays one list.
+    expect(render(people, queueView, [rec({ person: 'Maya', action: 'A', due: today })])).not.toContain('rt-queue-person');
+  });
+
+  it('a done item can still be edited from Done, and reopened (review finding 17)', () => {
+    const html = render(people, queueView, [rec({ person: 'Jo', action: 'Old promise', due: today, done: true })], { onEdit: () => undefined });
+    expect(html).toMatch(/aria-label="Edit: Old promise"/);
+    expect(html).toMatch(/aria-label="Reopen: Old promise"/);
+  });
+});
+
+describe('a photo field in an entry (Make: “Photo / Photo”)', () => {
+  it('shows the photo itself, not the word Photo under the label Photo', () => {
+    const input = structuredClone(PHOTO_WALK_JOURNAL) as AppSpecInput & { fields: unknown[] };
+    input.fields.push({ id: 'snapshot', label: 'Photo', type: 'image' });
+    const spec = AppSpecSchema.parse(input);
+    const view = spec.views.find((v) => v.type === 'journal')!;
+    if (view.type !== 'journal') throw new Error('journal view');
+    const html = renderToStaticMarkup(createElement(JournalView, { spec, view, records: [rec({ snapshot: 'example:light-1', date: today })] }));
+    expect(html).toMatch(/<img class="rt-img rt-img-cover rt-value-thumb" src="[^"]*\/examples\/light-1\.jpg" alt="Photo"/);
+    expect(html).not.toMatch(/<dd><span>Photo<\/span><\/dd>/);
   });
 });

@@ -4,16 +4,27 @@ import type { Capture, ContextSource, ProfileFact } from '@shared/context.ts';
 import { readStatusLabel } from '@shared/context.ts';
 import { Icons } from '../../components/ui.tsx';
 import { ExampleTag, FactStatusChip } from './badges.tsx';
-import { SOURCE_KIND_LABELS, formatDate, relativeTime, truncate } from './helpers.ts';
+import { SOURCE_KIND_LABELS, formatDate, photoWords, relativeTime, truncate } from './helpers.ts';
 
 export type SourceMap = Map<string, ContextSource>;
+
+/** True when every source of a fact is the example profile: nothing the person said states it. */
+export function onlyFromExample(fact: ProfileFact, sourceById: SourceMap): boolean {
+  const sources = fact.sourceIds.map((id) => sourceById.get(id)).filter((s): s is ContextSource => Boolean(s));
+  return sources.length > 0 && sources.every((s) => s.kind === 'sample');
+}
+
+/** A source's name as shown: Ori's own labels for shared things say "photo"; names a person typed stay as typed. */
+function sourceName(source: ContextSource): string {
+  return source.kind === 'capture' ? photoWords(source.label) : source.label;
+}
 
 function SourceNames({ fact, sourceById }: { fact: ProfileFact; sourceById: SourceMap }) {
   const sources = fact.sourceIds.map((id) => sourceById.get(id)).filter((s): s is ContextSource => Boolean(s));
   if (sources.length === 0) return null;
   return (
     <span className="me-from">
-      from {sources.map((s) => s.label).join(', ')}
+      from {sources.map(sourceName).join(', ')}
     </span>
   );
 }
@@ -64,7 +75,7 @@ export function FactRow({ fact, sourceById, onEdit, onRemove }: FactRowProps) {
           <div className="me-fact-main">
             <span className="me-fact-value">{fact.value}</span>
             <span className="me-fact-meta">
-              <FactStatusChip status={fact.status} />
+              <FactStatusChip status={fact.status} example={onlyFromExample(fact, sourceById)} />
               <SourceNames fact={fact} sourceById={sourceById} />
             </span>
           </div>
@@ -101,7 +112,7 @@ export function ConflictCard({ facts, sourceById, onKeep }: ConflictCardProps) {
           <div className="me-fact-main">
             <span className="me-fact-value">{f.value}</span>
             <span className="me-fact-meta">
-              <FactStatusChip status={f.status} />
+              <FactStatusChip status={f.status} example={onlyFromExample(f, sourceById)} />
               <SourceNames fact={f} sourceById={sourceById} />
             </span>
           </div>
@@ -128,7 +139,7 @@ export function SourceRow({ source, onRemove }: { source: ContextSource; onRemov
     <li className="me-source" data-testid="mem-source" data-kind={source.kind}>
       <div className="me-source-main">
         <span className="me-source-label">
-          {source.label}
+          {sourceName(source)}
           {source.kind === 'sample' && <ExampleTag />}
         </span>
         <span className="me-source-meta">
@@ -141,7 +152,7 @@ export function SourceRow({ source, onRemove }: { source: ContextSource; onRemov
   );
 }
 
-// ---------- a capture (something shared with the agent) ----------
+// ---------- a capture (something shared with Ori) ----------
 
 export function CaptureRow({ capture, onForget }: { capture: Capture; onForget: (id: string) => Promise<void> }) {
   const [busy, setBusy] = useState(false);
@@ -151,14 +162,14 @@ export function CaptureRow({ capture, onForget }: { capture: Capture; onForget: 
     await onForget(capture.id);
     setBusy(false);
   }
-  const headline = capture.text ? truncate(capture.text, 140) : capture.linkMeta?.title ?? capture.url ?? 'Screenshot';
+  const headline = capture.text ? truncate(capture.text, 140) : capture.linkMeta?.title ?? capture.url ?? 'Photo';
   return (
     <li className="me-capture" data-testid="mem-capture" data-kind={capture.kind} data-status={capture.readStatus}>
       <span className="me-capture-icon" aria-hidden="true">{capture.kind === 'image' ? Icons.image : capture.kind === 'link' ? Icons.link : Icons.agent}</span>
       <div className="me-capture-main">
         <span className="me-capture-text">{headline}</span>
         <span className="me-capture-meta">
-          {capture.sourceLabel} · {readStatusLabel(capture)} · {relativeTime(capture.createdAt)}
+          {photoWords(capture.sourceLabel)} · {photoWords(readStatusLabel(capture))} · {relativeTime(capture.createdAt)}
           {capture.isExample && <ExampleTag />}
         </span>
       </div>

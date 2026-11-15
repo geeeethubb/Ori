@@ -79,7 +79,7 @@ export const FOLLOW_UP_BOARD: AppSpecInput = {
     { id: 'due_soon', type: 'due_soon', dateFieldId: 'due', withinDays: 3, stageFieldId: 'stage', doneStageValues: ['done'], label: 'Needs attention' },
   ],
   entryNoun: { singular: 'follow-up', plural: 'follow-ups' },
-  emptyStateHint: 'Add the last person you promised something to. A date turns a good intention into a reminder.',
+  emptyStateHint: 'Add the last person you promised something to. With a date, it stands out when it is due.',
   permissions: [],
 };
 
@@ -118,10 +118,10 @@ export const PRACTICE_TRACKER: AppSpecInput = {
 export const RIFF_PRACTICE: AppSpecInput = {
   schemaVersion: 1,
   name: 'Riff',
-  tagline: 'A little practice tonight',
+  tagline: 'A little practice. A little progress.',
   purpose: 'explore',
   pattern: 'practice',
-  icon: { symbol: 'waveform', color: 'ink' },
+  icon: { symbol: 'levels', color: 'ink' },
   design: { theme: 'ink', accent: 'lime', typography: 'display', density: 'regular', artwork: 'waves' },
   fields: [
     { id: 'kind', label: 'Kind', type: 'select', default: 'session', options: [{ value: 'session', label: 'Practice session' }, { value: 'source', label: 'Saved source' }] },
@@ -178,7 +178,7 @@ export const RIFF_PRACTICE: AppSpecInput = {
 export const LIGHT_GALLERY: AppSpecInput = {
   schemaVersion: 1,
   name: 'Light',
-  tagline: 'Find the light',
+  tagline: 'Notice the light.',
   purpose: 'explore',
   pattern: 'gallery',
   icon: { symbol: 'camera', color: 'charcoal' },
@@ -203,7 +203,7 @@ export const LIGHT_GALLERY: AppSpecInput = {
     ] },
   ],
   rules: [
-    { id: 'exercise', type: 'prompt_rotation', cadence: 'weekly', title: 'Light exercise', prompts: [
+    { id: 'exercise', type: 'prompt_rotation', cadence: 'weekly', title: 'This week’s prompt', prompts: [
       'Shoot only shadows and reflections',
       'Find three kinds of light before noon',
       'Photograph the same corner at two times of day',
@@ -223,11 +223,11 @@ export const LIGHT_GALLERY: AppSpecInput = {
 export const PEOPLE_QUEUE: AppSpecInput = {
   schemaVersion: 1,
   name: 'People',
-  tagline: 'Keep the conversation going',
+  tagline: 'Keep the conversation going.',
   purpose: 'work',
   pattern: 'queue',
   icon: { symbol: 'people', color: 'white' },
-  design: { theme: 'mint', accent: 'blue', typography: 'compact', density: 'compact', artwork: 'none' },
+  design: { theme: 'bright', accent: 'orange', typography: 'compact', density: 'compact', artwork: 'none' },
   fields: [
     { id: 'person', label: 'Who', type: 'text', required: true, placeholder: 'Maya, met at the design meetup' },
     { id: 'action', label: 'Next action', type: 'text', required: true, placeholder: 'Send the demo link' },
@@ -241,7 +241,7 @@ export const PEOPLE_QUEUE: AppSpecInput = {
     { id: 'draft', label: 'Message draft', type: 'long_text', help: 'A draft you can copy. Nothing is ever sent for you.' },
   ],
   views: [
-    { id: 'queue', type: 'queue', title: 'Next actions', personFieldId: 'person', actionFieldId: 'action', dueFieldId: 'due', doneFieldId: 'done', contextFieldId: 'context', channelFieldId: 'channel', dueTextFieldId: 'due_words', draftFieldId: 'draft', groupBy: 'due', addLabel: 'Add a follow-up' },
+    { id: 'queue', type: 'queue', title: 'Next actions', personFieldId: 'person', actionFieldId: 'action', dueFieldId: 'due', doneFieldId: 'done', contextFieldId: 'context', channelFieldId: 'channel', dueTextFieldId: 'due_words', draftFieldId: 'draft', groupBy: 'due', addLabel: 'Add person' },
     { id: 'summary', type: 'summary', title: 'At a glance', metrics: [
       { id: 'open', label: 'Open actions', kind: 'count', where: { fieldId: 'done', op: 'falsy' } },
       { id: 'done_week', label: 'Done this week', kind: 'count', period: 'week', where: { fieldId: 'done', op: 'truthy' } },
@@ -251,7 +251,7 @@ export const PEOPLE_QUEUE: AppSpecInput = {
     { id: 'due_soon', type: 'due_soon', dateFieldId: 'due', withinDays: 3, doneFieldId: 'done', label: 'Needs attention' },
   ],
   entryNoun: { singular: 'follow-up', plural: 'follow-ups' },
-  emptyStateHint: 'Add the last person you promised something to. A date turns a good intention into a reminder.',
+  emptyStateHint: 'Add the last person you promised something to. With a date, it moves up when it is due.',
   permissions: [],
 };
 

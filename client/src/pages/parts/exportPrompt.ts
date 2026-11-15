@@ -1,10 +1,10 @@
 /**
- * Verbatim copy of the "Copyable context-export prompt" section of AI_App_Store_README.md.
- * Users paste this into the AI they already use and bring the answer back here.
+ * The "Copyable context-export prompt" from AI_App_Store_README.md, with the product named Ori (the
+ * README predates the name). People paste it into the AI they already use and bring the answer back.
  */
-export const EXPORT_PROMPT = `Help me create a portable context profile for a personal AI app store.
-It will suggest tools for both my recurring workflows and my hobbies,
-curiosity, and goals.
+export const EXPORT_PROMPT = `Help me create a portable context profile for Ori, an AI companion
+that makes small personal apps for me. It will suggest tools for both
+my recurring workflows and my hobbies, curiosity, and goals.
 
 Use only information actually available in this conversation and memory
 you are permitted to use. Do not claim to read other conversations,
@@ -27,6 +27,6 @@ Leave out passwords, API keys, account numbers, precise home addresses,
 private information about others, and confidential employer/client data.
 Use broad descriptions where those are sufficient.
 
-Do not propose apps yet. Describe my needs and interests so the app store
-can make its own recommendations. Keep the profile under 800 words.
+Do not propose apps yet. Describe my needs and interests so Ori can
+make its own suggestions. Keep the profile under 800 words.
 End with a short list of items I should review before sharing it.`;

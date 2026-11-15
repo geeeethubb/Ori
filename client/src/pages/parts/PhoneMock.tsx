@@ -1,203 +1,216 @@
 /**
- * Landing-page product composition: phone frames drawn in HTML/CSS showing the Agent, the Playground
- * and two visibly different apps (Riff: dark ink practice room; Light: paper contact sheet with real
- * CC0 example photographs). Static illustrations, labelled as examples; no live data.
+ * Landing previews (references C and 01; ORI_DESIGN_SPEC section 6): faithful static compositions of
+ * three example apps, each with its own identity (Light: paper and charcoal, photographs first; Riff:
+ * ink, lime and lilac, a tabular timer; People: white with orange, a next-action queue), a home screen
+ * where Ori and each app have their own icon, and the three example screens of one journey (drawn
+ * small and muted, with chips where the real screens have buttons). They use the real tokens, the
+ * canonical icons and CC0 example photographs, and are labelled Example. No device bezel or status
+ * bar, no live data, and nothing in them is a control.
  */
-import { BRAND } from '@shared/brand.ts';
+import type { CSSProperties } from 'react';
+import { REFERENCE_APP_ICONS, referenceIcon, type ReferenceAppKey } from '@shared/brand.ts';
+import { oriAppIconSvg } from '@shared/oriArt.ts';
 import { AppIcon } from '../../components/AppIcon.tsx';
-import { BrandMark } from '../../components/BrandMark.tsx';
-import { Icons } from '../../components/ui.tsx';
+import { OriCompanion } from '../../components/ori/OriCompanion.tsx';
+import { Glyph, Icons } from '../../components/ui.tsx';
+import { ExampleTag } from './badges.tsx';
 import { examplePhotos } from './MiniPreview.tsx';
 
-export const EXAMPLE_NOTE = 'I like this sound and have 15 minutes to practice.';
+/** The reference apps' headlines, as the apps themselves show them. */
+export const EXAMPLE_TAGLINES: Record<ReferenceAppKey, string> = {
+  light: 'Notice the light.',
+  riff: 'A little practice. A little progress.',
+  people: 'Keep the conversation going.',
+};
 
-interface PhoneFrameProps {
-  children: React.ReactNode;
-  /** Visually hidden description for screen readers. */
-  description: string;
-  theme?: 'bright' | 'ink' | 'paper';
-  className?: string;
+const REFERENCE_KEYS: ReferenceAppKey[] = ['light', 'riff', 'people'];
+
+let oriIconUri: string | null = null;
+
+/** Ori's own app icon (the still companion on lilac): the same art the parent manifest serves. */
+export function OriAppIcon({ size = 64, className }: { size?: number; className?: string }) {
+  oriIconUri ??= `data:image/svg+xml;charset=utf-8,${encodeURIComponent(oriAppIconSvg(128))}`;
+  return <img className={className} src={oriIconUri} width={size} height={size} alt="" />;
 }
 
-export function PhoneFrame({ children, description, theme = 'bright', className }: PhoneFrameProps) {
+function cx(...names: Array<string | false | undefined>): string {
+  return names.filter(Boolean).join(' ');
+}
+
+function PreviewHead({ app }: { app: ReferenceAppKey }) {
   return (
-    <figure className={`ph${className ? ` ${className}` : ''}`}>
-      <div className="ph-screen themed" data-theme={theme} aria-hidden="true">
-        <div className="ph-status"><span className="ph-notch" /></div>
-        {children}
+    <div className="lp-head">
+      <Glyph symbol={referenceIcon(app).symbol} className="lp-glyph" />
+      <span>{REFERENCE_APP_ICONS[app].name}</span>
+      <ExampleTag />
+    </div>
+  );
+}
+
+/** Light: one large photograph and a contact strip. */
+export function LightPreview({ className }: { className?: string }) {
+  const photos = examplePhotos();
+  return (
+    <div className={cx('lp-card lp-light', className)}>
+      <PreviewHead app="light" />
+      <img className="lp-photo" src={photos[0]} alt="" decoding="async" />
+      <div className="lp-film">
+        {photos.slice(1, 4).map((src) => <img key={src} src={src} alt="" loading="lazy" decoding="async" />)}
       </div>
-      <figcaption className="sr-only">{description}</figcaption>
+      <p className="lp-tagline lp-serif">{EXAMPLE_TAGLINES.light}</p>
+    </div>
+  );
+}
+
+/** Riff's level bars drawn large: static decoration, not audio. */
+const LEVELS = [4, 7, 10, 6, 13, 9, 15, 11, 7, 12, 15, 9, 13, 8, 11, 6, 9, 5];
+
+/** Riff: the practice room with its plan on a tabular timer. */
+export function RiffPreview({ className }: { className?: string }) {
+  return (
+    <div className={cx('lp-card lp-riff', className)}>
+      <PreviewHead app="riff" />
+      <div className="lp-levels">
+        {LEVELS.map((h, i) => <i key={i} style={{ '--h': h } as CSSProperties} />)}
+      </div>
+      <div className="lp-timer">
+        <span className="lp-time">15:00</span>
+        <span className="lp-plan">15-minute plan</span>
+      </div>
+      <p className="lp-tagline">{EXAMPLE_TAGLINES.riff}</p>
+    </div>
+  );
+}
+
+const PEOPLE_ROWS = [
+  { text: 'Follow up with Jamie', when: 'Today', done: false },
+  { text: 'Plan a catch-up', when: 'Friday', done: false },
+  { text: 'Reply to Sam', when: 'Done', done: true },
+];
+
+/** People: a short next-action queue. */
+export function PeoplePreview({ className }: { className?: string }) {
+  return (
+    <div className={cx('lp-card lp-people', className)}>
+      <PreviewHead app="people" />
+      <ul className="lp-rows">
+        {PEOPLE_ROWS.map((r) => (
+          <li key={r.text} className={cx('lp-row', r.done && 'is-done')}>
+            <span className="lp-mark">{r.done ? Icons.check : null}</span>
+            <span className="lp-row-text">
+              <span>{r.text}</span>
+              <small>{r.when}</small>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="lp-tagline">{EXAMPLE_TAGLINES.people}</p>
+    </div>
+  );
+}
+
+/** A home screen with Ori and each app as its own icon (no bezel, no status bar). */
+export function HomeScreenPreview({ className }: { className?: string }) {
+  return (
+    <div className={cx('lp-home', className)}>
+      <ul className="lp-home-icons">
+        <li>
+          <span className="lp-home-tile"><OriAppIcon size={64} /></span>
+          <span>Ori</span>
+        </li>
+        {REFERENCE_KEYS.map((key) => (
+          <li key={key}>
+            <span className="lp-home-tile">
+              <AppIcon icon={referenceIcon(key)} name={REFERENCE_APP_ICONS[key].name} size={64} title="" />
+            </span>
+            <span>{REFERENCE_APP_ICONS[key].name}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="lp-home-caption">Open each app directly.</p>
+    </div>
+  );
+}
+
+const SCENE_DESCRIPTION =
+  'Example apps, not a real account. Light shows a large street photograph and a strip of three more. ' +
+  'Riff, a dark practice room, shows a 15-minute plan on its timer. People lists three next steps: follow up with Jamie today, ' +
+  'plan a catch-up on Friday, and a reply to Sam that is done. In front, a home screen where Ori, Light, Riff and ' +
+  'People each have their own icon. Open each app directly.';
+
+/** The hero composition: the example apps in Ori's pocket around a home screen. Phones: the home screen, then one example. */
+export function LandingScene() {
+  return (
+    <figure className="ld-scene" data-testid="landing-scene">
+      <div className="ld-art" aria-hidden="true">
+        <span className="ld-deco ld-deco-glow" />
+        <span className="ld-pocket ld-pocket-back" />
+        <LightPreview />
+        <RiffPreview />
+        <PeoplePreview />
+        <HomeScreenPreview />
+        <span className="ld-pocket ld-pocket-front" />
+        <OriCompanion className="ld-art-ori" size={128} />
+        <span className="ld-deco ld-deco-lime" />
+        <span className="ld-deco ld-deco-lilac" />
+        <span className="ld-deco ld-deco-orange" />
+      </div>
+      <figcaption>
+        <span className="sr-only">{SCENE_DESCRIPTION}</span>
+        <span className="ld-scene-caption" aria-hidden="true">Open each app directly.</span>
+      </figcaption>
     </figure>
   );
 }
 
-/** The Agent: a note with a saved link, then a concise reply with a proposal card. */
-export function AgentScreen() {
+/** Example step 1: what someone shares. */
+export function ExampleShare() {
+  const photos = examplePhotos();
   return (
-    <PhoneFrame description={`The Agent screen: a note saying "${EXAMPLE_NOTE}" with a saved YouTube link marked "Title read, content not read", and the agent's reply proposing Riff, a practice room, with a Make mine button.`}>
-      <div className="ph-bar">
-        <BrandMark size={16} decorative />
-        <span>Agent</span>
-      </div>
-      <div className="ph-agent">
-        <div className="ph-note">
-          <span className="ph-eyebrow">Typed note</span>
-          <p>{EXAMPLE_NOTE}</p>
-          <div className="ph-linkcard">
-            <span className="ph-thumb" />
-            <span>
-              <strong>Fingerpicked acoustic riff</strong>
-              <em>YouTube · Title read, content not read</em>
-            </span>
-          </div>
-        </div>
-        <div className="ph-reply">
-          <span className="ph-avatar">{Icons.agent}</span>
-          <p>Got it. I read the title, not the video. Two directions:</p>
-        </div>
-        <div className="ph-proposal">
-          <div className="ph-proposal-head">
-            <AppIcon icon={{ symbol: 'guitar', color: 'ink' }} size={22} title="Riff icon" />
-            <span>
-              <small>Make an app</small>
-              <strong>Riff</strong>
-            </span>
-          </div>
-          <p>A timer sized to 15 minutes turns a liked sound into a session you actually play tonight.</p>
-          <span className="ph-btn ph-btn-primary">Make mine</span>
-        </div>
-        <div className="ph-proposal ph-proposal-quiet">
-          <div className="ph-proposal-head">
-            <AppIcon icon={{ symbol: 'headphones', color: 'lilac' }} size={22} title="Exploration icon" />
-            <span>
-              <small>Explore</small>
-              <strong>A listening-and-playing session</strong>
-            </span>
-          </div>
-          <span className="ph-btn">Explore</span>
-        </div>
-      </div>
-    </PhoneFrame>
+    <div className="lx-share">
+      <img src={photos[2]} alt="" loading="lazy" decoding="async" />
+      <p className="lx-bubble">I keep stopping for long shadows on brick walls. I want to notice the light on my walks.</p>
+    </div>
   );
 }
 
-/** The Playground: a featured card plus two smaller, visibly different cards. */
-export function PlaygroundScreen() {
+/** Example step 2: a short reply and the suggestion that comes with it. */
+export function ExampleReply() {
   return (
-    <PhoneFrame description="The Playground screen: the heading 'A few things you might be into', a featured Light card with photo tiles, and smaller cards for Riff and People.">
-      <div className="ph-bar">
-        <BrandMark size={16} decorative />
-        <span>Playground</span>
-      </div>
-      <div className="ph-pg">
-        <h3>A few things you might be into.</h3>
-        <div className="ph-card">
-          <div className="ph-card-media ph-sheet">
-            {examplePhotos().slice(0, 3).map((src) => <img key={src} src={src} alt="" loading="lazy" decoding="async" />)}
-          </div>
-          <div className="ph-card-body">
-            <small>Make an app</small>
+    <div className="lx-reply">
+      <p className="lx-reply-line">
+        <OriCompanion size={30} motion="none" />
+        <span>Light could help: one photo and one line about the light, each walk.</span>
+      </p>
+      <div className="lx-proposal">
+        <div className="lx-app">
+          <AppIcon icon={referenceIcon('light')} name="Light" size={44} title="" />
+          <div>
             <strong>Light</strong>
-            <p>Your walks keep stopping for shadows; a contact sheet makes noticing light a habit.</p>
-            <span className="ph-btn ph-btn-primary">Make mine</span>
+            <span>{EXAMPLE_TAGLINES.light}</span>
           </div>
         </div>
-        <div className="ph-card-row">
-          <div className="ph-card ph-card-small">
-            <div className="ph-card-media ph-ink"><span className="ph-mini-timer">15:00</span></div>
-            <div className="ph-card-body"><strong>Riff</strong><small>Make an app</small></div>
-          </div>
-          <div className="ph-card ph-card-small">
-            <div className="ph-card-media ph-mint">
-              <span className="ph-row"><i>M</i> Maya · Today</span>
-              <span className="ph-row"><i>A</i> Alex · Fri</span>
-            </div>
-            <div className="ph-card-body"><strong>People</strong><small>Add to app</small></div>
-          </div>
+        <div className="lx-actions">
+          <span className="lx-chip lx-chip-primary">Preview Light</span>
+          <span className="lx-chip">Keep inspiration</span>
         </div>
       </div>
-    </PhoneFrame>
+    </div>
   );
 }
 
-/** Riff: a dark listening room with a big timer. Session/control-first. */
-export function RiffScreen({ minutes = 15 }: { minutes?: number }) {
+/** Example step 3: the app is made, with its own link and a home-screen spot. */
+export function ExampleReady() {
   return (
-    <PhoneFrame theme="ink" description={`Riff, a practice app with a dark ink look: tonight's prompt, a large ${minutes}:00 timer, preset chips 10, 15 and 25 minutes, a lime Start button and a tempo of 72 bpm.`}>
-      <div className="ph-bar ph-bar-app">
-        <AppIcon icon={{ symbol: 'guitar', color: 'ink' }} size={22} title="Riff icon" />
-        <span>Riff</span>
-        <em>A little practice tonight</em>
+    <div className="lx-ready">
+      <AppIcon icon={referenceIcon('light')} name="Light" size={64} title="" />
+      <strong>Light is yours</strong>
+      <span className="muted small">Ready to use</span>
+      <div className="lx-actions">
+        <span className="lx-chip lx-chip-primary">Open Light</span>
+        <span className="lx-chip">Add to home screen</span>
       </div>
-      <div className="ph-riff">
-        <div className="ph-prompt">
-          <small>Tonight</small>
-          <p>Play the riff at half tempo three times, then once at full speed</p>
-        </div>
-        <div className="ph-timer">{String(minutes).padStart(2, '0')}:00</div>
-        <div className="ph-presets">
-          {[10, 15, 25].map((m) => <span key={m} className={m === minutes ? 'is-on' : ''}>{m} min</span>)}
-        </div>
-        <span className="ph-btn ph-btn-lime">{Icons.play} Start</span>
-        <div className="ph-tempo">
-          <span>Tempo</span>
-          <strong>72 bpm</strong>
-          <span className="ph-tempo-dots"><i /><i /><i /><i /></span>
-        </div>
-        <div className="ph-sources">
-          <small>Inspiration</small>
-          <span>Fingerpicked acoustic riff · YouTube</span>
-        </div>
-      </div>
-    </PhoneFrame>
-  );
-}
-
-/** Light: a paper contact sheet with real example photographs. Image-first. */
-export function LightScreen() {
-  return (
-    <PhoneFrame theme="paper" description="Light, a photography app with a warm paper look: a weekly light exercise, a contact sheet of four photographs of sunlight and shadows, and an Add photo button.">
-      <div className="ph-bar ph-bar-app">
-        <AppIcon icon={{ symbol: 'aperture', color: 'charcoal' }} size={22} title="Light icon" />
-        <span>Light</span>
-        <em>Find the light</em>
-      </div>
-      <div className="ph-light">
-        <div className="ph-exercise">
-          <small>Light exercise</small>
-          <p>Shoot only shadows and reflections</p>
-        </div>
-        <div className="ph-contact">
-          {examplePhotos().map((src, i) => (
-            <figure key={src}>
-              <img src={src} alt="" loading={i < 2 ? 'eager' : 'lazy'} decoding="async" />
-              <figcaption>{['Low sun, brick wall', 'Trees on the pavement', 'Shadow of a tree', 'Scaffolding at noon'][i]}</figcaption>
-            </figure>
-          ))}
-        </div>
-        <span className="ph-btn ph-btn-charcoal">{Icons.camera} Add photo</span>
-      </div>
-    </PhoneFrame>
-  );
-}
-
-/** The inspiration that starts the story: the note and the saved link, honestly labelled. */
-export function InspirationNote() {
-  return (
-    <div className="ld-note card" aria-label="An example note shared with the agent">
-      <div className="row-between">
-        <span className="eyebrow">A note to the agent</span>
-        <span className="badge badge-sample">Example</span>
-      </div>
-      <p className="ld-note-text">{EXAMPLE_NOTE} It is a fingerpicked acoustic riff I keep coming back to.</p>
-      <div className="ld-note-link">
-        <span className="ld-note-thumb" aria-hidden="true">{Icons.play}</span>
-        <span>
-          <strong>Fingerpicked acoustic riff</strong>
-          <span className="small muted">YouTube · Title read, content not read</span>
-        </span>
-      </div>
-      <p className="tiny faint">{BRAND.shortName} never claims to have watched a video it only saved.</p>
+      <span className="lx-ready-foot">Your own app. Its own link.</span>
     </div>
   );
 }

@@ -225,27 +225,46 @@ export function markUseful(appId: string, meta: Record<string, string | number |
   postEvent(appId, 'useful_action', meta);
 }
 
-/** Copy text to the clipboard; resolves false when neither the async API nor execCommand worked. */
+/**
+ * Copy text to the clipboard; resolves true only when it was copied. The async API needs a secure
+ * context (https or localhost), so on a plain-http network address the legacy path selects the text in
+ * a hidden field and runs the copy command. That field goes inside the open dialog, if any, so the
+ * dialog's focus trap cannot pull focus away first, and the copy counts only if the field really was
+ * focused with all of the text selected when the command ran (execCommand also says true for an empty
+ * selection). Focus then goes back to where it was.
+ */
 export async function copyText(text: string): Promise<boolean> {
   try {
-    await navigator.clipboard.writeText(text);
-    return true;
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
   } catch {
     /* fall through to the legacy path */
   }
+  if (typeof document === 'undefined') return false;
+  const previous = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null;
+  const dialogs = document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]');
+  const host = previous?.closest<HTMLElement>('[role="dialog"]') ?? dialogs[dialogs.length - 1] ?? document.body;
+  const ta = document.createElement('textarea');
   try {
-    const ta = document.createElement('textarea');
     ta.value = text;
     ta.setAttribute('readonly', '');
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
+    ta.setAttribute('aria-hidden', 'true');
+    ta.tabIndex = -1;
+    // 16px: iOS zooms into smaller fields when they take focus.
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:0;margin:0;opacity:0;font-size:16px;pointer-events:none;';
+    host.appendChild(ta);
+    ta.focus({ preventScroll: true });
     ta.select();
-    const ok = document.execCommand('copy');
-    document.body.removeChild(ta);
-    return ok;
+    ta.setSelectionRange(0, text.length);
+    const selected = document.activeElement === ta && ta.selectionStart === 0 && ta.selectionEnd === text.length;
+    return selected && document.execCommand('copy');
   } catch {
     return false;
+  } finally {
+    ta.remove();
+    if (previous?.isConnected) previous.focus({ preventScroll: true });
   }
 }
 

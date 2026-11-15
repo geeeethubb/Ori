@@ -300,7 +300,7 @@ export function promptsFor(conceptId: string | undefined, pattern: Pattern, purp
 
 /**
  * Daily practice prompts sized to the minutes the person has (used when a practice app's prompts are
- * resized through "Make this more me" or an Agent update). General practice only: no artists, no links.
+ * resized through Edit with Ori or an Agent update). General practice only: no artists, no links.
  */
 export function practicePromptsFor(minutes: number): string[] {
   const m = Math.max(3, Math.min(180, Math.round(minutes)));

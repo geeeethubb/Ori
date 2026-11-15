@@ -1,0 +1,178 @@
+/* ------------------------------------------------------------------
+   Landing (references C and 01; ORI_DESIGN_SPEC section 6).
+   Prefixes: ld- page and hero scene, lp- the example app previews
+   (Light, Riff, People and the home screen), lx- the example journey.
+   Inside the scene every size is a multiple of --u: 1% of the scene's
+   width from 640px up (container units), a fixed step on phones, where
+   the same previews stack into one example. Phone first; nothing here
+   may widen the page at 320px. The previews are illustrations: no
+   pointer events, nothing in them is a control; the example screens
+   are framed, scaled down and captioned so they read as pictures.
+   ------------------------------------------------------------------ */
+
+.ld { display: flex; flex-direction: column; gap: 72px; width: 100%; max-width: var(--content-w); margin: 0 auto; }
+/* A solid cobalt focus ring (about 6:1 on the canvas). */
+.ld :focus-visible { outline-color: var(--blue); }
+
+/* ---------- hero ---------- */
+.ld-hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-items: center; padding-top: 4px; }
+@media (min-width: 960px) {
+  .ld-hero { grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.04fr); gap: 16px; min-height: min(720px, calc(100vh - 120px)); padding-top: 0; }
+}
+.ld-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; min-width: 0; }
+/* Three lines, as in reference C: "Your interests / have somewhere / to go." */
+.ld-h1 { font-size: clamp(2.125rem, 1.45rem + 3.1vw, 4.125rem); font-weight: 800; line-height: 1.02; letter-spacing: -0.035em; max-width: 15ch; text-wrap: wrap; }
+.ld-lede { font-size: clamp(1.05rem, 0.98rem + 0.35vw, 1.3rem); line-height: 1.45; color: var(--ink-2); max-width: 34ch; }
+.ld-cta { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; margin-top: 4px; }
+.ld-cta .btn { flex: 1 1 150px; border-radius: 999px; }
+@media (min-width: 560px) { .ld-cta .btn { flex: 0 0 auto; min-width: 180px; } }
+/* Small phones: both actions on one row, so the home screen comes into view above the fold. */
+@media (max-width: 359px) {
+  .ld-hero { gap: 22px; }
+  .ld-copy { gap: 14px; }
+  .ld-cta { flex-wrap: nowrap; gap: 8px; }
+  .ld-cta .btn { flex: 1 1 0; min-width: 0; min-height: 48px; padding: 10px 8px; font-size: 0.95rem; }
+}
+.ld-signature { font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; letter-spacing: -0.01em; color: var(--ink-2); }
+
+/* ---------- the scene: three example apps in the pocket, and a home screen ---------- */
+.ld-scene { margin: 0; width: 100%; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.ld-art { --u: 4.2px; position: relative; width: 100%; container-type: inline-size; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.ld-art > * { min-width: 0; }
+.ld-art > .ld-deco, .ld-art > .ld-pocket, .ld-art > .ld-art-ori { display: none; }
+/* Phones: the home screen first, then one convincing example (Light), then Riff and People side by side. */
+.ld-art .lp-home { grid-column: 1 / -1; order: -2; }
+.ld-art .lp-light { grid-column: 1 / -1; order: -1; }
+.ld-scene-caption { display: none; font-family: var(--font-display); font-weight: 700; font-size: 1.02rem; letter-spacing: -0.01em; color: var(--ink); text-align: center; }
+
+@media (min-width: 640px) {
+  .ld-art { --u: 1cqw; display: block; max-width: 620px; aspect-ratio: 100 / 96; margin: 0 auto; }
+  .ld-art > .ld-deco, .ld-art > .ld-pocket, .ld-art > .ld-art-ori { display: block; position: absolute; }
+  .ld-scene-caption { display: block; }
+  /* Back to front: glow, the pocket's back rim, three app cards tucked into the pocket, the pocket,
+     then the home screen standing in front of it with the companion beside it (reference C). */
+  .ld-art .lp-card { position: absolute; z-index: 2; box-shadow: 0 calc(var(--u) * 1.2) calc(var(--u) * 4) rgba(22, 32, 57, 0.18); }
+  .ld-art .lp-card .lp-tagline { display: none; }
+  .ld-art .lp-light { left: calc(var(--u) * 2); top: calc(var(--u) * 10); width: calc(var(--u) * 33); min-height: calc(var(--u) * 56); transform: rotate(-8deg); }
+  .ld-art .lp-riff { left: calc(var(--u) * 34); top: calc(var(--u) * 1); width: calc(var(--u) * 32); min-height: calc(var(--u) * 64); transform: rotate(2deg); }
+  .ld-art .lp-people { left: calc(var(--u) * 62); top: calc(var(--u) * 14); width: calc(var(--u) * 34); min-height: calc(var(--u) * 54); transform: rotate(8deg); }
+  .ld-art .lp-home { position: absolute; z-index: 6; left: calc(var(--u) * 31); top: calc(var(--u) * 36); width: calc(var(--u) * 38); box-shadow: 0 calc(var(--u) * 1.5) calc(var(--u) * 5) rgba(22, 32, 57, 0.3); }
+  .ld-art .lp-home-caption { display: none; }
+  .ld-art > .ld-pocket-back { z-index: 1; left: calc(var(--u) * 3); right: calc(var(--u) * 3); top: calc(var(--u) * 54); height: calc(var(--u) * 12); border-radius: 50%; background: #2436C9; }
+  .ld-art > .ld-pocket-front { z-index: 4; left: 0; right: 0; bottom: 0; height: calc(var(--u) * 37); background: var(--blue); border-radius: calc(var(--u) * 5) calc(var(--u) * 5) 50% 50% / calc(var(--u) * 5) calc(var(--u) * 5) 58% 58%; box-shadow: inset 0 calc(var(--u) * 0.8) 0 rgba(255, 255, 255, 0.18); }
+  /* The companion sits on the pocket's rim, in front of Light, so its cobalt body never melts into the pocket. */
+  .ld-art > .ld-art-ori { z-index: 7; left: calc(var(--u) * 1); top: calc(var(--u) * 40); width: calc(var(--u) * 22); height: calc(var(--u) * 22); }
+  .ld-art > .ld-deco-glow { z-index: 0; left: calc(var(--u) * 6); top: calc(var(--u) * 0); width: calc(var(--u) * 88); height: calc(var(--u) * 80); border-radius: 50%; background: radial-gradient(closest-side, #ECE3FF 0%, rgba(236, 227, 255, 0.6) 55%, rgba(236, 227, 255, 0) 100%); }
+  .ld-art > .ld-deco-lime { z-index: 7; right: calc(var(--u) * 4); top: calc(var(--u) * 58); width: calc(var(--u) * 8); height: calc(var(--u) * 8); border-radius: calc(var(--u) * 2); background: var(--lime); transform: rotate(14deg); }
+  .ld-art > .ld-deco-lilac { z-index: 7; right: calc(var(--u) * 12); top: calc(var(--u) * 68); width: calc(var(--u) * 5.5); height: calc(var(--u) * 5.5); border-radius: 50%; background: var(--lilac); }
+  .ld-art > .ld-deco-orange { z-index: 7; right: calc(var(--u) * 5); top: calc(var(--u) * 71); width: calc(var(--u) * 7); height: calc(var(--u) * 6.4); background: var(--orange); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+}
+
+/* ---------- example app previews (also the phone example) ---------- */
+.lp-card { position: relative; display: flex; flex-direction: column; gap: calc(var(--u) * 2); padding: calc(var(--u) * 2.6); border-radius: calc(var(--u) * 4.4); font-size: max(12px, calc(var(--u) * 2.5)); line-height: 1.3; overflow: hidden; pointer-events: none; user-select: none; }
+.lp-head { display: flex; align-items: center; gap: 4px calc(var(--u) * 1.4); font-family: var(--font-display); font-weight: 800; font-size: max(15px, calc(var(--u) * 3.6)); letter-spacing: -0.02em; line-height: 1.1; }
+/* Phones: a narrow card lets the Example tag drop to its own line instead of clipping it (320px). */
+@media (max-width: 639px) { .lp-head { flex-wrap: wrap; } }
+.lp-glyph { width: max(18px, calc(var(--u) * 4.4)); height: max(18px, calc(var(--u) * 4.4)); flex: none; }
+.lp-head .badge { margin-left: auto; font-size: max(10px, calc(var(--u) * 1.8)); padding: 2px max(6px, calc(var(--u) * 1.2)); letter-spacing: 0.02em; }
+.lp-tagline { font-size: max(13px, calc(var(--u) * 2.6)); }
+
+/* Light: warm paper, charcoal, images first */
+.lp-light { background: #FAF8F4; color: #181A1F; border: 1px solid #E6E1D6; }
+.lp-photo { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: calc(var(--u) * 2.4); background: #E6E1D6; }
+.lp-film { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: max(3px, calc(var(--u) * 0.8)); padding: max(7px, calc(var(--u) * 1.5)) max(5px, calc(var(--u) * 1)); background: #181A1F; border-radius: max(5px, calc(var(--u) * 1.3)); }
+.lp-film::before, .lp-film::after { content: ''; position: absolute; left: 8%; right: 8%; height: max(2px, calc(var(--u) * 0.5)); background: repeating-linear-gradient(90deg, rgba(250, 248, 244, 0.75) 0 max(3px, calc(var(--u) * 0.8)), transparent max(3px, calc(var(--u) * 0.8)) max(8px, calc(var(--u) * 2))); }
+.lp-film::before { top: max(2px, calc(var(--u) * 0.45)); }
+.lp-film::after { bottom: max(2px, calc(var(--u) * 0.45)); }
+.lp-film img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: max(2px, calc(var(--u) * 0.5)); background: #343842; }
+.lp-serif { font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif; font-style: italic; letter-spacing: 0; }
+
+/* Riff: dark ink, lime and lilac, a tabular timer */
+.lp-riff { background: #162039; color: #F7F8FC; }
+.lp-riff .lp-glyph { color: var(--lime); }
+.lp-levels { display: flex; align-items: center; justify-content: space-between; gap: max(2px, calc(var(--u) * 0.45)); height: max(48px, calc(var(--u) * 12)); padding: 0 calc(var(--u) * 0.4); }
+.lp-levels i { flex: 1 1 0; max-width: max(4px, calc(var(--u) * 0.95)); height: calc(var(--h) * 6.5%); min-height: 4px; border-radius: 999px; background: var(--lilac); }
+.lp-levels i:nth-child(4n + 2) { background: #A994F0; }
+.lp-timer { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 calc(var(--u) * 1.6); }
+.lp-time { font-family: var(--font-display); font-weight: 800; font-size: max(34px, calc(var(--u) * 7.4)); line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; color: var(--lime); }
+.lp-plan { color: #B9C1D9; font-size: max(12px, calc(var(--u) * 2.3)); font-weight: 600; }
+.lp-riff .lp-tagline { color: #B9C1D9; }
+
+/* People: clean white, orange accents, a next-action queue */
+.lp-people { background: #FFFFFF; color: var(--ink); border: 1px solid var(--line); }
+.lp-people .lp-glyph { color: #E9541F; }
+.lp-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: max(6px, calc(var(--u) * 1.1)); }
+.lp-row { display: flex; align-items: center; gap: max(8px, calc(var(--u) * 1.3)); padding: max(7px, calc(var(--u) * 1.3)) max(8px, calc(var(--u) * 1.5)); border-radius: max(9px, calc(var(--u) * 1.8)); background: #FFF1EA; font-weight: 600; line-height: 1.2; }
+.lp-row-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; overflow-wrap: anywhere; }
+.lp-row-text small { font-size: 0.82em; font-weight: 700; color: #9A2E0E; }
+.lp-mark { flex: none; display: inline-flex; align-items: center; justify-content: center; width: max(16px, calc(var(--u) * 3.3)); height: max(16px, calc(var(--u) * 3.3)); border-radius: 50%; border: 2px solid #E9541F; color: #FFFFFF; }
+.lp-mark svg { width: 70%; height: 70%; }
+.lp-row.is-done { background: #F7F8FC; color: var(--ink-2); }
+.lp-row.is-done .lp-row-text > span { text-decoration: line-through; }
+.lp-row.is-done .lp-mark { background: #E9541F; }
+.lp-row.is-done .lp-row-text small { color: var(--ink-2); }
+
+/* the home screen: separate icons, no bezel or status bar */
+.lp-home { position: relative; overflow: hidden; background: #162039; color: #FFFFFF; border-radius: max(20px, calc(var(--u) * 5)); padding: max(16px, calc(var(--u) * 4)) max(10px, calc(var(--u) * 2.5)) max(14px, calc(var(--u) * 4.5)); pointer-events: none; user-select: none; }
+.lp-home::after { content: ''; position: absolute; left: -10%; right: -10%; bottom: -55%; height: 90%; border-radius: 50%; background: radial-gradient(circle at 50% 40%, rgba(49, 71, 242, 0.55), rgba(49, 71, 242, 0) 65%); }
+.lp-home-icons { position: relative; z-index: 1; list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 4px; justify-items: center; }
+.lp-home-icons li { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; font-family: var(--font-display); font-weight: 700; font-size: max(13px, calc(var(--u) * 2.5)); letter-spacing: -0.005em; line-height: 1.1; }
+.lp-home-icons svg, .lp-home-icons img { display: block; width: 54px; height: 54px; }
+.lp-home-tile { display: inline-flex; border-radius: 22%; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16); }
+.lp-home-caption { position: relative; z-index: 1; margin-top: 14px; text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; color: #FFFFFF; }
+@media (max-width: 359px) { .lp-home-icons svg, .lp-home-icons img { width: 48px; height: 48px; } }
+@media (min-width: 640px) {
+  .lp-home-icons { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(var(--u) * 3) calc(var(--u) * 1.5); }
+  .lp-home-icons li { gap: calc(var(--u) * 1.2); }
+  .lp-home-icons svg, .lp-home-icons img { width: calc(var(--u) * 11.5); height: calc(var(--u) * 11.5); }
+}
+
+/* ---------- one example, start to finish ---------- */
+.ld-example { display: flex; flex-direction: column; gap: 24px; scroll-margin-top: 84px; }
+.ld-example:focus { outline: none; }
+.ld-example:focus-visible { outline: 3px solid var(--blue); outline-offset: 8px; border-radius: 12px; }
+.ld-example-head { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; max-width: 46rem; }
+.ld-example-head h2 { font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2.4rem); letter-spacing: -0.025em; max-width: 22ch; text-wrap: balance; }
+.ld-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .ld-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; } }
+.ld-step { display: flex; flex-direction: column; gap: 16px; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l); min-width: 0; }
+.ld-step-head { display: flex; gap: 12px; align-items: flex-start; }
+.ld-step-head > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ld-step-head h3 { font-size: 1.15rem; }
+.ld-step-num { flex: none; width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--blue-soft); color: var(--blue-ink); font-family: var(--font-display); font-weight: 800; }
+/* Each step's picture: a small framed screen on a tinted ground, captioned "Example screen". Its
+   chips are drawn muted and small so they never look like the page's real buttons. */
+.ld-step-art { margin: auto 0 0; display: flex; flex-direction: column; align-items: stretch; gap: 8px; pointer-events: none; user-select: none; }
+.ld-screen { padding: 12px; border-radius: 18px; background: #ECEFF7; border: 1px solid var(--line); font-size: 0.84rem; }
+.ld-screen-caption { align-self: center; font-size: 0.78rem; font-weight: 600; letter-spacing: 0.01em; color: var(--ink-2); }
+
+.lx-share { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.lx-share img { width: 58%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 14px 14px 5px 14px; background: var(--surface-2); }
+.lx-bubble { max-width: 90%; padding: 8px 12px; border-radius: 14px 14px 5px 14px; background: #4A5DF0; color: #FFFFFF; line-height: 1.4; }
+.lx-reply { display: flex; flex-direction: column; gap: 8px; }
+.lx-reply-line { display: flex; gap: 8px; align-items: flex-start; line-height: 1.4; }
+.lx-reply-line .ori-companion { flex: none; width: 26px; height: 26px; margin-top: -2px; }
+.lx-proposal { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.lx-app { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.lx-app > svg { width: 36px; height: 36px; flex: none; }
+.lx-app > div { display: flex; flex-direction: column; min-width: 0; }
+.lx-app strong { font-family: var(--font-display); font-size: 0.98rem; }
+.lx-app span { color: var(--ink-2); font-size: 0.82rem; }
+.lx-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.lx-chip { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--canvas); font-family: var(--font-display); font-weight: 700; font-size: 0.74rem; color: var(--ink-2); white-space: nowrap; }
+.lx-chip-primary { background: var(--blue-soft); border-color: var(--blue-soft); color: var(--blue-ink); }
+.lx-ready { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 14px 12px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.lx-ready > svg { width: 52px; height: 52px; }
+.lx-ready strong { font-family: var(--font-display); font-size: 1.12rem; letter-spacing: -0.02em; margin-top: 4px; }
+.lx-ready .lx-actions { justify-content: center; margin-top: 6px; }
+.lx-ready-foot { margin-top: 4px; font-size: 0.78rem; color: var(--ink-2); }
+.ld-example-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.ld-example-cta .btn { border-radius: 999px; }
+.ld-example-cta > span { flex: 1 1 260px; }
+
+/* ---------- footer ---------- */
+.ld-foot { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 28px 0 4px; border-top: 1px solid var(--line); text-align: center; }
+.ld-foot-brand { display: inline-flex; align-items: center; gap: 14px; }
+.ld-foot-brand img { border-radius: 22%; }
+.ld-foot-sep { width: 1px; height: 30px; background: var(--line-2); }
+.ld-foot p { max-width: 52ch; }

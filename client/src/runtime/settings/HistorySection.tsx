@@ -11,6 +11,18 @@ interface Props {
   onDetail: (detail: AppDetailDto) => void;
 }
 
+/**
+ * The data-safe undo of exactly the change that made `expectedVersion` (the toast's Undo). The plan is
+ * read first and an undo that would leave entries out of every tab is never run; if the app changed
+ * since (another change, another device, a retried tap), the server refuses it and nothing happens.
+ */
+export async function undoChange(appId: string, expectedVersion: number): Promise<{ detail: AppDetailDto; kept: string[]; label: UndoPreviewDto['label'] }> {
+  const plan = await api<UndoPreviewDto>(`/api/apps/${appId}/revisions/undo/preview`, { method: 'POST' });
+  if (!plan.ok) throw new Error(plan.blocked.join(' ') || 'This undo would lose track of entries, so it was not run.');
+  const d = await api<AppDetailDto & { kept?: string[] }>(`/api/apps/${appId}/revisions/undo`, { method: 'POST', body: { expectedVersion } });
+  return { detail: { app: d.app, spec: d.spec, version: d.version, canUndo: d.canUndo }, kept: d.kept ?? plan.kept, label: plan.label };
+}
+
 export function HistorySection({ appId, detail, onDetail }: Props) {
   const { toast } = useToast();
   const [versions, setVersions] = useState<AppVersionDto[] | null>(null);
@@ -71,9 +83,9 @@ export function HistorySection({ appId, detail, onDetail }: Props) {
   };
 
   return (
-    <section className="rt-section card card-pad" data-testid="rt-history">
+    <section className="rt-section card card-pad" data-testid="rt-history" id="history" aria-labelledby="rt-history-heading">
       <div className="row-between">
-        <h2>History</h2>
+        <h2 id="rt-history-heading">History and undo</h2>
         <button type="button" className="btn btn-secondary btn-sm" data-testid="rt-undo" disabled={!detail.canUndo || busy || plan !== null} onClick={() => void askUndo()}>
           {busy && !plan ? 'Checking…' : 'Undo last change'}
         </button>

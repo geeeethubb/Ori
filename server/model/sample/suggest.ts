@@ -35,7 +35,7 @@ export function suggestImprovement(input: SuggestInput, now: Date = new Date()):
         request: 'Add a weekly challenge',
       };
     }
-    const intents = planInstructions(spec, feedback).filter((i): i is Exclude<Intent, { kind: 'unsupported' }> => i.kind !== 'unsupported');
+    const intents = planInstructions(spec, feedback).filter((i): i is Exclude<Intent, { kind: 'unsupported' | 'exists' }> => i.kind !== 'unsupported' && i.kind !== 'exists');
     const first = intents[0];
     if (first) return fromIntent(first, said);
     const noun = mainNoun(feedback, spec.fields.map((f) => f.label));
@@ -95,7 +95,7 @@ export function suggestImprovement(input: SuggestInput, now: Date = new Date()):
   return null;
 }
 
-function fromIntent(intent: Exclude<Intent, { kind: 'unsupported' }>, said: string): ImprovementSuggestion {
+function fromIntent(intent: Exclude<Intent, { kind: 'unsupported' | 'exists' }>, said: string): ImprovementSuggestion {
   switch (intent.kind) {
     case 'add_field':
       return {

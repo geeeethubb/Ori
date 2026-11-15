@@ -390,10 +390,10 @@ export const EXPLORE_CONCEPTS: Concept[] = [
     pattern: 'tracker',
     icon: { symbol: 'sun', color: 'indigo' },
     tagline: 'Spot what helps you feel better',
-    description: 'A daily check-in for hours slept, energy, mood and what affected it, with weekly averages so patterns show up before burnout does.',
+    description: 'A quick check-in you log for hours slept, energy, mood and what affected it, with weekly averages so patterns show up before burnout does.',
     triggers: ['sleep', 'sleeping', 'insomnia', 'energy', 'tired', 'exhausted', 'burnout', 'burned out', 'burnt out', 'fatigue', 'rest', 'naps', 'wake up', 'caffeine', 'low energy', 'bedtime', 'recovery', 'screen time'],
     firstAction: 'Log last night’s sleep and how your energy is right now.',
-    because: 'A thirty-second daily check-in with weekly averages shows what actually helps you feel better.',
+    because: 'A thirty-second check-in with weekly averages shows what actually helps you feel better.',
     base: () => trackerSpec({
       name: 'Energy & Sleep Check-in', tagline: 'Spot what helps you feel better', purpose: 'explore', icon: { symbol: 'sun', color: 'indigo' },
       fields: [

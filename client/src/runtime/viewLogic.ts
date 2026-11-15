@@ -2,10 +2,10 @@
  * Pure, testable logic behind the runtime views: which fields a view shows, how records are
  * sorted and grouped, and how board columns are built. No React here.
  */
-import { fieldById, visibleFields, type AppSpec, type DueSoonRule, type FieldSpec, type SelectOption, type ViewSpec } from '@shared/appSpec.ts';
+import { fieldById, formFieldsFor, recordMatchesView, visibleFields, type AppSpec, type DueSoonRule, type FieldSpec, type SelectOption, type ViewSpec } from '@shared/appSpec.ts';
 import type { AppRecord, RecordValues } from '@shared/records.ts';
 import { dueStatus, type DueStatus } from '@shared/rules.ts';
-import { friendlyDate, parseIsoDate, toIsoDate } from '@shared/time.ts';
+import { daysBetween, findWhenWords, friendlyDate, parseIsoDate, todayIso, toIsoDate } from '@shared/time.ts';
 
 export type JournalViewSpec = Extract<ViewSpec, { type: 'journal' }>;
 export type BoardViewSpec = Extract<ViewSpec, { type: 'board' }>;
@@ -175,8 +175,10 @@ export function listRows(spec: AppSpec, view: ListViewSpec, records: AppRecord[]
 
 // ---------- summary ----------
 
-export function recentRecords(records: AppRecord[], n = 3): AppRecord[] {
-  return [...records].sort((a, b) => -cmpStr(a.createdAt, b.createdAt)).slice(0, n);
+/** The newest entries: by their own date field when one is given (creation time as tiebreak), else by creation time. */
+export function recentRecords(records: AppRecord[], n = 3, dateFieldId?: string): AppRecord[] {
+  const key = (r: AppRecord) => (dateFieldId ? recordDate(r, dateFieldId) : '');
+  return [...records].sort((a, b) => -(cmpStr(key(a), key(b)) || cmpStr(a.createdAt, b.createdAt))).slice(0, n);
 }
 
 // ---------- gallery ----------
@@ -215,9 +217,19 @@ export function galleryCaption(view: GalleryViewSpec, record: AppRecord): string
   return '';
 }
 
-/** Fields shown in the lightbox under the photo (everything visible except image, caption, note and date). */
+/**
+ * Fields shown in the photo detail under the photo: every field of the photo's own form (so fields a
+ * revision added, such as Camera, Shutter and Aperture, appear), except the image, caption, note and
+ * date, which the detail shows on their own. A view without a form list shows every visible field.
+ */
 export function galleryDetailFields(spec: AppSpec, view: GalleryViewSpec): FieldSpec[] {
-  return resolveFields(spec, undefined, [view.imageFieldId, view.captionFieldId, view.noteFieldId, view.dateFieldId], () => visibleFields(spec));
+  return resolveFields(spec, undefined, [view.imageFieldId, view.captionFieldId, view.noteFieldId, view.dateFieldId], () => formFieldsFor(spec, view));
+}
+
+/** "Thursday, November 12" style date for the photo detail (the raw value when it is not a date). */
+export function longDate(iso: string): string {
+  const d = parseIsoDate(iso);
+  return d ? d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) : iso;
 }
 
 // ---------- links ----------
@@ -238,6 +250,27 @@ export function linkRows(records: AppRecord[]): AppRecord[] {
   return [...records].sort((a, b) => -cmpStr(a.createdAt, b.createdAt));
 }
 
+/**
+ * What a practice room lists under its timer to play along with: the saved sources of the app's first
+ * links view (records of that view's kind that hold a link), newest first. Null when the app keeps none.
+ */
+export function practiceSources(spec: AppSpec, records: AppRecord[]): { view: LinksViewSpec; rows: AppRecord[] } | null {
+  const links = spec.views.find((v): v is LinksViewSpec => v.type === 'links');
+  if (!links) return null;
+  const rows = linkRows(records.filter((r) => recordMatchesView(links, r.values) && typeof r.values[links.urlFieldId] === 'string' && String(r.values[links.urlFieldId]).trim() !== ''));
+  return { view: links, rows };
+}
+
+/** A small glyph for a saved source from its kind (song, lesson, riff, artist…), so the list reads at a glance. */
+export function sourceGlyph(kindLabel: string | undefined): 'music' | 'book' | 'guitar' | 'mic' | 'link' {
+  const k = (kindLabel ?? '').toLowerCase();
+  if (/song|track|music|album/.test(k)) return 'music';
+  if (/lesson|tutorial|course|class|article/.test(k)) return 'book';
+  if (/riff|lick|chord|tab|scale/.test(k)) return 'guitar';
+  if (/artist|band|singer|player/.test(k)) return 'mic';
+  return 'link';
+}
+
 // ---------- queue ----------
 
 export type QueueGroupKey = 'overdue' | 'today' | 'soon' | 'later' | 'done';
@@ -250,18 +283,30 @@ export interface QueueGroup {
   records: AppRecord[];
 }
 
+/** A queue rule's date field when the queue has no dates at all (no item is ever due). */
+const NO_DATE_FIELD = '__none__';
+
 /** The due rule a queue view works with: its own due/done config, with the spec's matching rule for `withinDays`. */
 export function queueRule(spec: AppSpec, view: QueueViewSpec): DueSoonRule {
   const specRule = spec.rules.find((r): r is DueSoonRule => r.type === 'due_soon' && (!view.dueFieldId || r.dateFieldId === view.dueFieldId));
   return {
     id: `queue_${view.id}`,
     type: 'due_soon',
-    dateFieldId: view.dueFieldId ?? specRule?.dateFieldId ?? '__none__',
+    dateFieldId: view.dueFieldId ?? specRule?.dateFieldId ?? NO_DATE_FIELD,
     withinDays: specRule?.withinDays ?? 3,
     doneFieldId: view.doneFieldId,
     stageFieldId: view.stageFieldId,
     doneStageValues: view.doneStageValues,
   };
+}
+
+/**
+ * The field a queue item's due date lives in: the view's own, else the app's due_soon rule's (a view
+ * may leave it to the rule). Undefined when the queue has no dates. Cards, chips and suggested dates
+ * all read it, so an item sorted into Today also says why.
+ */
+export function queueDateField(rule: DueSoonRule): string | undefined {
+  return rule.dateFieldId !== NO_DATE_FIELD ? rule.dateFieldId : undefined;
 }
 
 export function dueGroupKey(status: DueStatus): QueueGroupKey {
@@ -310,9 +355,12 @@ export function personName(view: QueueViewSpec, record: AppRecord): string {
   return typeof v === 'string' && v.trim() ? v.trim() : 'Someone';
 }
 
-/** Short name: the part before a comma, bracket, dash or " from " / " at " / " met ". */
+/**
+ * Short name: the part before a comma, a bracket, a dash set apart by a space (" - ", "–", "—") or
+ * " from " / " at " / " met ". A hyphen inside a name ("Mary-Jane", "Jean-Luc", "Seo-yeon") is part of it.
+ */
 export function personShortName(full: string): string {
-  const cut = full.split(/\s*[,(–—-]\s*|\s+(?:from|at|met|via|of)\s+/i)[0] ?? full;
+  const cut = full.split(/\s*[,(–—]\s*|\s+-\s*|\s*-\s+|\s+(?:from|at|met|via|of)\s+/i)[0] ?? full;
   return cut.trim() || full.trim();
 }
 
@@ -379,11 +427,121 @@ export function draftFieldFor(spec: AppSpec, view?: QueueViewSpec): FieldSpec | 
   return spec.fields.find((f) => f.type === 'long_text' && !f.hidden && /draft/i.test(`${f.id} ${f.label}`));
 }
 
+/** A tab's items grouped by person (a queue with groupBy 'person'), in the order each person first appears, so the soonest stays first. */
+export function personGroups(view: QueueViewSpec, records: AppRecord[]): { key: string; label: string; records: AppRecord[] }[] {
+  const map = new Map<string, { key: string; label: string; records: AppRecord[] }>();
+  for (const r of records) {
+    const label = personShortName(personName(view, r));
+    const key = label.toLowerCase();
+    const group = map.get(key);
+    if (group) group.records.push(r);
+    else map.set(key, { key, label, records: [r] });
+  }
+  return [...map.values()];
+}
+
+/**
+ * Where keyboard focus goes after the person acted on a queue item whose control then went away
+ * (Mark done, Set a date, Reopen): the item itself when it should still be listed (`keepSelf`), else
+ * the next item of the list it was in, else the one before. Ids, in order of preference.
+ */
+export function focusCandidates(order: string[], id: string, keepSelf: boolean): string[] {
+  const i = order.indexOf(id);
+  const after = i < 0 ? [] : order.slice(i + 1);
+  const before = i < 0 ? [] : order.slice(0, i).reverse();
+  return [...(keepSelf ? [id] : []), ...after, ...before];
+}
+
 /** Short one-line snippet (first line, trimmed to `max` characters). */
 export function snippet(v: unknown, max = 90): string {
   if (typeof v !== 'string') return '';
   const line = v.trim().split('\n')[0] ?? '';
   return line.length > max ? `${line.slice(0, max - 1)}…` : line;
+}
+
+// ---------- queue: Today | Upcoming (People) ----------
+
+export type QueueTab = 'today' | 'upcoming';
+
+export interface QueueTabs {
+  /** Due today or overdue (the most overdue first, then today's). */
+  today: AppRecord[];
+  /** Due later, soonest first, then items without a date. */
+  upcoming: AppRecord[];
+  /** Completed, most recently updated first. In neither tab. */
+  done: AppRecord[];
+}
+
+/** The open items of a queue split for the Today | Upcoming filter (same due rule as the groups). */
+export function queueTabs(spec: AppSpec, view: QueueViewSpec, records: AppRecord[], now: Date = new Date()): QueueTabs {
+  const g = Object.fromEntries(queueGroups(spec, view, records, now).map((x) => [x.key, x.records])) as Record<QueueGroupKey, AppRecord[]>;
+  return { today: [...g.overdue, ...g.today], upcoming: [...g.soon, ...g.later], done: g.done };
+}
+
+export type DueTone = 'overdue' | 'today' | 'soon' | 'later' | 'words';
+
+export interface DueChip {
+  /** Short text on the chip: "Today", "Tomorrow", "Friday", "Nov 28", or the person's own words. */
+  text: string;
+  /** The same for a screen reader, e.g. "Due tomorrow" or "You said: Thursday". */
+  label: string;
+  tone: DueTone;
+}
+
+/**
+ * The due chip of a queue item: from its date when it has one ("Today", "Tomorrow", a weekday within
+ * the week, else a short date; past dates are overdue), else the person's own words, as they said them.
+ */
+export function dueChip(due: unknown, words: unknown, now: Date = new Date()): DueChip | null {
+  const date = typeof due === 'string' ? parseIsoDate(due) : null;
+  if (date) {
+    const diff = daysBetween(todayIso(now), due as string) ?? 0;
+    const short = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    if (diff < -1) return { text: 'Overdue', label: `Overdue since ${short}`, tone: 'overdue' };
+    if (diff === -1) return { text: 'Yesterday', label: 'Overdue since yesterday', tone: 'overdue' };
+    if (diff === 0) return { text: 'Today', label: 'Due today', tone: 'today' };
+    if (diff === 1) return { text: 'Tomorrow', label: 'Due tomorrow', tone: 'soon' };
+    if (diff < 7) {
+      const weekday = date.toLocaleDateString(undefined, { weekday: 'long' });
+      return { text: weekday, label: `Due ${weekday}`, tone: 'soon' };
+    }
+    return { text: short, label: `Due ${short}`, tone: 'later' };
+  }
+  const said = typeof words === 'string' ? words.trim() : '';
+  if (!said) return null;
+  // Short on the chip (the card has the person and the action to show): the when-word they used
+  // ("Thursday" from "Thursday, after the demo"), else their words cut short. The full words are in
+  // the label and on the open card.
+  const when = findWhenWords(said) ?? said;
+  const text = when.length > 16 ? `${when.slice(0, 15).trimEnd()}…` : when;
+  return { text: `“${text}”`, label: `You said: ${said}`, tone: 'words' };
+}
+
+/** "Thu, Nov 19" for a suggested date the person can confirm. */
+export function shortDay(iso: string): string {
+  const d = parseIsoDate(iso);
+  return d ? d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : iso;
+}
+
+export const AVATAR_TONES = ['orange', 'lilac', 'lime', 'mint', 'blue'] as const;
+export type AvatarTone = (typeof AVATAR_TONES)[number];
+
+/** A stable soft color for a person's initial avatar, from their short name (the same person, the same color). */
+export function avatarTone(name: string): AvatarTone {
+  const key = personShortName(name).toLowerCase();
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return AVATAR_TONES[h % AVATAR_TONES.length] as AvatarTone;
+}
+
+/**
+ * What the person wrote after the name ("Maya, met at the design meetup" → "Met at the design meetup"),
+ * shown as context on the expanded card. Empty when the entry is only a name.
+ */
+export function personNote(full: string): string {
+  const name = personShortName(full);
+  const rest = full.trim().slice(name.length).replace(/^[\s,(–—-]+/, '').replace(/\)\s*$/, '').trim();
+  return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : '';
 }
 
 // ---------- practice ----------

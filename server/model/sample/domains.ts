@@ -1,6 +1,7 @@
 /**
- * The three reference domains the redesign's Agent and Playground understand without a model:
- * music (Riff), photography (Light) and people / follow-ups (People). A domain knows how to spot
+ * The reference domains the redesign's Agent and Playground understand without a model: music (Riff),
+ * photography (Light), people / follow-ups (People), and sketching (a sketching timer the Agent offers
+ * when a note is about drawing; the Playground keeps scoring the Sketchbook journal). A domain knows how to spot
  * itself in a note, a link title or a fact; which reference concept builds its app; when an existing
  * app already covers it; what to explore without an app; and which change request the sample
  * revision planner can actually apply to an existing app. Nothing here invents links, artists,
@@ -10,9 +11,14 @@ import type { AppIcon, Capability, Pattern } from '../../../shared/appSpec.ts';
 import { PATTERNS } from '../../../shared/appSpec.ts';
 import { RecommendationDraftSchema, type RecommendationDraft } from '../../../shared/context.ts';
 import type { ExistingAppSummary } from '../types.ts';
+import { minutesCount, minutesFromText } from './durations.ts';
 import { clip, joinNatural, quote } from './text.ts';
 
-export type DomainId = 'music' | 'photo' | 'people';
+export type DomainId = 'music' | 'photo' | 'people' | 'sketch';
+
+/** An app named for drawing ("Sketch Sprint", "Sketchbook"): its timer is for sketching, not for music. */
+const SKETCH_APP_RX = /\b(?:sketch\w*|draw\w*|doodl\w*|illustrat\w*|art|paint\w*|watercolou?r\w*)\b/i;
+const appWords = (a: ExistingAppSummary) => `${a.name} ${a.tagline ?? ''}`;
 
 /** What the person shared, reduced to what an exploration or an update can honestly refer to. */
 export interface ExploreContext {
@@ -47,6 +53,8 @@ export interface Domain {
   legacyConceptId: string;
   /** Capability that means an existing app already covers the domain in full. */
   coreCapability: Capability;
+  /** When the capability alone is not enough (a timer can be for music or for sketching): does this app cover it in full? */
+  fullFit?: (app: ExistingAppSummary) => boolean;
   /** Names/taglines of apps that cover the domain in part (the Agent offers an update as well as the reference app). */
   appNameRx: RegExp;
   /** Short word for "another <topic> save". */
@@ -66,17 +74,12 @@ export interface Domain {
   updateRequest: (app: ExistingAppSummary, ctx: ExploreContext, full: boolean) => UpdatePlan | null;
 }
 
-const MINUTES_RX = /\b(\d{1,3})\s*(?:-\s*)?(?:min(?:ute)?s?)\b/i;
-
-/** Minutes mentioned in a text ("15 minutes", "20-minute", "half an hour"), capped at 180. */
+/**
+ * Minutes mentioned in a text, in digits or words ("15 minutes", "a ten-minute session", "10 min",
+ * "half an hour", "a quarter of an hour"), capped at 180.
+ */
 export function minutesIn(text: string): number | null {
-  const m = MINUTES_RX.exec(text);
-  if (m) {
-    const n = Number(m[1]);
-    if (Number.isFinite(n) && n >= 1) return Math.min(180, n);
-  }
-  if (/\bhalf an hour\b/i.test(text)) return 30;
-  return null;
+  return minutesFromText(text);
 }
 
 export const DOMAINS: Domain[] = [
@@ -87,6 +90,8 @@ export const DOMAINS: Domain[] = [
     conceptId: 'riff-practice',
     legacyConceptId: 'music-practice-companion',
     coreCapability: 'practice_timer',
+    // A sketching timer is not a practice room for music.
+    fullFit: (app) => app.capabilities.includes('practice_timer') && !SKETCH_APP_RX.test(appWords(app)),
     appNameRx: /\b(?:music|practi[cs]e|guitar|riff|songs?|piano|ukulele|bass|drums?|instrument)\b/i,
     topic: 'music',
     explore: {
@@ -103,7 +108,7 @@ export const DOMAINS: Domain[] = [
             : `Listen to ${src} once all the way through and notice exactly what you like about the sound.`,
           'Find the two bars that matter most and hum or tap them before you touch the instrument.',
           `Play them at half tempo for ${Math.max(3, Math.round(m / 3))} minutes; speed up only when it is clean.`,
-          `Play along with ${src} once at full speed, then stop. ${minutes ? `${minutes} minutes is enough.` : 'Even ten minutes is enough.'}`,
+          `Play along with ${src} once at full speed, then stop. ${minutes ? `${minutesCount(minutes)} is enough.` : 'Even ten minutes is enough.'}`,
           'Write one line: what got easier, what to try tomorrow.',
         ];
       },
@@ -118,7 +123,7 @@ export const DOMAINS: Domain[] = [
         return {
           request: `Add a ${ctx.minutes}-minute preset to the practice timer as the default`,
           change: joinNatural([`a ${ctx.minutes}-minute timer preset`]),
-          previewLines: [`Timer starts at ${ctx.minutes} minutes`, 'Your sessions and sources stay as they are'],
+          previewLines: [`Timer starts at ${minutesCount(ctx.minutes)}`, 'Your sessions and sources stay as they are'],
         };
       }
       return {
@@ -145,7 +150,7 @@ export const DOMAINS: Domain[] = [
       steps: ({ words, minutes, source }) => {
         const ref = source ? 'the picture that inspired you' : 'the last photo you liked';
         return [
-          `Go out for ${minutes ? `${minutes} minutes` : 'twenty minutes'} with one rule: photograph only where light meets shadow.`,
+          `Go out for ${minutes ? minutesCount(minutes) : 'twenty minutes'} with one rule: photograph only where light meets shadow.`,
           'Take the same frame twice, from standing height and from low down.',
           'Pick one keeper and write one sentence about what the light was doing.',
           `Compare it with ${ref}${words ? `, keeping your note in mind: ${quote(clip(words, 60))}` : ''}. What is the one difference?`,
@@ -199,6 +204,42 @@ export const DOMAINS: Domain[] = [
       };
     },
   },
+  {
+    // Sketching and drawing as a practice ("I want to sketch for 10 minutes every day"): a sketching timer
+    // that starts at the length the person said. Last, so it never wins a tie against the reference domains.
+    id: 'sketch',
+    strong: /\b(?:sketch(?:es|ed|ing|book|books)?|drawings?|doodl(?:e|es|ed|ing)|illustrat\w*|watercolou?rs?|gouache|figure drawing|life drawing|urban sketch\w*|draw(?!\s+(?:up|on|attention|conclusions?|the line|a line|near|closer|back|lots|straws))(?:s|ing)?)\b/i,
+    weak: /\b(?:pencils?|pens?|ink|paint(?:s|ing)?|art|artist|procreate|easel|canvas)\b/i,
+    conceptId: 'sketch-practice',
+    legacyConceptId: 'sketchbook',
+    coreCapability: 'practice_timer',
+    fullFit: (app) => app.capabilities.includes('practice_timer') && SKETCH_APP_RX.test(appWords(app)),
+    appNameRx: SKETCH_APP_RX,
+    topic: 'sketching',
+    explore: {
+      title: 'One object, drawn twice',
+      icon: { symbol: 'pen', color: 'lilac' },
+      description: 'A timer, a pencil and the nearest object: draw it once slowly and once fast, then write what got easier. No app needed.',
+      because: 'Drawing one object twice is the quickest way to practise seeing, and it needs no app.',
+      steps: ({ words, minutes }) => [
+        `Set a timer for ${minutesCount(minutes ?? 10)} and draw the nearest object without erasing.`,
+        'Draw it again from another side, in half the time.',
+        'Keep the one you like better; nobody needs to see it.',
+        `Write one line: what got easier${words ? `, with your note in mind: ${quote(clip(words, 60))}` : ''}?`,
+      ],
+    },
+    updateRequest: (app, ctx, full) => {
+      // A sketching timer already does the job: only a length it does not offer is a real change.
+      if (!full) return null;
+      const presets = app.minutePresets ?? (app.defaultMinutes ? [app.defaultMinutes] : []);
+      if (!ctx.minutes || presets.includes(ctx.minutes)) return null;
+      return {
+        request: `Add a ${ctx.minutes}-minute preset to the practice timer as the default`,
+        change: `a ${ctx.minutes}-minute timer preset`,
+        previewLines: [`Timer starts at ${minutesCount(ctx.minutes)}`, 'Your sketches stay as they are'],
+      };
+    },
+  },
 ];
 
 export function domainById(id: DomainId): Domain {
@@ -234,9 +275,10 @@ export function detectDomain(text: string): Domain | null {
 
 /** Does an existing app already cover a domain? `full` means the core capability is there. */
 export function fittingApp(domain: Domain, apps: ExistingAppSummary[]): { app: ExistingAppSummary; full: boolean } | null {
-  const full = apps.find((a) => a.capabilities.includes(domain.coreCapability));
+  const covers = domain.fullFit ?? ((a: ExistingAppSummary) => a.capabilities.includes(domain.coreCapability));
+  const full = apps.find(covers);
   if (full) return { app: full, full: true };
-  const partial = apps.find((a) => domain.appNameRx.test(`${a.name} ${a.tagline ?? ''}`) && a.pattern !== 'queue' && a.pattern !== 'gallery' && a.pattern !== 'practice');
+  const partial = apps.find((a) => domain.appNameRx.test(appWords(a)) && a.pattern !== 'queue' && a.pattern !== 'gallery' && a.pattern !== 'practice');
   return partial ? { app: partial, full: false } : null;
 }
 
@@ -250,7 +292,7 @@ export interface ExploreGrounding {
 /** An "explore" proposal for a domain: steps the person can do today, no app, no invented links. */
 export function exploreDraft(domain: Domain, ctx: ExploreContext, grounding: ExploreGrounding): RecommendationDraft {
   const steps = domain.explore.steps(ctx).map((s) => clip(s, 200));
-  const pattern: Pattern = grounding.pattern ?? (domain.id === 'music' ? 'practice' : domain.id === 'photo' ? 'gallery' : 'queue');
+  const pattern: Pattern = grounding.pattern ?? (domain.id === 'music' || domain.id === 'sketch' ? 'practice' : domain.id === 'photo' ? 'gallery' : 'queue');
   return RecommendationDraftSchema.parse({
     kind: 'explore',
     title: clip(domain.explore.title, 50),

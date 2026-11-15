@@ -6,22 +6,30 @@ import { describe, expect, it, vi } from 'vitest';
 import { AppSpecSchema, type AppSpec } from '@shared/appSpec.ts';
 import type { AppRecord } from '@shared/records.ts';
 import { todayIso } from '@shared/time.ts';
-import { FOLLOW_UP_BOARD, PHOTO_WALK_JOURNAL, PRACTICE_TRACKER } from '../../../server/fixtures/specs.ts';
+import { FOLLOW_UP_BOARD, PEOPLE_QUEUE, PHOTO_WALK_JOURNAL, PRACTICE_TRACKER } from '../../../server/fixtures/specs.ts';
 import {
   boardCardFields,
   boardLayout,
   dueBadgeClass,
   dueSummaryLine,
+  focusCandidates,
   journalFields,
   journalGroups,
   listColumns,
   listRows,
+  personGroups,
+  personInitials,
+  personNote,
+  personShortName,
+  queueDateField,
+  queueRule,
   recentRecords,
   recordDate,
   resolveFields,
   type BoardViewSpec,
   type JournalViewSpec,
   type ListViewSpec,
+  type QueueViewSpec,
 } from './viewLogic.ts';
 import { appHomePath, appSettingsPath, cacheKey, capitalize, detectPlatform, draftKey, purposeLabel, sameValues, stableStringify, timeAgo } from './runtimeUtils.ts';
 
@@ -160,6 +168,13 @@ describe('list', () => {
     expect(recentRecords([a, b, c]).map((r) => r.values.focus)).toEqual(['b', 'c', 'a']);
     expect(recentRecords([a, b, c], 2)).toHaveLength(2);
   });
+  it('recentRecords goes by the entry’s own date when it has one, not by when it was typed in', () => {
+    const typedToday = (focus: string, date: string, at: string) => rec({ focus, date }, at);
+    const older = typedToday('older', '2026-11-01', '2026-11-14T10:00:00.000Z');
+    const newer = typedToday('newer', '2026-11-12', '2026-11-14T09:00:00.000Z');
+    expect(recentRecords([older, newer], 3, 'date').map((r) => r.values.focus)).toEqual(['newer', 'older']);
+    expect(recentRecords([older, newer], 3).map((r) => r.values.focus)).toEqual(['older', 'newer']);
+  });
 });
 
 describe('runtime helpers', () => {
@@ -196,5 +211,54 @@ describe('runtime helpers', () => {
     expect(detectPlatform('Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36')).toBe('android');
     expect(detectPlatform('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36')).toBe('desktop');
     vi.unstubAllGlobals();
+  });
+});
+
+describe('People: names with a hyphen (review finding 7)', () => {
+  it('keeps a hyphen inside a name as part of it, and never turns half a name into context', () => {
+    expect(personShortName('Mary-Jane Watson')).toBe('Mary-Jane Watson');
+    expect(personNote('Mary-Jane Watson')).toBe('');
+    expect(personShortName('Jean-Luc')).toBe('Jean-Luc');
+    expect(personNote('Jean-Luc')).toBe('');
+    expect(personShortName('Seo-yeon Park')).toBe('Seo-yeon Park');
+    expect(personInitials('Seo-yeon Park')).toBe('SP');
+    expect(personShortName('Anna-Lena, from the meetup')).toBe('Anna-Lena');
+    expect(personNote('Anna-Lena, from the meetup')).toBe('From the meetup');
+  });
+
+  it('still cuts at a dash set apart by a space, and at an en or em dash', () => {
+    expect(personShortName('Maya - design meetup')).toBe('Maya');
+    expect(personNote('Maya - design meetup')).toBe('Design meetup');
+    expect(personShortName('Maya – design meetup')).toBe('Maya');
+    expect(personShortName('Maya—design meetup')).toBe('Maya');
+    expect(personNote('Maya—design meetup')).toBe('Design meetup');
+  });
+});
+
+describe('People: queue helpers', () => {
+  const people = AppSpecSchema.parse(PEOPLE_QUEUE);
+  const queue = people.views[0] as QueueViewSpec;
+
+  it('a view without its own date field takes the due rule’s, so cards show why they are due (review finding 4)', () => {
+    const { dueFieldId: _own, ...rest } = queue;
+    const ruled: QueueViewSpec = rest;
+    expect(queueDateField(queueRule(people, queue))).toBe('due');
+    expect(queueDateField(queueRule(people, ruled))).toBe('due');
+    expect(queueDateField(queueRule({ ...people, rules: [] }, ruled))).toBeUndefined();
+  });
+
+  it('groups a tab by person in the order each first appears, merging the same person', () => {
+    const items = [rec({ person: 'Maya, met at the mixer', action: 'A' }), rec({ person: 'Alex', action: 'B' }), rec({ person: 'maya', action: 'C' })];
+    const groups = personGroups(queue, items);
+    expect(groups.map((g) => g.label)).toEqual(['Maya', 'Alex']);
+    expect(groups[0]!.records.map((r) => r.values.action)).toEqual(['A', 'C']);
+  });
+
+  it('after an item leaves, focus goes to it (when kept), then the next, then the one before (review finding 5)', () => {
+    expect(focusCandidates(['a', 'b', 'c'], 'b', false)).toEqual(['c', 'a']);
+    expect(focusCandidates(['a', 'b', 'c'], 'b', true)).toEqual(['b', 'c', 'a']);
+    expect(focusCandidates(['a', 'b', 'c'], 'c', false)).toEqual(['b', 'a']);
+    expect(focusCandidates(['a'], 'a', false)).toEqual([]);
+    expect(focusCandidates(['a'], 'x', true)).toEqual(['x']);
   });
 });

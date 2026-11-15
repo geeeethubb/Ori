@@ -1,9 +1,46 @@
 /** Small shared UI primitives: sheet (modal), toasts, spinner, empty/error states, disclosure, action menu, icons. */
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { Link } from 'react-router';
 import { ICON_PATHS, type IconSymbol } from '@shared/icons.ts';
+import type { OriMood } from '@shared/oriArt.ts';
+import { OriCompanion } from './ori/OriCompanion.tsx';
+
+// ---------- focus helpers ----------
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), summary, [contenteditable]:not([contenteditable="false"]), [tabindex]:not([tabindex="-1"])';
+
+/** Keyboard-reachable controls inside `root`, in order (hidden and inert ones left out). */
+export function focusableIn(root: HTMLElement): HTMLElement[] {
+  return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => !el.closest('[inert]') && el.getClientRects().length > 0);
+}
 
 // ---------- Sheet ----------
+
+/** Open sheets, innermost last: only the innermost one answers Escape and holds focus. */
+const openSheets: HTMLElement[] = [];
+
+/**
+ * The control that last had focus outside every dialog and toast. A sheet opened from something that is
+ * gone by the time it closes (a photo's detail that closed to open the photo's form) gives focus back
+ * here, so keyboard and screen-reader users are not dropped at the top of the page.
+ */
+let lastOutsideDialogs: HTMLElement | null = null;
+if (typeof document !== 'undefined') {
+  document.addEventListener(
+    'focusin',
+    (e) => {
+      const t = e.target;
+      if (t instanceof HTMLElement && t !== document.body && !t.closest('[role="dialog"], [aria-modal="true"], .toast-host')) lastOutsideDialogs = t;
+    },
+    true,
+  );
+}
+
+/** Still in the page, shown and not inert: somewhere focus can go back to. */
+function canTakeFocus(el: HTMLElement | null | undefined): el is HTMLElement {
+  return Boolean(el && el.isConnected && el.getClientRects().length > 0 && !el.closest('[inert]'));
+}
 
 interface SheetProps {
   open: boolean;
@@ -12,34 +49,128 @@ interface SheetProps {
   children: ReactNode;
   /** Sticky footer actions. */
   actions?: ReactNode;
+  /** Id of an element inside that names the sheet (used when there is no `title`). */
   labelledBy?: string;
+  /** Accessible name when the sheet shows no title. */
+  label?: string;
+  className?: string;
+  testId?: string;
+  /** What takes focus when the sheet opens. Default: a control inside that already took it (autofocus), else the sheet. */
+  initialFocus?: RefObject<HTMLElement | null>;
+  /**
+   * Where focus goes on close when the control that opened the sheet is gone (a toast's action, a
+   * one-time offer). Without it: a sheet still open beneath, else the control last focused outside dialogs.
+   */
+  fallbackFocus?: () => HTMLElement | null | undefined;
 }
 
-export function Sheet({ open, onClose, title, children, actions }: SheetProps) {
+/**
+ * A modal bottom sheet (a centred dialog on wide screens). Opaque from its first frame, it keeps
+ * keyboard focus inside while open, closes on Escape or a tap outside, and gives focus back to
+ * whatever opened it (or, when that is gone, to `fallbackFocus`).
+ */
+export function Sheet({ open, onClose, title, children, actions, labelledBy, label, className, testId, initialFocus, fallbackFocus }: SheetProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const onCloseRef = useRef(onClose);
+  const fallbackRef = useRef(fallbackFocus);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+    fallbackRef.current = fallbackFocus;
+  }, [onClose, fallbackFocus]);
+  // Where focus was when the sheet opened, read before anything inside can take it (an autofocus field).
+  const returnTo = useRef<HTMLElement | null>(null);
+  const outsideAtOpen = useRef<HTMLElement | null>(null);
+  const wasOpen = useRef(false);
+  if (open && !wasOpen.current && typeof document !== 'undefined') {
+    returnTo.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null;
+    outsideAtOpen.current = lastOutsideDialogs;
+  }
+  wasOpen.current = open;
+
   useEffect(() => {
     if (!open) return;
+    const dialog = ref.current;
+    if (!dialog) return;
+    const back = returnTo.current;
+    const outside = outsideAtOpen.current;
+    openSheets.push(dialog);
+    if (!dialog.contains(document.activeElement)) (initialFocus?.current ?? dialog).focus({ preventScroll: true });
+    const innermost = () => openSheets[openSheets.length - 1] === dialog;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (!innermost()) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const items = focusableIn(dialog);
+      const active = document.activeElement;
+      if (!items.length) {
+        e.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = items[0] as HTMLElement;
+      const last = items[items.length - 1] as HTMLElement;
+      if (e.shiftKey && (active === first || active === dialog || !dialog.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !dialog.contains(active))) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    // Focus that lands outside (a script, a stray click on the page edge) comes back to the sheet.
+    const onFocusIn = (e: FocusEvent) => {
+      if (!innermost()) return;
+      const target = e.target as Node | null;
+      if (target && !dialog.contains(target) && !(target instanceof Element && target.closest('.toast-host'))) dialog.focus({ preventScroll: true });
     };
     document.addEventListener('keydown', onKey);
+    document.addEventListener('focusin', onFocusIn);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKey);
+      document.removeEventListener('focusin', onFocusIn);
+      const i = openSheets.lastIndexOf(dialog);
+      if (i >= 0) openSheets.splice(i, 1);
       document.body.style.overflow = prev;
+      if (back && back.isConnected) {
+        back.focus({ preventScroll: true });
+        return;
+      }
+      // The opener is gone: a sheet still open beneath keeps focus, else the given fallback, else the
+      // control last focused outside any dialog before this one opened.
+      const next = [openSheets[openSheets.length - 1], fallbackRef.current?.(), outside].find(canTakeFocus);
+      next?.focus({ preventScroll: true });
     };
-  }, [open, onClose]);
+    // Runs once per opening; the latest onClose is read through a ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   if (!open) return null;
+  const named = title !== undefined ? titleId : labelledBy;
   return (
     <div className="sheet-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()} role="presentation">
-      <div className="sheet" role="dialog" aria-modal="true" ref={ref}>
+      <div
+        className={`sheet${className ? ` ${className}` : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={named}
+        aria-label={named ? undefined : label}
+        tabIndex={-1}
+        ref={ref}
+        data-testid={testId}
+      >
         <div className="sheet-handle" aria-hidden="true" />
         {title !== undefined && (
           <div className="sheet-title">
-            <h2 style={{ fontSize: '1.35rem' }}>{title}</h2>
-            <button type="button" className="btn btn-ghost btn-icon" aria-label="Close" onClick={onClose}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            <h2 id={titleId}>{title}</h2>
+            <button type="button" className="btn btn-ghost btn-icon" aria-label="Close" onClick={onClose} data-testid={testId ? `${testId}-close` : undefined}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
             </button>
           </div>
         )}
@@ -52,44 +183,116 @@ export function Sheet({ open, onClose, title, children, actions }: SheetProps) {
 
 // ---------- Toasts ----------
 
-interface Toast {
+export type ToastKind = 'info' | 'error' | 'success';
+
+interface ToastOptions {
+  kind?: ToastKind;
+  action?: { label: string; onClick: () => void };
+  durationMs?: number;
+  /** A small, still companion beside the message (only for results the server confirmed). */
+  mood?: OriMood;
+}
+
+interface ToastItem {
   id: number;
   message: string;
-  kind: 'info' | 'error';
-  action?: { label: string; onClick: () => void };
+  kind: ToastKind;
+  action?: ToastOptions['action'];
+  mood?: OriMood;
+  durationMs: number;
 }
 
 interface ToastApi {
-  toast: (message: string, opts?: { kind?: 'info' | 'error'; action?: Toast['action']; durationMs?: number }) => void;
+  toast: (message: string, opts?: ToastOptions) => void;
+}
+
+/** How long a toast stays: longer when it carries an action, so there is time to reach it. */
+export function toastDuration(opts: ToastOptions = {}): number {
+  if (opts.durationMs !== undefined) return opts.durationMs;
+  if (opts.action) return 10_000;
+  return opts.kind === 'error' ? 7000 : 3500;
 }
 
 const ToastContext = createContext<ToastApi>({ toast: () => undefined });
 
+/**
+ * Toasts show at the bottom (at the top while a sheet is open, so they never cover its fields or
+ * actions; styles.css) and are announced once: the visible toasts are not live regions; one polite
+ * region (an alert for errors) carries each message a single time. A toast pauses while the pointer
+ * or keyboard focus is on it, so its action stays reachable.
+ */
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [said, setSaid] = useState<{ id: number; text: string; kind: ToastKind } | null>(null);
   const counter = useRef(0);
+  const dismiss = useCallback((id: number) => setToasts((t) => t.filter((x) => x.id !== id)), []);
   const toast = useCallback<ToastApi['toast']>((message, opts = {}) => {
     const id = ++counter.current;
-    setToasts((t) => [...t.slice(-2), { id, message, kind: opts.kind ?? 'info', action: opts.action }]);
-    window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), opts.durationMs ?? (opts.kind === 'error' ? 7000 : 3500));
+    const kind = opts.kind ?? 'info';
+    setToasts((t) => [...t.slice(-2), { id, message, kind, action: opts.action, mood: opts.mood, durationMs: toastDuration(opts) }]);
+    setSaid({ id, text: message, kind });
   }, []);
   const value = useMemo(() => ({ toast }), [toast]);
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="toast-host" aria-live="polite">
+      <div className="toast-host">
         {toasts.map((t) => (
-          <div key={t.id} className={`toast ${t.kind === 'error' ? 'toast-error' : ''}`} role="status">
-            <span>{t.message}</span>
-            {t.action && (
-              <button type="button" className="btn btn-sm" onClick={() => { t.action?.onClick(); setToasts((x) => x.filter((y) => y.id !== t.id)); }}>
-                {t.action.label}
-              </button>
-            )}
-          </div>
+          <ToastView key={t.id} item={t} onDone={dismiss} />
         ))}
       </div>
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {said && said.kind !== 'error' ? <span key={said.id}>{said.text}</span> : null}
+      </div>
+      <div className="sr-only" role="alert" aria-atomic="true">
+        {said && said.kind === 'error' ? <span key={said.id}>{said.text}</span> : null}
+      </div>
     </ToastContext.Provider>
+  );
+}
+
+function ToastView({ item, onDone }: { item: ToastItem; onDone: (id: number) => void }) {
+  const [hold, setHold] = useState({ pointer: false, focus: false });
+  const remaining = useRef(item.durationMs);
+  const messageId = useId();
+  const paused = hold.pointer || hold.focus;
+  useEffect(() => {
+    if (paused) return;
+    const started = Date.now();
+    const timer = window.setTimeout(() => onDone(item.id), Math.max(0, remaining.current));
+    return () => {
+      window.clearTimeout(timer);
+      remaining.current -= Date.now() - started;
+    };
+  }, [paused, item.id, onDone]);
+  return (
+    <div
+      className={`toast toast-${item.kind}${item.kind === 'error' ? ' toast-error' : ''}`}
+      data-testid="toast"
+      onMouseEnter={() => setHold((h) => ({ ...h, pointer: true }))}
+      onMouseLeave={() => setHold((h) => ({ ...h, pointer: false }))}
+      onFocus={() => setHold((h) => ({ ...h, focus: true }))}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setHold((h) => ({ ...h, focus: false }));
+      }}
+    >
+      {item.mood && <OriCompanion mood={item.mood} size={22} motion="none" className="toast-ori" />}
+      <span id={messageId} className="toast-message">{item.message}</span>
+      {item.action && (
+        <button
+          type="button"
+          className="btn btn-sm toast-action"
+          aria-describedby={messageId}
+          data-testid="toast-action"
+          onClick={() => {
+            item.action?.onClick();
+            onDone(item.id);
+          }}
+        >
+          {item.action.label}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -165,6 +368,7 @@ export interface MenuItem {
   key: string;
   label: string;
   icon?: ReactNode;
+  /** An in-app route. */
   to?: string;
   onSelect?: () => void;
   danger?: boolean;
@@ -178,14 +382,24 @@ interface ActionMenuProps {
   /** Which side the popover aligns to; "auto" (default) opens towards the wider side of the viewport. */
   align?: 'left' | 'right' | 'auto';
   className?: string;
+  /** Extra class for the trigger button. */
+  triggerClassName?: string;
   children?: ReactNode;
 }
 
-/** A "more" button that opens a small menu. Closes on outside click, Escape and selection. */
-export function ActionMenu({ items, label, testId, align = 'auto', className, children }: ActionMenuProps) {
+/**
+ * A "more" button that opens a small menu (the WAI-ARIA menu button pattern): the first item takes
+ * focus, arrow keys, Home and End move between items, Enter or Space chooses one, Escape closes and
+ * returns focus to the button, Tab or a click outside closes. Choosing an item puts focus back on the
+ * button before it runs, so a sheet the item opens gives focus back to the button when it closes.
+ */
+export function ActionMenu({ items, label, testId, align = 'auto', className, triggerClassName, children }: ActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [side, setSide] = useState<'left' | 'right'>(align === 'left' ? 'left' : 'right');
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuId = useId();
   const toggle = () => {
     if (!open && align === 'auto' && ref.current) {
       const r = ref.current.getBoundingClientRect();
@@ -193,31 +407,65 @@ export function ActionMenu({ items, label, testId, align = 'auto', className, ch
     }
     setOpen((o) => !o);
   };
+  const close = (refocus: boolean) => {
+    setOpen(false);
+    if (refocus) triggerRef.current?.focus();
+  };
   useEffect(() => {
     if (!open) return;
+    menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     const onDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
     document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
+    return () => document.removeEventListener('mousedown', onDown);
   }, [open]);
+  const onMenuKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const entries = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
+    const at = entries.indexOf(document.activeElement as HTMLElement);
+    const go = (i: number) => entries[(i + entries.length) % entries.length]?.focus();
+    const current = entries[at];
+    if (e.key === 'ArrowDown') go(at + 1);
+    else if (e.key === 'ArrowUp') go(at - 1);
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(entries.length - 1);
+    // Space chooses a link item too, as it does a button item (a link alone would scroll the page).
+    else if (e.key === ' ' && current instanceof HTMLAnchorElement) current.click();
+    else if (e.key === 'Escape') {
+      e.stopPropagation();
+      close(true);
+    } else if (e.key === 'Tab') {
+      setOpen(false);
+      return;
+    } else return;
+    e.preventDefault();
+  };
   return (
     <div className={`menu-anchor${className ? ` ${className}` : ''}`} ref={ref}>
-      <button type="button" className="btn btn-ghost btn-icon menu-trigger" aria-haspopup="menu" aria-expanded={open} aria-label={label} data-testid={testId} onClick={toggle}>
+      <button
+        type="button"
+        ref={triggerRef}
+        className={`btn btn-ghost btn-icon menu-trigger${triggerClassName ? ` ${triggerClassName}` : ''}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+        aria-label={label}
+        data-testid={testId}
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown' && !open) {
+            e.preventDefault();
+            toggle();
+          }
+        }}
+      >
         {children ?? Icons.more}
       </button>
       {open && (
-        <div className={`menu${side === 'left' ? ' menu-left' : ''}`} role="menu">
+        <div className={`menu${side === 'left' ? ' menu-left' : ''}`} role="menu" id={menuId} aria-label={label} ref={menuRef} onKeyDown={onMenuKey}>
           {items.map((item) =>
             item.to ? (
-              <Link key={item.key} to={item.to} role="menuitem" onClick={() => setOpen(false)} data-testid={item.testId} className={item.danger ? 'menu-danger' : undefined}>
+              <Link key={item.key} to={item.to} role="menuitem" tabIndex={-1} onClick={() => close(false)} data-testid={item.testId} className={item.danger ? 'menu-danger' : undefined}>
                 {item.icon}
                 {item.label}
               </Link>
@@ -226,10 +474,11 @@ export function ActionMenu({ items, label, testId, align = 'auto', className, ch
                 key={item.key}
                 type="button"
                 role="menuitem"
+                tabIndex={-1}
                 data-testid={item.testId}
                 className={item.danger ? 'menu-danger' : undefined}
                 onClick={() => {
-                  setOpen(false);
+                  close(true);
                   item.onSelect?.();
                 }}
               >
@@ -387,6 +636,21 @@ export const Icons = {
   ),
   inbox: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12" /><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></svg>
+  ),
+  history: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l4 2" /></svg>
+  ),
+  phone: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><path d="M12 18h.01" /></svg>
+  ),
+  copy: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
+  ),
+  moreVertical: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" /></svg>
+  ),
+  squarePlus: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M8 12h8" /><path d="M12 8v8" /></svg>
   ),
 };
 

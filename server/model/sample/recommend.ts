@@ -6,13 +6,18 @@
  * pick by quoting the facts or captures that matched. Nothing here invents links or availability.
  */
 import { AppSpecSchema, type AppSpecInput } from '../../../shared/appSpec.ts';
+import { displayIcon } from '../../../shared/brand.ts';
 import { RecommendationDraftSchema, type RecommendationDraft } from '../../../shared/context.ts';
 import type { RecommendInput } from '../types.ts';
 import { CONCEPTS, DEFAULT_CONCEPT_IDS, PLAYGROUND_CONCEPTS, conceptById, type Concept, type MatchedFact } from './catalog.ts';
 import { reasonFrom } from './concept.ts';
 import { DOMAINS, domainForConcept, exploreDraft, fittingApp, minutesIn } from './domains.ts';
+import { minutesCount, rewriteMinutes } from './durations.ts';
+import { setSessionDefault } from './revisionCopy.ts';
 import { PATTERNS } from '../../../shared/appSpec.ts';
 import { clip, escapeRegExp, normalize, snippet, uniq } from './text.ts';
+
+const INSTRUMENT_RX = /\b(guitar|piano|bass|ukulele|drums|violin|cello|saxophone|trumpet|flute)\b/i;
 
 type Fact = RecommendInput['facts'][number];
 type RecentCapture = NonNullable<RecommendInput['recentCaptures']>[number];
@@ -215,6 +220,14 @@ function draftFor(concept: Concept, matches: MatchedFact[], reason: string): Rec
   const input = concept.buildSpec({ instructions: '' });
   const spec = AppSpecSchema.parse(input); // every concept must build a valid app
   const { factIds, captureIds } = splitIds(matches);
+  // A session length the person stated ("practising about 30 minutes most evenings") outranks the
+  // template's default: the card, the Make page and the app all start there.
+  const grounded = reason !== SPARSE_REASON && reason !== FILL_REASON;
+  const minutes = grounded && input.views.some((v) => v.type === 'practice') ? matches.map((m) => minutesIn(m.value)).find((n): n is number => n !== null) ?? null : null;
+  const from = minutes ? setSessionDefault(input, minutes) : null;
+  const instrument = matches.map((m) => INSTRUMENT_RX.exec(m.value)?.[1]?.toLowerCase()).find(Boolean);
+  const tagline = minutes && concept.pattern === 'practice' ? `Make room for ${minutesCount(minutes)} of ${instrument ?? 'practice'}.` : concept.tagline;
+  const firstAction = minutes && from ? rewriteMinutes(concept.firstAction, from, minutes).text : concept.firstAction;
   return RecommendationDraftSchema.parse({
     conceptId: concept.id,
     kind: 'new_app',
@@ -222,15 +235,16 @@ function draftFor(concept: Concept, matches: MatchedFact[], reason: string): Rec
     purpose: concept.purpose,
     pattern: concept.pattern,
     icon: concept.icon,
-    tagline: clip(concept.tagline, 120),
+    tagline: clip(tagline, 120),
     description: clip(concept.description, 500),
     reason: clip(reason, 400),
     evidenceFactIds: factIds.slice(0, 8),
     sourceCaptureIds: captureIds.slice(0, 4),
-    firstAction: clip(concept.firstAction, 200),
+    firstAction: clip(firstAction, 200),
     previewLines: previewLinesFor(input),
     capabilities: capabilitiesForPattern(concept.pattern),
     ...(spec.design ? { design: spec.design } : {}),
+    ...(minutes ? { suggestedMinutes: minutes } : {}),
   });
 }
 
@@ -271,10 +285,10 @@ function useCards(scoredAll: Scored[], existing: RecommendInput['existingApps'])
     out.push(RecommendationDraftSchema.parse({
       conceptId: d.conceptId,
       kind: 'use_app',
-      title: clip(d.id === 'music' ? `Practise in ${app.name}` : d.id === 'photo' ? `Take your camera out with ${app.name}` : `Catch up in ${app.name}`, 50),
+      title: clip(d.id === 'music' ? `Practise in ${app.name}` : d.id === 'photo' ? `Take your camera out with ${app.name}` : d.id === 'sketch' ? `Sketch in ${app.name}` : `Catch up in ${app.name}`, 50),
       purpose: app.purpose === 'work' ? 'work' : 'explore',
       pattern: (PATTERNS as readonly string[]).includes(app.pattern) ? app.pattern : s.concept.pattern,
-      icon: app.icon ?? s.concept.icon,
+      icon: displayIcon(app.name, app.icon ?? s.concept.icon),
       tagline: 'You already have the app for this',
       description: clip(`${app.name} already does this. Open it and start; nothing about it changes.`, 500),
       reason: clip(reasonFrom('You mentioned', s.matches.slice(0, 2), `${app.name} already does this, so there is nothing new to make.`), 400),

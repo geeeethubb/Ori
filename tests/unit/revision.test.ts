@@ -4,8 +4,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { AppSpecSchema, type AppSpec } from '../../shared/appSpec.ts';
-import { RevisionOpSchema, applyRevision, fieldsTouched, type ApplyResult, type RevisionOp } from '../../shared/revision.ts';
-import { FOLLOW_UP_BOARD, PHOTO_WALK_JOURNAL, PRACTICE_TRACKER } from '../../server/fixtures/specs.ts';
+import { RevisionOpSchema, applyRevision, changeHistoryLine, fieldsTouched, type ApplyResult, type RevisionOp } from '../../shared/revision.ts';
+import { FOLLOW_UP_BOARD, LIGHT_GALLERY, PHOTO_WALK_JOURNAL, PRACTICE_TRACKER, RIFF_PRACTICE } from '../../server/fixtures/specs.ts';
 
 const journal = (): AppSpec => AppSpecSchema.parse(PHOTO_WALK_JOURNAL);
 const board = (): AppSpec => AppSpecSchema.parse(FOLLOW_UP_BOARD);
@@ -67,6 +67,23 @@ describe('adding a field', () => {
 
     const unknown = applied(applyRevision(journal(), [{ ...NEXT_EXPERIMENT, afterFieldId: 'ghost' }]));
     expect(unknown.fields.at(-1)?.id).toBe('next_experiment');
+  });
+
+  it('in a form, sits right after afterFieldId when the form shows it (Light: camera details under the caption), else at the end', () => {
+    const light = AppSpecSchema.parse(LIGHT_GALLERY);
+    const form = (spec: AppSpec, id: string) => spec.views.find((v) => v.id === id)?.formFieldIds;
+    const details = applied(applyRevision(light, [
+      { op: 'add_field', field: { id: 'camera', label: 'Camera', type: 'text' }, afterFieldId: 'caption' },
+      { op: 'add_field', field: { id: 'shutter', label: 'Shutter', type: 'text' }, afterFieldId: 'camera' },
+    ]));
+    expect(form(details, 'sheet')).toEqual(['photo', 'caption', 'camera', 'shutter', 'light', 'note', 'location', 'keeper', 'date']);
+    // Without afterFieldId: at the end, as before.
+    expect(form(applied(applyRevision(light, [{ op: 'add_field', field: { id: 'iso', label: 'ISO', type: 'text' } }])), 'sheet')?.at(-1)).toBe('iso');
+    // Riff's session form does not show the saved-source fields: a field placed after one goes at the end of
+    // the session form, and the filtered sources form never gets it.
+    const riff = applied(applyRevision(AppSpecSchema.parse(RIFF_PRACTICE), [{ op: 'add_field', field: { id: 'mood', label: 'Mood', type: 'text' }, afterFieldId: 'source_kind' }]));
+    expect(form(riff, 'practice')?.at(-1)).toBe('mood');
+    expect(form(riff, 'sources')).not.toContain('mood');
   });
 
   it('refuses a duplicate id instead of overwriting the existing field', () => {
@@ -183,10 +200,12 @@ describe('app-level changes', () => {
   it('rename_app changes the name (and tagline when given)', () => {
     const result = applyRevision(journal(), [{ op: 'rename_app', name: 'Evening Walks', tagline: 'Light after work' }]);
     expect(applied(result)).toMatchObject({ name: 'Evening Walks', tagline: 'Light after work' });
-    expect(result.changes).toEqual(['Rename the app from “Photo Walk Journal” to “Evening Walks”.']);
+    expect(result.changes).toEqual(['Rename the app from “Photo Walk Journal” to “Evening Walks”.', 'Tagline: “Notice more on every walk” → “Light after work”.']);
 
+    // A tagline change reads as before → after; the name alone is not repeated.
     const taglineOnly = applyRevision(journal(), [{ op: 'rename_app', name: 'Photo Walk Journal', tagline: 'New tagline' }]);
-    expect(taglineOnly.changes).toEqual(['Update the tagline.']);
+    expect(taglineOnly.changes).toEqual(['Tagline: “Notice more on every walk” → “New tagline”.']);
+    expect(applyRevision(journal(), [{ op: 'rename_app', name: 'Photo Walk Journal' }]).changes).toEqual([]);
   });
 
   it('set_icon, set_entry_noun and set_empty_state_hint', () => {
@@ -199,7 +218,7 @@ describe('app-level changes', () => {
     expect(spec.icon).toEqual({ symbol: 'sun', color: 'mustard' });
     expect(spec.entryNoun).toEqual({ singular: 'outing', plural: 'outings' });
     expect(spec.emptyStateHint).toBe('Start with the walk to the shop.');
-    expect(result.changes).toEqual(['Change the app icon.', 'Call items “outings”.', 'Update the empty-state hint.']);
+    expect(result.changes).toEqual(['Change the app icon.', 'Call items “outings”.', 'Update the hint shown before the first outing: “Start with the walk to the shop”.']);
   });
 });
 
@@ -227,7 +246,7 @@ describe('rules', () => {
     const replaced = applyRevision(board(), [{ op: 'replace_rule', ruleId: 'due_soon', rule: { id: 'due_soon', type: 'due_soon', dateFieldId: 'due', withinDays: 7, stageFieldId: 'stage', doneStageValues: ['done'] } }]);
     const rule = applied(replaced).rules[0];
     expect(rule?.type === 'due_soon' ? rule.withinDays : null).toBe(7);
-    expect(replaced.changes).toEqual(['Change the due-soon window to 7 days.']);
+    expect(replaced.changes).toEqual(['Due-soon window: 3 days → 7 days.']);
     expect(refused(applyRevision(board(), [{ op: 'replace_rule', ruleId: 'ghost', rule: { id: 'ghost', type: 'due_soon', dateFieldId: 'due', withinDays: 1 } }]))).toEqual(['Unknown rule "ghost"']);
 
     const removed = applyRevision(board(), [{ op: 'remove_rule', ruleId: 'due_soon' }]);
@@ -302,6 +321,66 @@ describe('change preview sentences', () => {
       expect(line).toMatch(/^[A-Z].*\.$/);
       expect(line).not.toMatch(/undefined|\[object|next_experiment|location/);
     }
+  });
+
+  it('a changed default reads before → after (audit P1-02), not "Update the practice timer view"', () => {
+    const riff = AppSpecSchema.parse(RIFF_PRACTICE);
+    const practice = riff.views.find((v) => v.type === 'practice');
+    if (practice?.type !== 'practice') throw new Error('Riff lost its practice view');
+    const shorter = applyRevision(riff, [{ op: 'replace_view', viewId: practice.id, view: { ...practice, presets: [5, 15, 10, 25], defaultTempo: 60, title: 'Five-minute room', addLabel: 'Save practice' } }]);
+    expect(applied(shorter).views.find((v) => v.type === 'practice')).toMatchObject({ presets: [5, 15, 10, 25], defaultTempo: 60 });
+    expect(shorter.changes).toEqual([
+      'Default session: 15 min → 5 min.',
+      'Timer presets: 15, 10, 25 → 5, 15, 10, 25 min.',
+      'Metronome: 72 bpm → 60 bpm.',
+      'Tab name: “Practice” → “Five-minute room”.',
+      'Button: “Save session” → “Save practice”.',
+    ]);
+    // Only the order changes: the default line alone.
+    const reordered = applyRevision(riff, [{ op: 'replace_view', viewId: practice.id, view: { ...practice, presets: [10, 15, 25] } }]);
+    expect(reordered.changes).toEqual(['Default session: 15 min → 10 min.']);
+    // Nothing a person would notice: the plain line stays.
+    expect(applyRevision(riff, [{ op: 'replace_view', viewId: practice.id, view: { ...practice } }]).changes).toEqual(['Update the practice timer view.']);
+  });
+
+  it('several new fields read as one line; one new field keeps its exact line', () => {
+    const light = AppSpecSchema.parse(LIGHT_GALLERY);
+    const three = applyRevision(light, (['Camera', 'Shutter', 'Aperture'] as const).map((label) => ({ op: 'add_field' as const, field: { id: label.toLowerCase(), label, type: 'text' as const } })));
+    expect(three.changes).toEqual(['Add “Camera”, “Shutter” and “Aperture” (short text). Existing photos keep their data; these fields start empty for them.']);
+    const mixed = applyRevision(light, [
+      { op: 'add_field', field: { id: 'iso', label: 'ISO', type: 'number' } },
+      { op: 'rename_app', name: 'Light Notes' },
+      { op: 'add_field', field: { id: 'lens', label: 'Lens', type: 'text' } },
+    ]);
+    expect(mixed.changes).toEqual([
+      'Add “ISO” (number) and “Lens” (short text). Existing photos keep their data; these fields start empty for them.',
+      'Rename the app from “Light” to “Light Notes”.',
+    ]);
+    expect(applyRevision(light, [{ op: 'add_field', field: { id: 'iso', label: 'ISO', type: 'number' } }]).changes).toEqual(['Add “ISO” (number). Existing photos keep their data; this field starts empty for them.']);
+  });
+
+  it('a changed prompt rhythm or title reads before → after', () => {
+    const j = journal();
+    const rule = j.rules[0];
+    if (rule?.type !== 'prompt_rotation') throw new Error('journal lost its prompts');
+    const daily = applyRevision(j, [{ op: 'replace_rule', ruleId: rule.id, rule: { ...rule, cadence: 'daily', title: 'Today’s challenge' } }]);
+    expect(daily.changes).toEqual(['Prompts: weekly → daily.', 'Prompt title: “This week\'s challenge” → “Today’s challenge”.']);
+    for (const line of daily.changes) expect(line).toMatch(/^[A-Z].*\.$/);
+  });
+});
+
+describe('version history line', () => {
+  it('is built from the applied change lines, which still read correctly after the change, within 300 characters', () => {
+    const light = AppSpecSchema.parse(LIGHT_GALLERY);
+    const result = applyRevision(light, (['Camera', 'Shutter', 'Aperture'] as const).map((label) => ({ op: 'add_field' as const, field: { id: label.toLowerCase(), label, type: 'text' as const } })));
+    expect(changeHistoryLine(result.changes)).toBe('Add “Camera”, “Shutter” and “Aperture” (short text). Existing photos keep their data; these fields start empty for them.');
+    expect(changeHistoryLine(result.changes)).not.toMatch(/\bwill\b/);
+    const many = Array.from({ length: 12 }, (_, i) => `Rename “Field number ${i}” to “A longer field name ${i}”.`);
+    const line = changeHistoryLine(many);
+    expect(line.length).toBeLessThanOrEqual(300);
+    expect(line).toMatch(/^Rename “Field number 0” to “A longer field name 0”\. .* And \d+ more changes\.$/);
+    expect(changeHistoryLine(['x'.repeat(400)]).length).toBeLessThanOrEqual(300);
+    expect(changeHistoryLine([])).toBe('No visible change.');
   });
 });
 

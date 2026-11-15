@@ -6,6 +6,7 @@ import { friendlyDate, parseIsoDate } from '@shared/time.ts';
 import { FieldList } from './ValueDisplay.tsx';
 import { pressable } from './runtimeUtils.ts';
 import { journalFields, journalGroups, type JournalViewSpec } from './viewLogic.ts';
+import './appViews.css';
 
 interface Props {
   spec: AppSpec;

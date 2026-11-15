@@ -6,13 +6,26 @@ import { useAuth } from '../auth.tsx';
 import { Skeleton } from '../components/ui.tsx';
 import { safeNextPath } from './parts/helpers.ts';
 import { usePageTitle } from './parts/usePageTitle.ts';
+import { EXAMPLE_PATH } from './WelcomePage.tsx';
 import './pages.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const AUTH_PAGE_RE = /^\/(?:login|signup)(?:[/?#]|$)/;
 
 interface FormError {
   message: string;
   code: string;
+}
+
+/**
+ * Where a successful sign-in or sign-up goes: the intended same-site destination, kept exactly
+ * (an app's own URL with its query, such as /apps/{id}/?install=1, included); otherwise the Agent
+ * after sign-up and the Playground after sign-in. Never back to a sign-in page.
+ */
+export function authDestination(rawNext: string | null | undefined, mode: 'login' | 'signup'): string {
+  const fallback = mode === 'signup' ? '/agent' : '/playground';
+  const next = safeNextPath(rawNext, fallback);
+  return AUTH_PAGE_RE.test(next) ? fallback : next;
 }
 
 export function LoginPage({ mode }: { mode: 'login' | 'signup' }) {
@@ -22,7 +35,10 @@ export function LoginPage({ mode }: { mode: 'login' | 'signup' }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const rawNext = params.get('next');
-  const destination = safeNextPath(rawNext, isSignup ? '/agent' : '/playground');
+  const destination = authDestination(rawNext, mode);
+  const toApp = destination.startsWith('/apps/');
+  // Arriving from the landing's "Try an example": say why there is a form first.
+  const toExample = destination === EXAMPLE_PATH;
   const nextQuery = rawNext ? `?next=${encodeURIComponent(rawNext)}` : '';
 
   const [email, setEmail] = useState('');
@@ -75,8 +91,14 @@ export function LoginPage({ mode }: { mode: 'login' | 'signup' }) {
     <div className="card auth-card">
       <p className="eyebrow">{isSignup ? 'Welcome' : 'Welcome back'}</p>
       <h1>{isSignup ? 'Create your account' : 'Sign in'}</h1>
-      <p className="muted small">
-        {isSignup ? 'Your context, your recommendations and your apps, kept in one place.' : 'Pick up where you left off.'}
+      <p className="muted small" data-testid="auth-lede">
+        {toApp
+          ? 'Then your app opens right where you were going.'
+          : toExample
+            ? `Then try the example with ${BRAND.name}. It is labelled as an example, and nothing is sent until you press send.`
+            : isSignup
+              ? `Your apps, and what you share with ${BRAND.name}, in one place.`
+              : 'Pick up where you left off.'}
       </p>
       <form className="st-auth-form" onSubmit={(e) => void onSubmit(e)} noValidate>
         {isSignup && (
@@ -147,7 +169,7 @@ export function LoginPage({ mode }: { mode: 'login' | 'signup' }) {
       <p className="tiny faint">Prototype sign-in. Use any email; passwords are stored hashed on this server only.</p>
       {isLocal && (
         <p className="tiny faint" data-testid="auth-demo-hint">
-          Demo account on this machine: demo@aiappstore.local with password demo-pass-2026 (created by the seed script; example content only).
+          Demo account on this machine: made by npm run seed, with example content only. Its sign-in is in docs/DEMO.md.
         </p>
       )}
     </div>

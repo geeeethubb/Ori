@@ -1,18 +1,21 @@
 /**
- * Riff-style practice room: a big countdown with minute presets, start/pause/reset, an optional
- * metronome (WebAudio, started only by a tap, silenced on unmount) and "Save session", which opens
- * the record form prefilled with the elapsed minutes, tempo and date. Recent sessions sit beneath,
- * and "Show all sessions" lists every one, so older sessions stay reachable and editable.
+ * Riff-style practice room: a lime ring countdown whose play button starts a MEASURED session (a
+ * timer, never audio), the minute presets, decorative level bars (not interactive, not listening),
+ * an optional metronome (WebAudio, started only by a tap, silenced on Stop and on unmount) and "Save
+ * session", which opens the record form prefilled with the elapsed minutes, tempo and date. The plan
+ * (the preset) is never saved as time played. Saved sources to practise with and the recent sessions
+ * sit beneath; "Show all sessions" lists every one, so older sessions stay reachable and editable.
  */
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { fieldById, type AppSpec } from '@shared/appSpec.ts';
 import type { AppRecord, RecordValues } from '@shared/records.ts';
 import { friendlyDate, todayIso } from '@shared/time.ts';
-import { Icons } from '../components/ui.tsx';
+import { Glyph, Icons } from '../components/ui.tsx';
 import { practiceTimerKey, readTempo, sessionDate, usePracticeTimer, writeTempo } from './practiceTimer.ts';
 import { pressable } from './runtimeUtils.ts';
 import { ValueDisplay } from './ValueDisplay.tsx';
-import { atTime, clampTempo, elapsedMinutes, formatClock, listedSessions, recordDate, TEMPO_MAX, TEMPO_MIN, type PracticeViewSpec } from './viewLogic.ts';
+import { atTime, clampTempo, elapsedMinutes, formatClock, linkHost, listedSessions, practiceSources, recordDate, sourceGlyph, TEMPO_MAX, TEMPO_MIN, type LinksViewSpec, type PracticeViewSpec } from './viewLogic.ts';
+import './appViews.css';
 
 /** What the timer measured for a save: the plan and the clock stay separate, and an untimed save says so. */
 export interface PracticeSaveMeta {
@@ -39,9 +42,11 @@ interface Props {
   readOnlyNote?: string;
   /** Extra content between the controls and the recent list (e.g. the prompt strip). */
   children?: ReactNode;
+  /** Every record of the app, when the page passes them: the saved sources to practise with are listed. */
+  allRecords?: AppRecord[];
 }
 
-export function PracticeView({ appId, spec, view, records, onEdit, onSave, readOnlyNote }: Props) {
+export function PracticeView({ appId, spec, view, records, onEdit, onSave, readOnlyNote, children, allRecords }: Props) {
   const firstPreset = view.presets[0] ?? 10;
   const timerKey = practiceTimerKey(appId, view.id);
   const timer = usePracticeTimer(timerKey, firstPreset);
@@ -180,13 +185,62 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
   const focusField = fieldById(spec, view.focusFieldId);
   const feelField = fieldById(spec, view.feelFieldId);
   const progress = state.presetMinutes > 0 ? Math.min(1, timer.elapsed / (state.presetMinutes * 60_000)) : 0;
+  const sources = useMemo(() => (allRecords ? practiceSources(spec, allRecords) : null), [spec, allRecords]);
+  const sourcesId = useId();
+  const timed = timer.elapsed >= 1000;
+  const playLabel = state.status === 'paused' ? 'Resume the timer' : done ? 'Start a new session' : 'Start the timer';
+  const saveLabel = view.addLabel ?? 'Save session';
 
   return (
-    <div className={`rt-practice${running ? ' is-running' : ''}${done ? ' is-done' : ''}`} data-testid="rt-practice" data-status={state.status}>
-      <section className="rt-timer" aria-label="Practice timer">
-        <div className="rt-timer-ring" style={{ '--rt-progress': progress } as React.CSSProperties} aria-hidden="true" />
-        <div className="rt-practice-time" data-testid="rt-practice-time" role="timer" aria-live={done ? 'assertive' : 'off'} aria-atomic="true">
-          {formatClock(timer.remaining)}
+    <div className={`rt-practice prc${running ? ' is-running' : ''}${done ? ' is-done' : ''}`} data-testid="rt-practice" data-status={state.status}>
+      <section className="prc-timer" aria-label="Practice timer">
+        <div className="prc-presets" role="group" aria-label="Session length">
+          {view.presets.map((m) => (
+            <button
+              type="button"
+              key={m}
+              className="prc-preset"
+              aria-pressed={state.presetMinutes === m}
+              aria-label={`${m} minutes`}
+              disabled={state.status !== 'idle'}
+              onClick={() => timer.choosePreset(m)}
+              data-testid={`rt-practice-preset-${m}`}
+            >
+              {m} min
+            </button>
+          ))}
+        </div>
+        <div className="prc-stage">
+          <LevelBars side="left" />
+          <div className="prc-ring">
+            <svg className="prc-ring-svg" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
+              <circle className="prc-ring-track" cx="100" cy="100" r={RING_R} />
+              <circle
+                className="prc-ring-arc"
+                cx="100"
+                cy="100"
+                r={RING_R}
+                strokeDasharray={RING_C}
+                strokeDashoffset={RING_C * progress}
+                transform="rotate(-90 100 100)"
+              />
+            </svg>
+            <div className="prc-ring-center">
+              <div className="prc-time" data-testid="rt-practice-time" role="timer" aria-live={done ? 'assertive' : 'off'} aria-atomic="true">
+                {formatClock(timer.remaining)}
+              </div>
+              {running ? (
+                <button type="button" className="prc-play" onClick={timer.pause} aria-label="Pause the timer" data-testid="rt-practice-pause">
+                  {Icons.pause}
+                </button>
+              ) : (
+                <button type="button" className="prc-play" onClick={start} aria-label={playLabel} data-testid="rt-practice-start">
+                  {Icons.play}
+                </button>
+              )}
+            </div>
+          </div>
+          <LevelBars side="right" />
         </div>
         <p className="rt-timer-note" role="status">
           {done
@@ -199,68 +253,80 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
                 ? state.needsReview ? 'Paused. The clock changed while it ran; check the minutes when you save.' : 'Paused.'
                 : `${state.presetMinutes} minute${state.presetMinutes === 1 ? '' : 's'} of practice`}
         </p>
-        <div className="rt-presets" role="group" aria-label="Session length">
-          {view.presets.map((m) => (
-            <button
-              type="button"
-              key={m}
-              className="rt-preset"
-              aria-pressed={state.presetMinutes === m}
-              disabled={state.status !== 'idle'}
-              onClick={() => timer.choosePreset(m)}
-              data-testid={`rt-practice-preset-${m}`}
-            >
-              {m} min
-            </button>
-          ))}
-        </div>
-        <div className="rt-transport">
-          {running ? (
-            <button type="button" className="btn btn-primary btn-lg rt-transport-main" onClick={timer.pause} data-testid="rt-practice-pause">
-              {Icons.pause}
-              Pause
-            </button>
-          ) : (
-            <button type="button" className="btn btn-primary btn-lg rt-transport-main" onClick={start} data-testid="rt-practice-start">
-              {Icons.play}
-              {state.status === 'paused' ? 'Resume' : done ? 'Again' : 'Start'}
-            </button>
-          )}
-          <button type="button" className="btn btn-secondary btn-lg" onClick={reset} disabled={state.status === 'idle'} data-testid="rt-practice-reset" aria-label="Reset timer">
+        {state.status !== 'idle' && (
+          <button type="button" className="btn btn-ghost btn-sm prc-reset" onClick={reset} data-testid="rt-practice-reset" aria-label="Reset the timer">
             {Icons.reset}
             Reset
           </button>
-        </div>
+        )}
       </section>
 
+      <div className="prc-save-row">
+        {onSave ? (
+          <button type="button" className={`btn ${timed ? 'btn-primary' : 'btn-secondary'} btn-lg prc-save`} onClick={save} data-testid="rt-practice-save">
+            {Icons.check}
+            {saveLabel}
+          </button>
+        ) : (
+          <button type="button" className="btn btn-secondary btn-lg prc-save" disabled data-testid="rt-practice-save" aria-disabled="true">
+            {saveLabel}
+          </button>
+        )}
+        <p className="small muted rt-practice-hint" data-testid="rt-practice-hint">
+          {readOnlyNote ??
+            (timed
+              ? `Timed ${formatClock(timer.elapsed)} so far of a ${state.presetMinutes}-minute plan; you can adjust before saving.`
+              : 'Nothing timed yet. Played without the timer? Save it and type in the minutes.')}
+        </p>
+      </div>
+
+      {/* What to play along with sits right under the timer, as in the practice room (reference A). */}
+      {sources && sources.rows.length > 0 && (
+        <section className="prc-sources" aria-labelledby={sourcesId} data-testid="rt-practice-sources">
+          <h3 className="rt-subhead" id={sourcesId}>
+            Practice with
+          </h3>
+          <ul className="src-list">
+            {sources.rows.slice(0, SOURCES_SHOWN).map((r) => (
+              <li key={r.id}>
+                <SourceLink spec={spec} view={sources.view} record={r} />
+              </li>
+            ))}
+          </ul>
+          {sources.rows.length > SOURCES_SHOWN && (
+            <p className="small muted prc-more">
+              {sources.rows.length - SOURCES_SHOWN} more in {sources.view.title ?? 'your saved sources'}.
+            </p>
+          )}
+        </section>
+      )}
+
+      {children}
+
       {view.tempoHelper && (
-        <section className="rt-tempo" data-testid="rt-tempo" aria-label="Tempo">
-          <div className="rt-tempo-top">
-            <div>
-              <div className="eyebrow rt-tempo-kicker">Tempo</div>
-              <div className="rt-tempo-readout">
-                <span className="rt-tempo-value" data-testid="rt-tempo-value">
-                  {tempo}
-                </span>
-                <span className="rt-tempo-unit">bpm</span>
-              </div>
-            </div>
-            <span className={`rt-beat${beat !== null ? ' is-on' : ''}${beat === 0 ? ' is-accent' : ''}`} aria-hidden="true" />
+        <section className="prc-tempo" data-testid="rt-tempo" aria-label="Tempo helper">
+          <div className="prc-tempo-read">
+            <span className="prc-tempo-kicker">Tempo</span>
+            <span className="prc-tempo-value">
+              <span data-testid="rt-tempo-value">{tempo}</span>
+              <small>bpm</small>
+            </span>
+            <span className={`prc-beat${beat !== null ? ' is-on' : ''}${beat === 0 ? ' is-accent' : ''}`} aria-hidden="true" />
           </div>
-          <div className="rt-tempo-controls">
-            <button type="button" className="rt-tempo-btn" onClick={() => nudgeTempo(-5)} disabled={tempo <= TEMPO_MIN} aria-label="Slower by 5" data-testid="rt-tempo-minus-5">
+          <div className="prc-tempo-controls">
+            <button type="button" className="prc-step" onClick={() => nudgeTempo(-5)} disabled={tempo <= TEMPO_MIN} aria-label="Slower by 5" data-testid="rt-tempo-minus-5">
               −5
             </button>
-            <button type="button" className="rt-tempo-btn" onClick={() => nudgeTempo(-1)} disabled={tempo <= TEMPO_MIN} aria-label="Slower by 1" data-testid="rt-tempo-minus-1">
+            <button type="button" className="prc-step" onClick={() => nudgeTempo(-1)} disabled={tempo <= TEMPO_MIN} aria-label="Slower by 1" data-testid="rt-tempo-minus-1">
               −1
             </button>
-            <button type="button" className="rt-tempo-btn" onClick={() => nudgeTempo(1)} disabled={tempo >= TEMPO_MAX} aria-label="Faster by 1" data-testid="rt-tempo-plus-1">
+            <button type="button" className="prc-step" onClick={() => nudgeTempo(1)} disabled={tempo >= TEMPO_MAX} aria-label="Faster by 1" data-testid="rt-tempo-plus-1">
               +1
             </button>
-            <button type="button" className="rt-tempo-btn" onClick={() => nudgeTempo(5)} disabled={tempo >= TEMPO_MAX} aria-label="Faster by 5" data-testid="rt-tempo-plus-5">
+            <button type="button" className="prc-step" onClick={() => nudgeTempo(5)} disabled={tempo >= TEMPO_MAX} aria-label="Faster by 5" data-testid="rt-tempo-plus-5">
               +5
             </button>
-            <button type="button" className={`btn ${ticking ? 'btn-primary' : 'btn-secondary'} rt-tempo-toggle`} onClick={toggleMetronome} aria-pressed={ticking} data-testid="rt-tempo-toggle">
+            <button type="button" className={`btn ${ticking ? 'btn-primary' : 'btn-secondary'} prc-click`} onClick={toggleMetronome} aria-pressed={ticking} data-testid="rt-tempo-toggle">
               {ticking ? Icons.pause : Icons.play}
               {ticking ? 'Stop click' : 'Start click'}
             </button>
@@ -268,27 +334,8 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
         </section>
       )}
 
-      <div className="rt-practice-save-row">
-        {onSave ? (
-          <button type="button" className="btn btn-primary btn-lg rt-practice-save" onClick={save} data-testid="rt-practice-save">
-            {Icons.check}
-            {view.addLabel ?? 'Save session'}
-          </button>
-        ) : (
-          <button type="button" className="btn btn-secondary btn-lg rt-practice-save" disabled data-testid="rt-practice-save" aria-disabled="true">
-            {view.addLabel ?? 'Save session'}
-          </button>
-        )}
-        <p className="small muted rt-practice-hint" data-testid="rt-practice-hint">
-          {readOnlyNote ??
-            (timer.elapsed < 1000
-              ? 'Not timed yet. You can still log a session you did without the timer.'
-              : `Timed ${formatClock(timer.elapsed)} so far of a ${state.presetMinutes}-minute plan; you can adjust before saving.`)}
-        </p>
-      </div>
-
       {recent.length > 0 && (
-        <section className="rt-recent" data-testid="rt-practice-recent">
+        <section className="rt-recent prc-sessions" data-testid="rt-practice-recent">
           <h3 className="rt-subhead">{showAll ? 'All sessions' : 'Recent sessions'}</h3>
           <ul className="rt-session-list" id={listId}>
             {recent.map((r) => {
@@ -298,19 +345,19 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
               // An empty timed value means typed in by hand; no value at all (seeded or older sessions) says nothing.
               const timedSec = view.timedSecondsFieldId ? r.values[view.timedSecondsFieldId] : undefined;
               return (
-                <li key={r.id} className={`rt-session${onEdit ? ' rt-pressable' : ''}`} data-testid="rt-session" {...pressable(onEdit ? () => onEdit(r) : undefined)}>
-                  <span className="rt-session-minutes">
+                <li key={r.id} className={`prc-session${onEdit ? ' rt-pressable' : ''}`} data-testid="rt-session" {...pressable(onEdit ? () => onEdit(r) : undefined)}>
+                  <span className="prc-session-minutes">
                     {typeof minutes === 'number' || typeof minutes === 'string' ? minutes : '–'}
                     <small>{minutesField?.type === 'number' && minutesField.unit ? minutesField.unit : 'min'}</small>
                   </span>
-                  <span className="rt-session-body">
-                    <span className="rt-session-focus">{typeof focus === 'string' && focus.trim() ? focus : 'Practice'}</span>
-                    <span className="rt-session-meta">
+                  <span className="prc-session-body">
+                    <span className="prc-session-focus">{typeof focus === 'string' && focus.trim() ? focus : 'Practice'}</span>
+                    <span className="prc-session-meta">
                       <span>{friendlyDate(recordDate(r, view.dateFieldId))}</span>
                       {typeof planned === 'number' && <span data-testid="rt-session-planned">of {planned} planned</span>}
                       {typeof timedSec === 'number'
-                        ? <span title="Measured by the timer" data-testid="rt-session-timed">timed {formatClock(timedSec * 1000)}</span>
-                        : timedSec === null ? <span>typed in</span> : null}
+                        ? <span className="prc-timed" title="Measured by the timer" data-testid="rt-session-timed">timed {formatClock(timedSec * 1000)}</span>
+                        : timedSec === null ? <span className="prc-typed">typed in</span> : null}
                       {feelField && <ValueDisplay field={feelField} value={r.values[feelField.id]} />}
                     </span>
                   </span>
@@ -326,6 +373,56 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
         </section>
       )}
     </div>
+  );
+}
+
+const RING_R = 90;
+const RING_C = 2 * Math.PI * RING_R;
+const SOURCES_SHOWN = 4;
+/** Riff's level bars: a fixed, decorative shape. They never move with sound: nothing is listening. */
+const LEVELS = [10, 22, 34, 18, 42, 28, 14];
+
+function LevelBars({ side }: { side: 'left' | 'right' }) {
+  const bars = side === 'left' ? LEVELS : [...LEVELS].reverse();
+  const width = bars.length * 11 - 5;
+  return (
+    <svg className={`prc-bars prc-bars-${side}`} viewBox={`0 0 ${width} 48`} aria-hidden="true" focusable="false">
+      {bars.map((h, i) => (
+        <rect key={i} x={i * 11} y={(48 - h) / 2} width="6" height={h} rx="3" />
+      ))}
+    </svg>
+  );
+}
+
+/** One saved source as a row that opens it (in a new tab); a value that is not a web link is shown, not linked. */
+export function SourceLink({ spec, view, record }: { spec: AppSpec; view: LinksViewSpec; record: AppRecord }) {
+  const url = typeof record.values[view.urlFieldId] === 'string' ? String(record.values[view.urlFieldId]).trim() : '';
+  const host = linkHost(url);
+  const titleRaw = view.titleFieldId ? record.values[view.titleFieldId] : undefined;
+  const title = typeof titleRaw === 'string' && titleRaw.trim() ? titleRaw.trim() : host || 'Saved link';
+  const kindField = fieldById(spec, view.kindFieldId);
+  const kind = kindField?.type === 'select' ? kindField.options.find((o) => o.value === record.values[kindField.id])?.label : undefined;
+  const meta = [kind, host && host !== title ? host : ''].filter(Boolean).join(' · ');
+  const body = (
+    <>
+      <span className="src-thumb" data-glyph={sourceGlyph(kind)} aria-hidden="true">
+        <Glyph symbol={sourceGlyph(kind)} size={20} />
+      </span>
+      <span className="src-text">
+        <span className="src-title">{title}</span>
+        {meta && <span className="src-meta">{meta}</span>}
+      </span>
+    </>
+  );
+  if (!/^https?:\/\//i.test(url)) return <span className="src-row">{body}</span>;
+  return (
+    <a className="src-row src-link" href={url} target="_blank" rel="noopener noreferrer" data-testid="rt-source-open">
+      {body}
+      <span className="sr-only"> (opens {host || 'the link'} in a new tab)</span>
+      <span className="src-chevron" aria-hidden="true">
+        {Icons.chevronRight}
+      </span>
+    </a>
   );
 }
 

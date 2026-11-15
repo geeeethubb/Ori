@@ -1,20 +1,27 @@
 /**
  * Companion mood is bound to the current UI operation: success only after a confirmed result,
- * stale responses ignored, timers released on cancel/reset/unmount, focus never hides real work.
+ * stale responses ignored, timers released on cancel/reset/unmount, focus never hides real work
+ * or a fresh proposal, and React StrictMode's simulated remount loses nothing.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   NO_ORI_TOKEN,
   ORI_MOOD_TIMING,
   createOriMoodController,
+  createOriMoodLifecycle,
   initialOriMoodState,
   moodOf,
   oriMoodReducer,
+  settledOf,
   type OriMoodController,
 } from './useOriMood.ts';
 
 let ori: OriMoodController;
 const mood = () => moodOf(ori.getState());
+/** What the hook hands <OriCompanion>: settled stops the motion of the mood on show. */
+const settled = () => settledOf(ori.getState());
+/** Let queued microtasks run (the lifecycle's deferred dispose). */
+const flushMicrotasks = () => new Promise<void>((resolve) => queueMicrotask(resolve));
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -237,5 +244,132 @@ describe('teardown releases everything', () => {
     off();
     ori.succeed(t);
     expect(heard).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('a proposal and the composer', () => {
+  it('shows "Found something" even when the composer kept focus after Enter, and settles there', () => {
+    ori.focus();
+    const t = ori.begin('capture');
+    expect(mood()).toBe('thinking');
+    ori.discover(t);
+    expect(mood()).toBe('discovery');
+    expect(settled()).toBe(false); // the arrival plays
+    vi.advanceTimersByTime(ORI_MOOD_TIMING.discoverySettleMs);
+    expect(mood()).toBe('discovery'); // focus from before the proposal does not hide it
+    expect(settled()).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('typing shows Listening at once, with its lean; leaving the composer returns to the still proposal', () => {
+    ori.focus();
+    const t = ori.begin('capture');
+    ori.discover(t);
+    ori.typing();
+    expect(mood()).toBe('attentive');
+    expect(settled()).toBe(false);
+    vi.advanceTimersByTime(ORI_MOOD_TIMING.discoverySettleMs);
+    expect(mood()).toBe('attentive');
+    expect(settled()).toBe(false); // settled belongs to the discovery, so the lean is not suppressed
+    ori.blur();
+    expect(mood()).toBe('discovery');
+    expect(settled()).toBe(true); // back on the proposal it stays still: no second arrival
+  });
+
+  it('focusing the composer again shows Listening once the arrival has played', () => {
+    const t = ori.begin('capture');
+    ori.discover(t);
+    ori.focus(); // during the arrival: the discovery finishes first
+    expect(mood()).toBe('discovery');
+    vi.advanceTimersByTime(ORI_MOOD_TIMING.discoverySettleMs);
+    expect(mood()).toBe('attentive');
+    expect(settled()).toBe(false);
+    ori.blur();
+    expect(mood()).toBe('discovery');
+    ori.focus(); // after the arrival: at once
+    expect(mood()).toBe('attentive');
+    expect(ori.getState().phase).toBe('discovery'); // the proposal is still there underneath
+  });
+
+  it('a newer proposal is news again, whatever the person was doing before it arrived', () => {
+    ori.focus();
+    ori.typing();
+    const first = ori.begin('capture');
+    ori.discover(first);
+    expect(mood()).toBe('discovery');
+    ori.typing();
+    expect(mood()).toBe('attentive');
+    const second = ori.begin('capture');
+    expect(mood()).toBe('thinking'); // typing never hides a pending request
+    ori.discover(second);
+    expect(mood()).toBe('discovery');
+  });
+
+  it('typing never hides pending work, an error or a clarification', () => {
+    const t = ori.begin('apply');
+    ori.typing();
+    expect(mood()).toBe('building');
+    ori.fail(t);
+    ori.typing();
+    expect(mood()).toBe('error');
+    const asking = ori.begin('revision');
+    ori.clarify(asking);
+    ori.typing();
+    expect(mood()).toBe('clarify');
+  });
+
+  it('a long pending settles its motion, and the next mood moves again', () => {
+    const t = ori.begin('create');
+    vi.advanceTimersByTime(ORI_MOOD_TIMING.pendingSettleMs);
+    expect(settled()).toBe(true);
+    ori.succeed(t);
+    expect(mood()).toBe('success');
+    expect(settled()).toBe(false);
+  });
+});
+
+describe('React StrictMode remount (development)', () => {
+  // StrictMode mounts, unmounts and remounts each new component once, synchronously, with children's
+  // effects before their parent's. These steps follow that order; the hook drives the same lifecycle.
+  it('an operation begun on mount survives the simulated unmount and remount', async () => {
+    const life = createOriMoodLifecycle(ori);
+    life.mount();
+    const t = ori.begin('capture'); // a child's mount effect, guarded so it runs only once
+    life.unmount(); // simulated
+    life.mount();
+    await flushMicrotasks();
+    expect(ori.isCurrent(t)).toBe(true);
+    expect(mood()).toBe('thinking');
+    expect(vi.getTimerCount()).toBe(1);
+    ori.discover(t);
+    expect(mood()).toBe('discovery');
+  });
+
+  it('a child that begins before its parent re-activates still gets a live operation', async () => {
+    const life = createOriMoodLifecycle(ori);
+    life.mount();
+    life.unmount(); // simulated
+    const t = ori.begin('create'); // the child's effect runs before the parent's remount
+    expect(t).not.toBe(NO_ORI_TOKEN);
+    life.mount();
+    await flushMicrotasks();
+    expect(mood()).toBe('building');
+    ori.succeed(t);
+    expect(mood()).toBe('success');
+  });
+
+  it('a real unmount still releases every timer straight after, and ignores later calls', async () => {
+    const life = createOriMoodLifecycle(ori);
+    life.mount();
+    const t = ori.begin('create');
+    expect(vi.getTimerCount()).toBe(1);
+    life.unmount();
+    await flushMicrotasks();
+    expect(vi.getTimerCount()).toBe(0);
+    expect(mood()).toBe('idle');
+    ori.succeed(t);
+    expect(ori.begin('apply')).toBe(NO_ORI_TOKEN);
+    expect(mood()).toBe('idle');
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

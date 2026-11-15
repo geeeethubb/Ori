@@ -57,7 +57,7 @@ export function SettingsPage() {
           <Link to="/settings/import" className="se-link" data-testid="settings-import">
             <span className="se-link-icon">{Icons.upload}</span>
             <span>
-              <strong>Bring more context</strong>
+              <strong>Bring context from your AI</strong>
               <span className="small muted">Optional: paste a profile, upload a file or answer four questions.</span>
             </span>
             <span className="se-link-chev" aria-hidden="true">{Icons.chevronRight}</span>
@@ -97,7 +97,12 @@ export function SettingsPage() {
               {!trialEnded && ` (${pluralize(left, 'day')} left)`}
             </dd>
           </dl>
-          {!user.premiumActive && <p className="small muted">Making and changing apps is paused. You can still open, use and export every app you made.</p>}
+          {!user.premiumActive && (
+            <p className="small muted">
+              {BRAND.name}'s replies and suggestions, app previews, and making or changing apps are paused. You can still open, use and export every
+              app you made, and what you share is still saved.
+            </p>
+          )}
           <p className="small"><Link to="/pricing">See pricing</Link></p>
         </section>
 
@@ -110,7 +115,8 @@ export function SettingsPage() {
             <div className="st-usage-fill" style={{ width: `${pct}%` }} />
           </div>
           <p className="small" data-testid="account-usage">
-            {used.toLocaleString()} of {allowance.toLocaleString()} generations. Replies, proposals, new apps and changes count; using your apps never does.
+            {used.toLocaleString()} of {allowance.toLocaleString()} generations. Replies, suggestions, app previews, proposed changes and imported
+            profiles count; using your apps never does.
           </p>
           {user.modelMode === 'sample' && <p className="small muted">Sample mode: replies and proposals come from the built-in catalog and are labelled as such.</p>}
         </section>
@@ -122,9 +128,9 @@ export function SettingsPage() {
             <ul className="se-exports">
               {apps.map((a) => (
                 <li key={a.id}>
-                  <AppIcon icon={a.icon} size={28} title="" />
+                  <AppIcon icon={a.icon} name={a.name} size={28} title="" />
                   <span className="se-export-name">{a.name}</span>
-                  <a className="btn btn-ghost btn-sm" href={`${apiBase()}/api/apps/${a.id}/export`} download={`${a.name.replace(/[^\w-]+/g, '-').toLowerCase()}.json`} data-testid="settings-export">
+                  <a className="btn btn-ghost btn-sm" style={{ minHeight: 44 }} href={`${apiBase()}/api/apps/${a.id}/export`} download={`${a.name.replace(/[^\w-]+/g, '-').toLowerCase()}.json`} data-testid="settings-export">
                     {Icons.download} Export
                   </a>
                 </li>
@@ -138,7 +144,7 @@ export function SettingsPage() {
         <section className="card card-pad se-card" aria-labelledby="se-look-title">
           <h2 id="se-look-title" className="st-h2-sm">Appearance</h2>
           <p className="small muted">
-            {BRAND.shortName} itself stays bright and quiet. Every app has its own look, type and density; change an app's look from its settings under “Make this more me”.
+            {BRAND.name} itself stays bright and quiet. Every app has its own look, type and density. To change one, open the app and choose Edit with {BRAND.name}.
           </p>
         </section>
       </div>
