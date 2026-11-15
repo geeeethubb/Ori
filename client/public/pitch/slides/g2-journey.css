@@ -85,10 +85,15 @@
 .layout-feeling .fe-answer { position: absolute; right: -10px; top: 440px; margin: 0; padding: 14px 22px; border-radius: 24px 8px 24px 24px; background: var(--blue); color: #fff; font-size: var(--fs-body); font-weight: 700; line-height: 1.2; white-space: nowrap; }
 
 /* Your app: the real Light screen, its own icon and name. */
-.layout-feeling .fe-phone { position: absolute; left: 100px; top: 84px; display: block; width: 300px; height: 383px; padding: 10px; border-radius: 40px; background: var(--charcoal); box-shadow: 0 30px 60px -30px rgba(22, 32, 57, 0.6); }
-.layout-feeling .fe-phone img { display: block; width: 280px; height: 363px; border-radius: 30px; object-fit: cover; object-position: top; background: #f6f4ef; }
-.layout-feeling .fe-app { position: absolute; left: 0; right: 0; top: 488px; width: fit-content; margin: 0 auto; display: flex; align-items: center; gap: 16px; }
-.layout-feeling .fe-app-name { font-family: var(--font-display); font-weight: 800; font-size: 52px; line-height: 1; letter-spacing: -0.04em; color: var(--fg); }
+.layout-feeling .fe-phone { position: absolute; left: 6px; top: 84px; display: block; width: 240px; height: 306px; padding: 8px; border-radius: 34px; background: var(--charcoal); box-shadow: 0 30px 60px -30px rgba(22, 32, 57, 0.6); }
+.layout-feeling .fe-phone img { display: block; width: 224px; height: 290px; border-radius: 26px; object-fit: cover; object-position: top; background: #f6f4ef; }
+/* Beside it, My apps: the person's own app store, where each app can be added to the home screen. */
+.layout-feeling .fe-phone-2 { left: 254px; }
+.layout-feeling .fe-phone-2 img { object-position: 50% 25%; background: var(--canvas); }
+.layout-feeling .fe-app { position: absolute; left: 6px; top: 410px; width: 240px; margin: 0; display: flex; justify-content: center; align-items: center; gap: 12px; }
+.layout-feeling .fe-app-name { font-family: var(--font-display); font-weight: 800; font-size: 40px; line-height: 1; letter-spacing: -0.04em; color: var(--fg); }
+.layout-feeling .fe-store { position: absolute; left: 254px; top: 404px; width: 240px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.layout-feeling .fe-store-chip { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px; background: var(--lime); color: var(--ink); font-size: 20px; font-weight: 750; line-height: 1.1; white-space: nowrap; }
 .layout-feeling .fe-caption { position: absolute; left: 0; right: 0; top: 588px; margin: 0; text-align: center; font-size: var(--fs-label); font-weight: 650; color: var(--fg-muted); }
 
 /* On arrival: the context moves into Ori, Ori answers, then the arrow reaches the app. */
@@ -103,6 +108,8 @@
 .layout-feeling.fe-play .fe-phone,
 .layout-feeling.fe-play .fe-app,
 .layout-feeling.fe-play .fe-caption { animation: g2-rise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) 1s both; }
+.layout-feeling.fe-play .fe-phone-2,
+.layout-feeling.fe-play .fe-store { animation: g2-rise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) 1.25s both; }
 
 /* ------------------------------------------------------------------------------------------ */
 /* Phones and portrait tablets (flow mode): stacked, no line art, nothing wider than the screen */
@@ -154,7 +161,9 @@
 .is-flow .layout-feeling .fe-phone { position: static; width: 220px; height: auto; padding: 8px; border-radius: 30px; }
 .is-flow .layout-feeling .fe-phone img { width: 204px; height: 264px; border-radius: 22px; }
 .is-flow .layout-feeling .fe-app,
+.is-flow .layout-feeling .fe-store,
 .is-flow .layout-feeling .fe-caption { position: static; margin: 0; }
+.is-flow .layout-feeling .fe-store-chip { font-size: 15px; }
 .is-flow .layout-feeling .fe-app .kit-app-icon { width: 56px; height: 56px; }
 .is-flow .layout-feeling .fe-app-name { font-size: 30px; }
 .is-flow .layout-feeling .fe-caption { font-size: 13px; }

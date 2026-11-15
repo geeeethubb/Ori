@@ -37,7 +37,7 @@ let BASE = opt('base', '');
 const budgets = [];
 args.forEach((a, i) => { if (a === '--budget' && args[i + 1]) { const [k, v] = args[i + 1].split('='); budgets.push([k, Number(v)]); } });
 const DEFAULT_BUDGET = 35;
-const DENSE = [[/promise/, 50], [/discover/, 50], [/^create$/, 40], [/^grow$/, 45], [/growth|roadmap|goal/, 50], [/founder|gtm|community/, 70], [/position|map|compet/, 70], [/velocity/, 60]];
+const DENSE = [[/promise/, 50], [/discover/, 50], [/^feeling$/, 45], [/^create$/, 40], [/^grow$/, 45], [/growth|roadmap|goal/, 50], [/founder|gtm|community/, 70], [/position|map|compet/, 70], [/velocity/, 60]];
 const budgetFor = (id) => {
   for (const [k, v] of budgets) if (id === k || id.includes(k)) return v;
   for (const [rx, v] of DENSE) if (rx.test(id)) return v;

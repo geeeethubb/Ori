@@ -87,6 +87,14 @@
       stillLabel: 'Product screenshot · Sample mode',
       alt: 'Light, the app Ori made: its camera icon, “Notice the light.”, this week’s prompt “Focus on golden-hour shadows” and the shared photo as the first entry.',
     },
+    // The founder's addition: where the app lives. My apps is the person's own app store; each app can be added
+    // to the home screen (an action they take: PRODUCT_FACTS.md), never shown as installed for them.
+    store: {
+      title: 'My apps',
+      action: 'Add to home screen',
+      still: 'media/stills/my-apps-three-apps.webp',
+      alt: 'My apps, “Your little world”: Light, Riff and People as separate apps, with Open, Edit with Ori and Add to home screen.',
+    },
   };
   slides.feeling = (scene, kit) => {
     const { h } = kit;
@@ -100,14 +108,15 @@
     const summary = (inputs.summary && inputs.summary.label) || d.summary;
     const exchange = { ...d.exchange, ...(o.exchange || {}) };
     const output = { ...d.output, ...(o.output && o.output.still ? o.output : {}) };
+    const store = { ...d.store, ...(o.store || {}) };
 
     const links = lineArt(kit, 'fe-links', F.w, F.h, [
       '<path class="fe-link" pathLength="1" style="--fe-d:0s" d="M392 150 C500 150 520 290 598 300"/>',
       '<path class="fe-link" pathLength="1" style="--fe-d:.08s" d="M262 340 C380 340 470 312 596 312"/>',
       '<path class="fe-link" pathLength="1" style="--fe-d:.16s" d="M458 296 C520 296 540 318 596 318"/>',
       '<path class="fe-link" pathLength="1" style="--fe-d:.24s" d="M470 520 C540 520 540 340 600 334"/>',
-      '<path class="fe-out-link" pathLength="1" d="M836 300 L992 300"/>',
-      `<polygon class="fe-out-head" points="${arrowHead([1014, 300], [992, 300], 30, 18)}"/>`,
+      '<path class="fe-out-link" pathLength="1" d="M840 300 L896 300"/>',
+      `<polygon class="fe-out-head" points="${arrowHead([918, 300], [896, 300], 30, 18)}"/>`,
     ].join(''));
 
     const structureRow = h('p', { class: 'fe-structure' },
@@ -133,9 +142,13 @@
       h('p', { class: 'fe-answer' }, kit.sr('You answer: '), exchange.answer));
 
     const appZone = h('figure', { class: 'fe-zone fe-out' },
-      h('span', { class: 'fe-phone' }, kit.lazyImage(output.still, { alt: output.alt, width: '280', height: '363' })),
-      h('span', { class: 'fe-app' }, kit.appIcon(output.app, { size: 84 }), h('b', { class: 'fe-app-name' }, output.name)),
-      h('figcaption', { class: 'fe-caption' }, output.stillLabel));
+      h('span', { class: 'fe-phone' }, kit.lazyImage(output.still, { alt: output.alt, width: '224', height: '290' })),
+      h('span', { class: 'fe-app' }, kit.appIcon(output.app, { size: 60 }), h('b', { class: 'fe-app-name' }, output.name)),
+      h('span', { class: 'fe-phone fe-phone-2' }, kit.lazyImage(store.still, { alt: store.alt, width: '224', height: '290' })),
+      h('span', { class: 'fe-store' },
+        h('b', { class: 'fe-app-name' }, store.title),
+        h('span', { class: 'fe-store-chip' }, kit.icon('squarePlus', { size: 20 }), h('span', null, store.action))),
+      h('figcaption', { class: 'fe-caption' }, String(output.stillLabel).replace(/^Product screenshot\b(?!s)/, 'Product screenshots')));
 
     return {
       bodyClass: 'fe-body',
