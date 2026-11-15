@@ -40,11 +40,20 @@ All from `ACCEPTED_DECISIONS.md` and `04_final_corrections.md`, adapted to this 
 
 New (commit `a88d8e0` unless noted): `shared/drafts.ts`, `server/services/revisionGuards.ts`, `server/model/sample/unsupported.ts`, `server/db/migrations/003_velocity.sql` (additive), `server/scripts/velocity-live-smoke.ts`, `tests/unit/velocity-cases.test.ts`, `tests/unit/velocity-runtime.test.ts`, `docs/velocity/INTEGRATION_REPORT.md`.
 
+Review fixes (`26381e8`, after an adversarial review of the integration): `server/db/migrations/004_forgotten_captures.sql` (additive), `tests/unit/velocity-review-fixes.test.ts`, `tests/unit/velocity-memory-fixes.test.ts`, `client/src/runtime/recordFlows.test.ts`, `client/src/runtime/practiceTimer.test.ts`, plus changes to files listed below.
+
 Changed: contracts `shared/appSpec.ts`, `shared/context.ts`, `shared/revision.ts`, `shared/records.ts`, `shared/time.ts`, `shared/api.ts`; server `server/routes/{agent,apps,recommendations,revisions}.ts`, `server/repos/{apps,captures,context}.ts`, `server/model/anthropic.ts`, `server/model/types.ts`, `server/model/sample/{respond,domains,recommend,revise,heuristics,generate}.ts`, `server/fixtures/specs.ts`, `server/services/linkMeta.ts`, `server/config.ts`; client `client/src/runtime/{AppHome,PracticeView,QueueView,RecordForm,RecordSheet,practiceTimer,runtimeUtils,useAppData,viewLogic}.tsx|ts`, `client/src/runtime/settings/{HistorySection,ReviseSection}.tsx`, `client/src/pages/{AgentPage,MakePage}.tsx`, `client/src/pages/parts/{helpers.ts,ProposalBits.tsx}`; tests `tests/unit/{api,appSpec-redesign,redesign-api,revision,sample-adapter,sample-respond}.test.ts`, `client/src/**/*.test.ts`, `tests/e2e/{journey,mobile}.spec.ts`, `tests/e2e/helpers.ts`, `playwright.config.ts`; docs `docs/redesign-contract.md`, `BUILD_STATUS.md`, `docs/TEST_RESULTS.md`. Review fixes after `a88d8e0` are listed in `INTEGRATION_REPORT.md` §8.
 
 ## 5. Checks actually run
 
-Recorded with counts and environments in `docs/TEST_RESULTS.md` §7. In short: typecheck; the full unit and API suite including the 12 Velocity cases and the runtime decision tests; the browser suite on phone, small phone and desktop; one bounded live run of five model calls (`docs/velocity/evidence/live-smoke-2026-11-14.txt`). Not run: a live browser journey after these changes, physical devices, Prompt C.
+Recorded with counts and environments in `docs/TEST_RESULTS.md` §7, all on 2026-11-14:
+- Typecheck: 0 errors.
+- Unit and API suite: **555 passed in 26 files** at `eb2f82c` (526 in 24 files at `26381e8` alone), including the 12 Velocity cases (22 tests), the runtime decisions (14), the review fixes (15), memory and idempotency (26), client record flows (35) and the practice timer (19).
+- Browser suite (Playwright, Sample mode, throwaway database): 14 passed, 4 skipped by design, on phone, small phone and desktop.
+- One bounded live run of five model calls on `claude-opus-5-5`: 15/15 checks (`docs/velocity/evidence/live-smoke-2026-11-14.txt`).
+- Evidence screenshots at 390 and 1440 px in Sample mode: `docs/velocity/evidence/screens/`.
+
+Not run: a live browser journey after these changes, the Android emulator, physical devices, Prompt C.
 
 ## 6. Remaining gaps
 

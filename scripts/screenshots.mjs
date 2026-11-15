@@ -48,7 +48,8 @@ try {
   const people = await api(seedCtx.request, 'POST', '/api/apps/from-fixture', { fixture: 'people-queue' });
   const undoDemo = await api(seedCtx.request, 'POST', '/api/apps/from-fixture', { fixture: 'riff-practice', name: 'Riff (undo example)' });
   const today = new Date();
-  const iso = (d) => { const x = new Date(today); x.setDate(x.getDate() + d); return x.toISOString().slice(0, 10); };
+  // Local calendar dates (toISOString is UTC and would label tonight's session 'Tomorrow').
+  const iso = (d) => { const x = new Date(today); x.setDate(x.getDate() + d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
   // The third session was typed in by hand: no plan and an explicitly empty timed value, so it reads "typed in".
   for (const [d, minutes, focus, tempo, feel, planned, timed] of [[0, 9, 'The riff at half speed, then full', 72, 4, 15, 552], [-1, 10, 'Chord changes without looking', 66, 3, 10, 600], [-2, 25, 'Intro of the song, clean strumming', 80, 5, null, null]]) {
     await api(seedCtx.request, 'POST', `/api/apps/${riff.app.id}/records`, { values: { kind: 'session', date: iso(d), minutes, focus, tempo, feel, target_minutes: planned, timed_seconds: timed } });

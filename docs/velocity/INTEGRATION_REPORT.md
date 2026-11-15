@@ -99,9 +99,19 @@ One bounded run of `server/scripts/velocity-live-smoke.ts` on 2026-11-14 at 23:0
 
 Note on latency: the first call took 105 s while the other four took 5 to 21 s. The script does not log retries, so whether that was a slow first response or an adapter retry is not known from this run. Live mode can therefore be slow on a first share; the demo plan uses Sample mode, labelled, for timed segments.
 
-## 8. Checks run for this pass
+## 8. Review of the integration, and the checks run
 
-See `docs/TEST_RESULTS.md` section 7 for counts and environments; this list names what was run.
+After `a88d8e0`, an adversarial review in six dimensions confirmed **42 findings (two high)**. All were fixed (`26381e8`): the routing fixes directly, the rest by one fixer per area followed by an independent verifier, then two more rounds for the edge cases those verifiers found. Grouped:
+
+| Area | What changed |
+| --- | --- |
+| Routing (two high) | Ordinary notes are no longer turned into a lone design change: a change needs a design word or an explicit capability request, and a use card needs a use intent; unsupported items need an integration verb and a named service; reminders are named as not possible; "Remind me…" is never claimed as done; questions never get "already does this"; notes about other people never redesign the person's app; names, actions and when-words are parsed without corrupting them ("sat next to" is never Saturday; a deadline wins over the first time word). |
+| Exactly-once saves | A retried save carrying newer values updates its own entry while nobody has edited it by hand (`edited_at`, migration 004); after an edit it is `409 record_conflict`; an entry the person deleted answers `409 record_deleted` and the client saves once more under a new id; a new entry keeps its id with its draft only once a create was sent, so a reopen retries the same entry and two tabs never share one; edit drafts hold only the keys the person changed, and a conflict keeps the typing the other device did not touch; queue Undo restores the item's own values; failed edits roll back only their keys. |
+| Practice timer | One stored timer per app view shared by every tab; preview timers never stored; sessions dated by the day they ended or their latest start; the plan stored only for timed sessions; "typed in" only for an explicit empty timed value; save marks, new ids and resets touch only their own session; "Show all sessions" keeps every session reachable. |
+| Undo and revisions | Binding problems compared by ids, so a rename never trips an old quirk (a list sorted by its title and a count over a non-date field are no longer flagged); bound fields checked on the final design; untouched defaults are not carried by undo; Undo and Redo alternate; a malformed `expectedVersion` is a 400; import decides photo fields by each id's latest definition; Accept re-checks the suggestion it came from. |
+| Memory | Forget and "Just keep it" remove only what was inferred from that share alone; a share restating a fact becomes another source of it (Unicode-aware); a forgotten share's id is never accepted again (tombstone, migration 004); a surviving fact quotes its supporting sentence or nothing; the import cap ignores shares; a category edit confirms a fact; deleting an app makes its card buildable again. |
+
+Checks (counts and environments in `docs/TEST_RESULTS.md` section 7): typecheck 0 errors; **555 unit/API tests in 26 files** at `eb2f82c` (526 in 24 at `26381e8` alone); browser suite 14 passed, 4 skipped by design; the bounded live run above, 15/15. Not run in this pass: a live browser journey, the Android emulator, physical devices, Prompt C.
 
 ## 9. Deferred, with reasons
 

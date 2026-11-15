@@ -387,7 +387,7 @@ const ImportSchema = z.object({
 /** Recreate an app (with history and records) from an export file. Always creates a new app ID. */
 appRoutes.post('/import', async (c) => {
   const body = ImportSchema.safeParse(await c.req.json().catch(() => null));
-  if (!body.success) return c.json({ error: 'That file is not an AI App Store export.', code: 'invalid_import', details: body.error.issues.slice(0, 3) }, 400);
+  if (!body.success) return c.json({ error: 'That file is not an app exported from Ori.', code: 'invalid_import', details: body.error.issues.slice(0, 3) }, 400);
   const ownerId = c.get('user').id;
   const versions = [...body.data.versions].sort((a, b) => a.version - b.version);
   const first = versions[0]!;

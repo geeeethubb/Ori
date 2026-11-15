@@ -1,6 +1,6 @@
-# Test results (redesign, session 2)
+# Test results (redesign, Velocity integration, Ori)
 
-Updated: 2026-11-14 14:10. Status values: ✅ passed · ❌ failed · ⏳ not run yet · ⚠️ partial. Every row names the environment it ran in. A check that did not run is listed as not run, never as passed. Session-1 totals are history; this file only reports what ran after the redesign started.
+Updated: 2026-11-14 20:30 (section 7 added: Velocity integration and its review; the Ori pass gets its own section when it is verified). Status values: ✅ passed · ❌ failed · ⏳ not run yet · ⚠️ partial. Every row names the environment it ran in. A check that did not run is listed as not run, never as passed. Session-1 totals are history; this file only reports what ran after the redesign started.
 
 Machine: Windows 11, Node 24.14.1, Playwright Chromium 1255, Android emulator `Pixel_9_Pro` (Android 17 / API 37).
 
@@ -65,6 +65,30 @@ Screenshots inspected (not just saved): the four builds reviewed their own (runt
 | --- | --- | --- |
 | iPhone Safari: Add to Home Screen on Riff and Light → two icons open two different apps with their data | ⏳ not run | needs a physical iPhone and a reachable server URL; desktop WebKit is not iOS verification |
 | Android phone: APK install + pinned shortcut | ⏳ not run | no device connected |
+
+## 7. Velocity integration and its review (session 3)
+
+Commits `a88d8e0` (integration), `26381e8` (review fixes), `eb2f82c` (Ori brand foundation, which only adds files and icons). Machine as above. Counts below are from the committed trees, run in clean temporary worktrees so unfinished work in the main tree could not affect them.
+
+| Check | Status | Count | Environment / evidence |
+| --- | --- | --- | --- |
+| Typecheck at `26381e8` and at `eb2f82c` | ✅ | 0 errors | `tsc -p tsconfig.json --noEmit`, whole repo |
+| Unit/API suite at `26381e8` alone | ✅ | 526 passed, 24 files | clean worktree, `npx vitest run` |
+| Unit/API suite at `eb2f82c` | ✅ | **555 passed, 26 files** | clean worktree, `npx vitest run --reporter=json` |
+| Velocity's 12 adversarial cases (`tests/unit/velocity-cases.test.ts`) | ✅ | 22 | Sample mode, in-memory SQLite over HTTP |
+| Velocity runtime decisions (`tests/unit/velocity-runtime.test.ts`) | ✅ | 14 | plan vs measured time, drafts by role, bindings |
+| Review fixes, server (`tests/unit/velocity-review-fixes.test.ts`) | ✅ | 15 | retried saves with newer values, two lost responses, deleted entries, Undo/Redo labels, malformed expectedVersion, untouched defaults, ids-based binding checks, bound fields on the final design, import photo fields, Accept re-checks its suggestion |
+| Memory and idempotency (`tests/unit/velocity-memory-fixes.test.ts`) | ✅ | 26 | forgetting keeps facts other shares or the person back, Unicode-aware matching, import cap, quotes, built cards after app deletion, overlapping and forgotten share ids |
+| Client record flows (`client/src/runtime/recordFlows.test.ts`) | ✅ | 35 | edit drafts hold changed keys only, sent drafts keep their id, conflicts keep untouched typing, queue Undo, rollback per key, record_deleted handling |
+| Practice timer (`client/src/runtime/practiceTimer.test.ts`) | ✅ | 19 | two tabs share one stored timer, sessions dated by their last stretch, preview timers never stored, save/renew/reset scoped to their session, "typed in" only when explicit, Show all sessions |
+| Browser suite (Playwright; production build served by Node; Sample mode; throwaway `data/test-e2e-8799.db`, which applied migration 004 on start) | ✅ | 14 passed, 4 skipped | the 4 skips are the layout specs that run on the phone project only, by design; tree as committed in `eb2f82c` |
+| Bounded live model run (`server/scripts/velocity-live-smoke.ts`) | ✅ | 15/15 checks, 5 calls | `claude-opus-5-5`; 105.2 s (first call), 5.8 s, 6.3 s, 5.3 s, 21.2 s; `docs/velocity/evidence/live-smoke-2026-11-14.txt` (no key in it) |
+| Evidence screenshots | ✅ | 32 kept (390 and 1440) | Sample mode, throwaway DB, `scripts/screenshots.mjs`; 320 and 768 were captured and inspected, not kept; `docs/velocity/evidence/screens/` |
+| Live browser journey after these changes | ⏳ not run | | not re-run, to avoid spend; the bounded adapter run covers the routing decisions |
+| Android emulator after these changes | ⏳ not run | | the APK was not rebuilt in this pass; section 4 is the last emulator evidence |
+| Physical devices | ⏳ not run | | no device attached |
+
+The review itself: six dimensions (routing honesty, idempotency and ownership, timer semantics, client flows, undo and data, contract compatibility) confirmed 42 findings, two high. Every finding was fixed; each area's fixes went to an independent verifier, whose new edge cases were fixed in a second and a third round. Details: `docs/velocity/INTEGRATION_REPORT.md` section 8.
 
 ## 6. Review pass
 
