@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { BRAND, NAV } from '@shared/brand.ts';
 import { useAuth } from '../auth.tsx';
-import { BrandMark } from './BrandMark.tsx';
+import { OriWordmark } from './ori/OriWordmark.tsx';
 import { Icons } from './ui.tsx';
 import { useInstallMeta } from '../hooks/useInstallMeta.ts';
 
@@ -25,9 +25,9 @@ export function StoreLayout() {
     <>
       <header className={`topbar${signedOut ? ' topbar-public' : ''}`}>
         <div className="topbar-inner">
+          {/* Compact navigation carries the wordmark alone (spec section 3); the link names it. */}
           <Link to={user ? '/playground' : '/'} className="brand" aria-label={`${BRAND.name} home`} data-testid="brand-home">
-            <BrandMark size={28} decorative />
-            <span className="brand-name">{BRAND.name}</span>
+            <OriWordmark variant="ink" height={34} title="" />
           </Link>
           {user && (
             <nav className="topnav" aria-label="Primary">

@@ -121,7 +121,7 @@ export const RIFF_PRACTICE: AppSpecInput = {
   tagline: 'A little practice tonight',
   purpose: 'explore',
   pattern: 'practice',
-  icon: { symbol: 'guitar', color: 'ink' },
+  icon: { symbol: 'waveform', color: 'ink' },
   design: { theme: 'ink', accent: 'lime', typography: 'display', density: 'regular', artwork: 'waves' },
   fields: [
     { id: 'kind', label: 'Kind', type: 'select', default: 'session', options: [{ value: 'session', label: 'Practice session' }, { value: 'source', label: 'Saved source' }] },
@@ -181,7 +181,7 @@ export const LIGHT_GALLERY: AppSpecInput = {
   tagline: 'Find the light',
   purpose: 'explore',
   pattern: 'gallery',
-  icon: { symbol: 'aperture', color: 'charcoal' },
+  icon: { symbol: 'camera', color: 'charcoal' },
   design: { theme: 'paper', accent: 'orange', typography: 'editorial', density: 'airy', artwork: 'none' },
   fields: [
     { id: 'date', label: 'Date', type: 'date', default: 'today', required: true },
@@ -226,7 +226,7 @@ export const PEOPLE_QUEUE: AppSpecInput = {
   tagline: 'Keep the conversation going',
   purpose: 'work',
   pattern: 'queue',
-  icon: { symbol: 'contact', color: 'mint' },
+  icon: { symbol: 'people', color: 'white' },
   design: { theme: 'mint', accent: 'blue', typography: 'compact', density: 'compact', artwork: 'none' },
   fields: [
     { id: 'person', label: 'Who', type: 'text', required: true, placeholder: 'Maya, met at the design meetup' },

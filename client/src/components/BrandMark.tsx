@@ -1,25 +1,11 @@
 /**
- * Temporary brand mark until the name is chosen: a blue tile with three rounded bars (a playground
- * of different things) and one lime bar. Original, deliberately simple, no sparkle.
+ * The Ori brand mark for compact headers: the ink wordmark alone (spec section 3); `size` is its
+ * height in px. The companion appears where it carries meaning (moods, the Ori app icon), and the
+ * companion + wordmark lockup (OriLockup) only on landing and brand headers.
  */
 import { BRAND } from '@shared/brand.ts';
+import { OriWordmark } from './ori/OriWordmark.tsx';
 
 export function BrandMark({ size = 28, className, decorative = false }: { size?: number; className?: string; decorative?: boolean }) {
-  return (
-    <svg
-      className={className}
-      width={size}
-      height={size}
-      viewBox="0 0 32 32"
-      role={decorative ? undefined : 'img'}
-      aria-label={decorative ? undefined : BRAND.name}
-      aria-hidden={decorative || undefined}
-      focusable="false"
-    >
-      <rect width="32" height="32" rx="9" fill="#3147F2" />
-      <rect x="7" y="13" width="4" height="12" rx="2" fill="#ffffff" />
-      <rect x="14" y="7" width="4" height="18" rx="2" fill="#ffffff" />
-      <rect x="21" y="16" width="4" height="9" rx="2" fill="#DFFF76" />
-    </svg>
-  );
+  return <OriWordmark variant="ink" height={size} className={className} title={decorative ? '' : BRAND.name} />;
 }

@@ -24,6 +24,8 @@ export const ICON_COLORS = [
   'terracotta', 'plum', 'teal', 'ocean', 'moss', 'mustard', 'rose', 'slate', 'indigo', 'coral',
   // flat Electric Playground / Studio Pop colors
   'ink', 'lime', 'lilac', 'orange', 'mint', 'blue', 'charcoal', 'paper',
+  // Ori canonical reference icons (additive): People is an orange glyph on a white tile
+  'white',
 ] as const;
 export type IconColor = (typeof ICON_COLORS)[number];
 
@@ -47,17 +49,28 @@ export const ICON_GRADIENTS: Record<IconColor, [string, string]> = {
   blue: ['#3147F2', '#3147F2'],
   charcoal: ['#181A1F', '#181A1F'],
   paper: ['#FAF8F4', '#FAF8F4'],
+  white: ['#FFFFFF', '#FFFFFF'],
 };
+
+/**
+ * Deeper People orange for a glyph on white: about 3.6:1, where brand orange #FF6A3D is only about
+ * 2.8:1 (WCAG asks 3:1 for meaningful graphics).
+ */
+export const ORANGE_ON_WHITE = '#E9541F';
 
 /** Glyph (stroke) color per background. Light backgrounds take dark ink for contrast. */
 export const ICON_GLYPH: Record<IconColor, string> = {
   terracotta: '#ffffff', plum: '#ffffff', teal: '#ffffff', ocean: '#ffffff', moss: '#ffffff',
   mustard: '#ffffff', rose: '#ffffff', slate: '#ffffff', indigo: '#ffffff', coral: '#ffffff',
-  ink: '#DFFF76', lime: '#162039', lilac: '#162039', orange: '#162039', mint: '#162039', blue: '#ffffff', charcoal: '#FAF8F4', paper: '#181A1F',
+  ink: '#DFFF76', lime: '#162039', lilac: '#162039', orange: '#162039', mint: '#162039', blue: '#ffffff', charcoal: '#ffffff', paper: '#181A1F',
+  white: ORANGE_ON_WHITE,
 };
 
 /** Flat colors render without the gradient sheen; legacy colors keep it. */
-export const FLAT_COLORS: ReadonlySet<IconColor> = new Set<IconColor>(['ink', 'lime', 'lilac', 'orange', 'mint', 'blue', 'charcoal', 'paper']);
+export const FLAT_COLORS: ReadonlySet<IconColor> = new Set<IconColor>(['ink', 'lime', 'lilac', 'orange', 'mint', 'blue', 'charcoal', 'paper', 'white']);
+
+/** Near-white tiles get a hairline so they stay visible on a white page or home screen. */
+export const OUTLINED_COLORS: ReadonlySet<IconColor> = new Set<IconColor>(['paper', 'white']);
 
 /** A readable text color for UI drawn on top of a given icon color (chips, theme bars). */
 export function contrastInk(color: IconColor): string {
@@ -96,12 +109,13 @@ export const ICON_PATHS: Record<IconSymbol, string> = {
   plant: 'M12 22V12 M12 12c0-4-3-7-8-7 0 5 3 7 8 7z M12 15c0-4 3-7 8-7 0 5-3 7-8 7z',
   film: 'M19.8 2H4.2A2.2 2.2 0 0 0 2 4.2v15.6A2.2 2.2 0 0 0 4.2 22h15.6a2.2 2.2 0 0 0 2.2-2.2V4.2A2.2 2.2 0 0 0 19.8 2z M7 2v20 M17 2v20 M2 12h20 M2 7h5 M2 17h5 M17 17h5 M17 7h5',
   wallet: 'M20 12V8H6a2 2 0 0 1-2-2 2 2 0 0 1 2-2h12v4 M4 6v12a2 2 0 0 0 2 2h14v-4 M18 12a2 2 0 0 0 0 4h4v-4h-4z',
-  guitar: 'm11.9 12.1 4.514-4.514 M20.1 2.3a1 1 0 0 0-1.4 0l-1.114 1.114A2 2 0 0 0 17 4.828v1.344a2 2 0 0 1-.586 1.414A2 2 0 0 1 17.828 7h1.344a2 2 0 0 0 1.414-.586L21.7 5.3a1 1 0 0 0 0-1.4z m6 16 2 2 M8.23 9.85A3 3 0 0 1 11 8a5 5 0 0 1 5 5 3 3 0 0 1-1.85 2.77l-.92.38A2 2 0 0 0 12 18a4 4 0 0 1-4 4 6 6 0 0 1-6-6 4 4 0 0 1 4-4 2 2 0 0 0 1.85-1.23z',
+  guitar: 'm11.9 12.1 4.514-4.514 M20.1 2.3a1 1 0 0 0-1.4 0l-1.114 1.114A2 2 0 0 0 17 4.828v1.344a2 2 0 0 1-.586 1.414A2 2 0 0 1 17.828 7h1.344a2 2 0 0 0 1.414-.586L21.7 5.3a1 1 0 0 0 0-1.4z M6 16l2 2 M8.23 9.85A3 3 0 0 1 11 8a5 5 0 0 1 5 5 3 3 0 0 1-1.85 2.77l-.92.38A2 2 0 0 0 12 18a4 4 0 0 1-4 4 6 6 0 0 1-6-6 4 4 0 0 1 4-4 2 2 0 0 0 1.85-1.23z',
   timer: 'M10 2L14 2 M12 14L15 11 M4 14a8 8 0 1 0 16 0a8 8 0 1 0 -16 0',
   headphones: 'M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3',
-  waveform: 'M2 13a2 2 0 0 0 2-2V7a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0V4a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0v-4a2 2 0 0 1 2-2',
-  aperture: 'M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0 m14.31 8 5.74 9.94 M9.69 8h11.48 m7.38 12 5.74-9.94 M9.69 16 3.95 6.06 M14.31 16H2.83 m16.62 12-5.74 9.94',
-  image: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z M7 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0 m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21',
+  // Level bars (Lucide audio-lines): Riff's identity in every Ori reference.
+  waveform: 'M2 10v3 M6 6v11 M10 3v18 M14 8v7 M18 5v13 M22 10v3',
+  aperture: 'M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0 M14.31 8l5.74 9.94 M9.69 8h11.48 M7.38 12l5.74-9.94 M9.69 16 3.95 6.06 M14.31 16H2.83 M16.62 12l-5.74 9.94',
+  image: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z M7 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0 M21 15l-3.086-3.086a2 2 0 0 0-2.828 0L6 21',
   bookmark: 'M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z',
   link: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
   disc: 'M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0 M6 12c0-1.7.7-3.2 1.8-4.2 M10 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0 M18 12c0 1.7-.7 3.2-1.8 4.2',
@@ -122,7 +136,7 @@ export const ICON_PATHS: Record<IconSymbol, string> = {
   flower: 'M12 5a3 3 0 1 1 3 3m-3-3a3 3 0 1 0-3 3m3-3v1M9 8a3 3 0 1 0 3 3M9 8h1m5 0a3 3 0 1 1-3 3m3-3h-1m-2 3v-1 M10 8a2 2 0 1 0 4 0a2 2 0 1 0 -4 0 M12 10v12 M12 22c4.2 0 7-1.667 7-5-4.2 0-7 1.667-7 5Z M12 22c-4.2 0-7-1.667-7-5 4.2 0 7 1.667 7 5Z',
   kanban: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z M8 7v7 M12 7v4 M16 7v9',
   notebook: 'M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4 M2 6h4 M2 10h4 M2 14h4 M2 18h4 M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z',
-  checks: 'M13 5h8 M13 12h8 M13 19h8 m3 17 2 2 4-4 m3 7 2 2 4-4',
+  checks: 'M13 5h8 M13 12h8 M13 19h8 M3 17l2 2 4-4 M3 7l2 2 4-4',
 };
 
 export interface AppIconSpec {
@@ -151,8 +165,8 @@ export function appIconSvg(icon: AppIconSpec, size = 192, radiusFraction = 0.22)
     ? ''
     : `<defs><linearGradient id="${gradId}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>`;
   const sheen = flat ? '' : `<circle cx="${size * 0.78}" cy="${size * 0.22}" r="${size * 0.3}" fill="#ffffff" fill-opacity="0.08"/>`;
-  // Paper icons need an outline to stay visible on a white home screen.
-  const outline = color === 'paper' ? `<rect x="1" y="1" width="${size - 2}" height="${size - 2}" rx="${Math.max(0, r - 1)}" ry="${Math.max(0, r - 1)}" fill="none" stroke="#DCE0EC" stroke-width="2"/>` : '';
+  // Paper and white icons need an outline to stay visible on a white home screen.
+  const outline = OUTLINED_COLORS.has(color) ? `<rect x="1" y="1" width="${size - 2}" height="${size - 2}" rx="${Math.max(0, r - 1)}" ry="${Math.max(0, r - 1)}" fill="none" stroke="#DCE0EC" stroke-width="2"/>` : '';
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">` +
     defs +

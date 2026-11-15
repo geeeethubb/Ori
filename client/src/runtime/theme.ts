@@ -18,13 +18,13 @@ export interface ThemeInfo {
 }
 
 export const THEMES: Record<AppTheme, ThemeInfo> = {
-  bright: { dark: false, defaultAccent: 'blue', unusable: ['paper'] },
-  paper: { dark: false, defaultAccent: 'orange', unusable: ['paper'] },
+  bright: { dark: false, defaultAccent: 'blue', unusable: ['paper', 'white'] },
+  paper: { dark: false, defaultAccent: 'orange', unusable: ['paper', 'white'] },
   charcoal: { dark: true, defaultAccent: 'orange', unusable: ['charcoal', 'ink', 'slate'] },
   ink: { dark: true, defaultAccent: 'lime', unusable: ['ink', 'charcoal', 'slate', 'indigo'] },
-  mint: { dark: false, defaultAccent: 'blue', unusable: ['paper', 'mint'] },
-  lilac: { dark: false, defaultAccent: 'lilac', unusable: ['paper'] },
-  sunset: { dark: false, defaultAccent: 'orange', unusable: ['paper'] },
+  mint: { dark: false, defaultAccent: 'blue', unusable: ['paper', 'mint', 'white'] },
+  lilac: { dark: false, defaultAccent: 'lilac', unusable: ['paper', 'white'] },
+  sunset: { dark: false, defaultAccent: 'orange', unusable: ['paper', 'white'] },
 };
 
 export interface AccentSwatch {
@@ -57,6 +57,8 @@ export const ACCENTS: Record<IconColor, AccentSwatch> = {
   blue: { fill: '#3147F2', onFill: '#FFFFFF', textLight: '#2436C9', textDark: '#AEB7FF' },
   charcoal: { fill: '#181A1F', onFill: '#FAF8F4', textLight: '#181A1F', textDark: '#FAF8F4' },
   paper: { fill: '#FAF8F4', onFill: '#181A1F', textLight: '#59617A', textDark: '#FAF8F4' },
+  // A white tile (People's icon). As an accent it only works on dark themes; light themes fall back.
+  white: { fill: '#FFFFFF', onFill: '#162039', textLight: '#162039', textDark: '#FFFFFF' },
 };
 
 /** The accent actually used on a theme: the design's choice unless it would disappear. */

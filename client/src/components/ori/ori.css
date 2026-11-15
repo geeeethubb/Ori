@@ -1,0 +1,152 @@
+/*
+ * Ori companion motion (docs/ori/ORI_DESIGN_SPEC.md section 5). CSS only.
+ *
+ * Every animation is scoped to one mood on a companion whose data-motion is "auto", so it stops
+ * as soon as the mood changes or the element unmounts. Each keyframe's resting state is the
+ * drawing itself, so motion="none", prefers-reduced-motion and an ended animation all show the
+ * same still expression. Coordinates are the art's 100-unit frame (1px = 1 unit).
+ *
+ *   idle       still; a rare single blink on large companions only
+ *   attentive  one ~160ms lean toward the rays (pose transition), rays fade in
+ *   thinking   small pupil glance and three dots pulsing in turn, while mounted in this mood
+ *   discovery  one ~260ms arrival: spark pops in, eyes open, then static
+ *   building   the lime dot travels the lilac orbit while mounted in this mood
+ *   success    one short hop and happy eyes (~0.4s), then static
+ *   clarify    one tilt (pose transition)
+ *   error      static: it takes its pose without moving
+ */
+
+.ori-companion {
+  display: inline-block;
+  flex: none;
+  overflow: visible;
+  vertical-align: middle;
+}
+
+/* Pose: lean or tilt about the middle of the base (50, 90). --ori-lean is set per mood. */
+.ori-companion .ori-figure {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  transform: translate(50px, 90px) rotate(var(--ori-lean, 0deg)) translate(-50px, -90px);
+}
+.ori-companion[data-motion='auto'] .ori-figure {
+  transition: transform 160ms cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+.ori-companion[data-mood='error'] .ori-figure {
+  transition: none;
+}
+/* Mounting straight into a leaning mood still plays its one lean or tilt. */
+@starting-style {
+  .ori-companion[data-motion='auto'][data-mood='attentive'] .ori-figure,
+  .ori-companion[data-motion='auto'][data-mood='clarify'] .ori-figure {
+    transform: translate(50px, 90px) rotate(0deg) translate(-50px, -90px);
+  }
+}
+
+/* Groups that scale about their own centre. */
+.ori-companion .ori-eyes,
+.ori-companion .ori-rays,
+.ori-companion .ori-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+/* Orbit parts rotate about their local origin (the ellipse centre, then the dot). */
+.ori-companion .ori-orbit-spin,
+.ori-companion .ori-orbit-counter,
+.ori-companion .ori-pupils,
+.ori-companion .ori-motion {
+  transform-box: view-box;
+  transform-origin: 0 0;
+}
+
+/* idle: a single blink every ~9s, only where the companion is large enough to notice (>= 56px). */
+.ori-companion[data-motion='auto'][data-mood='idle'][data-scale='lg'] .ori-eyes {
+  animation: ori-blink 9s ease-in-out 4s infinite;
+}
+@keyframes ori-blink {
+  0%, 96%, 99.5%, 100% { transform: scaleY(1); }
+  97.6% { transform: scaleY(0.1); }
+}
+
+/* attentive */
+.ori-companion[data-motion='auto'][data-mood='attentive'] .ori-rays {
+  transform-origin: 100% 100%;
+  animation: ori-rays-in 180ms ease-out both;
+}
+@keyframes ori-rays-in {
+  from { opacity: 0; transform: scale(0.7); }
+}
+
+/* thinking */
+.ori-companion[data-motion='auto'][data-mood='thinking'] .ori-pupils {
+  animation: ori-glance 2.8s ease-in-out infinite;
+}
+@keyframes ori-glance {
+  0%, 100% { transform: translate(0, 0); }
+  30% { transform: translate(-1.1px, 0.3px); }
+  62% { transform: translate(0.9px, -0.2px); }
+}
+.ori-companion[data-motion='auto'][data-mood='thinking'] .ori-dots circle {
+  animation: ori-dot 1.6s ease-in-out infinite;
+}
+.ori-companion[data-motion='auto'][data-mood='thinking'] .ori-dots circle:nth-child(2) { animation-delay: 0.2s; }
+.ori-companion[data-motion='auto'][data-mood='thinking'] .ori-dots circle:nth-child(3) { animation-delay: 0.4s; }
+@keyframes ori-dot {
+  0%, 100% { opacity: 1; }
+  45% { opacity: 0.3; }
+}
+
+/* discovery */
+.ori-companion[data-motion='auto'][data-mood='discovery'] .ori-spark {
+  animation: ori-spark-in 260ms cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+@keyframes ori-spark-in {
+  from { opacity: 0; transform: scale(0.45); }
+}
+.ori-companion[data-motion='auto'][data-mood='discovery'] .ori-eyes {
+  animation: ori-eyes-open 240ms ease-out both;
+}
+@keyframes ori-eyes-open {
+  from { transform: scaleY(0.72); }
+}
+
+/* building */
+.ori-companion[data-motion='auto'][data-mood='building'] .ori-orbit-spin {
+  animation: ori-orbit 2.8s linear infinite;
+}
+.ori-companion[data-motion='auto'][data-mood='building'] .ori-orbit-counter {
+  animation: ori-orbit 2.8s linear infinite reverse;
+}
+@keyframes ori-orbit {
+  to { transform: rotate(360deg); }
+}
+
+/* success */
+.ori-companion[data-motion='auto'][data-mood='success'] .ori-motion {
+  animation: ori-hop 420ms cubic-bezier(0.3, 0.7, 0.4, 1) both;
+}
+@keyframes ori-hop {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-3px); }
+}
+.ori-companion[data-motion='auto'][data-mood='success'] .ori-eyes {
+  transform-origin: 50% 100%;
+  animation: ori-happy 360ms ease-out both;
+}
+@keyframes ori-happy {
+  from { transform: scaleY(0.45); }
+}
+
+/* Still: motion="none" (e.g. pending settled) and reduced motion keep the expression, drop movement. */
+.ori-companion[data-motion='none'],
+.ori-companion[data-motion='none'] * {
+  animation: none !important;
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ori-companion,
+  .ori-companion * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

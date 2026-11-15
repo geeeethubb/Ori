@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Your Playground</string>
-    <string name="title_activity_main">Your Playground</string>
+    <string name="app_name">Ori</string>
+    <string name="title_activity_main">Ori</string>
     <string name="package_name">com.aiappstore.runtime</string>
     <string name="custom_url_scheme">com.aiappstore.runtime</string>
 </resources>

@@ -181,7 +181,7 @@ describe('designFor', () => {
     expect(designFor(light())).toEqual({ theme: 'paper', accent: 'orange', typography: 'editorial', density: 'airy', artwork: 'none' });
     const noAccent = loose(PEOPLE_QUEUE);
     delete noAccent.design.accent;
-    expect(designFor(AppSpecSchema.parse(noAccent)).accent).toBe('mint'); // the icon colour
+    expect(designFor(AppSpecSchema.parse(noAccent)).accent).toBe('white'); // the icon colour
   });
 
   it('refuses a theme or typography outside the allowlist', () => {

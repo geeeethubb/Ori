@@ -1,6 +1,7 @@
 /**
  * Home-screen install metadata: per-app web manifests, icons (SVG and rasterized PNG), and
  * the HTML <head> injection that makes a fresh request to /apps/{id}/ install as THAT app.
+ * The parent (Ori) installs with the companion icon; every personal app keeps its own icon.
  * Also serves the public-domain example photographs used by previews and the seed.
  */
 import fs from 'node:fs';
@@ -9,13 +10,17 @@ import { fileURLToPath } from 'node:url';
 import { Hono } from 'hono';
 import { config } from './config.ts';
 import { APP_ID_PATTERN } from '../shared/ids.ts';
-import { BRAND } from '../shared/brand.ts';
+import { BRAND, BRAND_ASSETS, BRAND_COLORS, displayIcon } from '../shared/brand.ts';
 import { ICON_GRADIENTS, appIconSvg, isIconColor, isIconSymbol, type AppIconSpec } from '../shared/icons.ts';
+import { oriAppIconSvg } from '../shared/oriArt.ts';
 import { getAppPublicMeta } from './repos/apps.ts';
 
-/** Temporary brand mark: a blue tile with a "play" shape made of the sparkle-free compass glyph. */
+/**
+ * Boot payload icon for parent routes (the client reads boot icons only for personal apps). The
+ * parent's real icons are the companion art from oriAppIconSvg.
+ */
 const STORE_ICON: AppIconSpec = { symbol: 'compass', color: 'blue' };
-const CANVAS = '#F7F8FC';
+const CANVAS = BRAND_COLORS.canvas;
 
 /** Manifest background per app theme (splash color on Android / iOS). */
 const THEME_BACKGROUND: Record<string, string> = {
@@ -51,9 +56,32 @@ export async function renderIconPng(icon: AppIconSpec, size: number, maskable = 
   return png;
 }
 
-function iconFor(meta: { iconSymbol: string; iconColor: string } | null): AppIconSpec {
+/**
+ * Parent PNGs. Home-screen PNGs are opaque squares: the platform applies its own mask (iOS paints
+ * transparent corners black), so the lilac fills the tile's corners. The maskable variant keeps the
+ * companion inside the safe zone for circular and squircle launcher masks.
+ */
+export async function renderOriIconPng(size: number, maskable = false): Promise<Buffer | null> {
+  const key = `ori:${size}:${maskable ? 'm' : 'r'}`;
+  const cached = pngCache.get(key);
+  if (cached) return cached;
+  const R = await loadResvg();
+  if (!R) return null;
+  const svg = oriAppIconSvg(size, { maskable });
+  const png = Buffer.from(new R(svg, { fitTo: { mode: 'width', value: size }, background: BRAND_COLORS.lilac }).render().asPng());
+  if (pngCache.size > 500) pngCache.clear();
+  pngCache.set(key, png);
+  return png;
+}
+
+/**
+ * The icon an app SHOWS: its stored icon, except that a reference app still carrying its pre-Ori
+ * default shows the canonical icon (display only; the stored spec is untouched).
+ */
+function iconFor(meta: { name: string; iconSymbol: string; iconColor: string } | null): AppIconSpec {
   if (!meta) return STORE_ICON;
-  return { symbol: isIconSymbol(meta.iconSymbol) ? meta.iconSymbol : 'compass', color: isIconColor(meta.iconColor) ? meta.iconColor : 'blue' };
+  const stored: AppIconSpec = { symbol: isIconSymbol(meta.iconSymbol) ? meta.iconSymbol : 'compass', color: isIconColor(meta.iconColor) ? meta.iconColor : 'blue' };
+  return displayIcon(meta.name, stored);
 }
 
 /** Browser chrome color: the app's own surface when its theme is known, else the icon color. */
@@ -92,12 +120,12 @@ export function storeManifest(): Record<string, unknown> {
     id: '/',
     name: BRAND.name,
     short_name: BRAND.shortName,
-    description: BRAND.tagline,
+    description: BRAND.productSentence,
     start_url: '/',
     scope: '/',
     display: 'standalone',
-    background_color: CANVAS,
-    theme_color: themeColor(STORE_ICON),
+    background_color: BRAND_ASSETS.backgroundColor,
+    theme_color: BRAND_ASSETS.themeColor,
     icons: [
       { src: '/icons/store-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
       { src: '/icons/store-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
@@ -110,25 +138,31 @@ export function storeManifest(): Record<string, unknown> {
 
 export const installRoutes = new Hono();
 
-async function pngResponse(icon: AppIconSpec, size: number, maskable: boolean): Promise<Response> {
-  const png = await renderIconPng(icon, size, maskable);
+function iconResponse(png: Buffer | null, fallbackSvg: () => string): Response {
   if (!png) {
     // Graceful fallback: SVG still renders in browsers and on Android; iOS needs PNG.
-    return new Response(appIconSvg(icon, size), { headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600', 'Access-Control-Allow-Origin': '*' } });
+    return new Response(fallbackSvg(), { headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600', 'Access-Control-Allow-Origin': '*' } });
   }
   // Icons are public assets; the Android shell fetches them cross-origin to build launcher shortcuts.
   return new Response(new Uint8Array(png), { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400', 'Access-Control-Allow-Origin': '*' } });
 }
 
+async function pngResponse(icon: AppIconSpec, size: number, maskable: boolean): Promise<Response> {
+  return iconResponse(await renderIconPng(icon, size, maskable), () => appIconSvg(icon, size));
+}
+
 installRoutes.get('/manifest.webmanifest', (c) => c.body(JSON.stringify(storeManifest()), 200, { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-cache' }));
 // Hono parameters must occupy a whole path segment, so the file name is one param with a regex.
 const ICON_FILE = /^(?:icon|store)-(\d+)(-maskable)?\.png$/;
-installRoutes.get('/icons/:file{store-\\d+(?:-maskable)?\\.png}', (c) => {
+installRoutes.get('/icons/:file{store-\\d+(?:-maskable)?\\.png}', async (c) => {
   const m = ICON_FILE.exec(c.req.param('file') ?? '');
   if (!m) return c.notFound();
-  return pngResponse(STORE_ICON, clampSize(m[1] as string), Boolean(m[2]));
+  const size = clampSize(m[1] as string);
+  const maskable = Boolean(m[2]);
+  return iconResponse(await renderOriIconPng(size, maskable), () => oriAppIconSvg(size, { maskable }));
 });
-installRoutes.get('/icons/store.svg', (c) => c.body(appIconSvg(STORE_ICON, 256), 200, { 'Content-Type': 'image/svg+xml' }));
+// The parent favicon: the companion on its lilac tile (the same art as the launcher icon).
+installRoutes.get('/icons/store.svg', (c) => c.body(oriAppIconSvg(256), 200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' }));
 
 installRoutes.get('/apps/:appId/manifest.webmanifest', (c) => {
   const appId = c.req.param('appId');
@@ -199,18 +233,18 @@ export interface BootInfo {
 export function renderIndex(html: string, boot: BootInfo): string {
   const name = escapeHtml(boot.name);
   const base = boot.appId ? `/apps/${boot.appId}/` : '/';
-  const manifest = boot.appId ? `${base}manifest.webmanifest` : '/manifest.webmanifest';
-  const touchIcon = boot.appId ? `${base}icon-180.png` : '/icons/store-180.png';
+  const manifest = boot.appId ? `${base}manifest.webmanifest` : BRAND_ASSETS.manifest;
+  const touchIcon = boot.appId ? `${base}icon-180.png` : BRAND_ASSETS.touchIcon;
   const head = [
     `<link rel="manifest" href="${manifest}">`,
     `<link rel="apple-touch-icon" sizes="180x180" href="${touchIcon}">`,
-    `<link rel="icon" type="image/svg+xml" href="${boot.appId ? `${base}icon.svg` : '/icons/store.svg'}">`,
+    `<link rel="icon" type="image/svg+xml" href="${boot.appId ? `${base}icon.svg` : BRAND_ASSETS.favicon}">`,
     `<meta name="apple-mobile-web-app-title" content="${name}">`,
     `<meta name="application-name" content="${name}">`,
     `<meta name="apple-mobile-web-app-capable" content="yes">`,
     `<meta name="mobile-web-app-capable" content="yes">`,
     `<meta name="apple-mobile-web-app-status-bar-style" content="default">`,
-    `<meta name="theme-color" content="${themeColor(boot.icon, boot.theme)}">`,
+    `<meta name="theme-color" content="${boot.appId ? themeColor(boot.icon, boot.theme) : BRAND_ASSETS.themeColor}">`,
     `<script>window.__AAS_BOOT__=${JSON.stringify({ appId: boot.appId, name: boot.name, icon: boot.icon, purpose: boot.purpose ?? null, theme: boot.theme ?? null }).replace(/</g, '\\u003c')}</script>`,
   ].join('\n    ');
   return html

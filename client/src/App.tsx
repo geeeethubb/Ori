@@ -16,6 +16,7 @@ import { PricingPage } from './pages/PricingPage.tsx';
 import { SettingsPage } from './pages/SettingsPage.tsx';
 import { LoginPage } from './pages/LoginPage.tsx';
 import { AgentPage } from './pages/AgentPage.tsx';
+import { OriGalleryPage } from './pages/OriGalleryPage.tsx';
 import { NativeServerSetup } from './components/NativeServerSetup.tsx';
 import { apiBase, isNative } from './api.ts';
 import { wireShortcutLaunches } from './native/shortcuts.ts';
@@ -59,6 +60,9 @@ export function App() {
       <Routes>
         {/* Personal apps live at their own stable URL and bring their own identity + in-place sign-in. */}
         <Route path="/apps/:appId/*" element={<AppRuntimePage />} />
+
+        {/* Companion gallery: built-in art only, no requests, no account data (outside the parent shell). */}
+        <Route path="/ori" element={<OriGalleryPage />} />
 
         <Route element={<StoreLayout />}>
           <Route index element={<WelcomePage />} />
