@@ -8,12 +8,15 @@
 //   --out   where screenshots and results.json go (default: a folder in the system temp directory)
 //
 // Checks, in Chromium and Microsoft Edge (each plays the MP4 or falls back to the WebM):
-//   navigation by buttons, keys and #1..#N; Next on the second-to-last scene reaches the last one and Next is then
-//   disabled; a refresh keeps the scene; step reveals build with Next and arrive complete by hash; the notes follow
-//   the scene; every spoken track fits its budget and the budgets total 238 s; the timer starts, pauses and resets;
-//   every media slot either plays its recording (labelled Sample mode) or shows its real screenshot (labelled
-//   Product screenshot); a playing clip pauses when its scene changes; the closing scene shows only the signature
-//   line, the QR code (linking to the product) and the contact links; same-origin links open, nothing links to a
+//   navigation by buttons, keys and #1..#N; the final-round scene order; old hashes (#create, #grow, #reopen,
+//   #use-revise) open 'built' and #features opens the appendix's demo section; Next on the second-to-last scene
+//   reaches the last one and Next is then disabled; a refresh keeps the scene; step reveals build with Next and arrive
+//   complete by hash; the notes follow the scene; every spoken track fits its budget and the budgets total 230 s; the
+//   timer starts, pauses and resets; NO main scene contains a video (any media slot there shows its real screenshot,
+//   labelled Product screenshot); the appendix holds the four recordings (sources, no autoplay, each plays on request,
+//   labelled Sample mode or Live AI) and pauses them when it closes or the deck navigates; the closing scene shows only
+//   the signature line, the QR code (linking to the product), the contact links and a small Appendix link that opens
+//   the appendix; same-origin links open, nothing links to a
 //   developer machine; no failed requests, no requests to other hosts, no console errors; every scene fits its stage
 //   at 1366x768, 1600x900 and 1920x1080 in the normal page and in presentation mode (no vertical overflow, the bars
 //   hidden in presentation mode); no horizontal overflow at 768x1024, 390x844 and 320x568; screenshots.
@@ -33,9 +36,11 @@ const opt = (name, fallback) => {
 const DIR = opt('dir', '') ? resolve(opt('dir', '')) : '';
 const PORT = Number(opt('port', '8870'));
 const OUT = resolve(opt('out', join(tmpdir(), `ori-pitch-check-${process.pid}`)));
-// 15 presented scenes and 238 s (3:58): the brief's slide 2 moved to the appendix; slide 8 (presented #7) runs 25 s.
+// The final-round deck: 15 presented scenes in 230 s (3:50); every recording lives in the appendix.
 const EXPECTED_SCENES = Number(opt('scenes', '15'));
-const EXPECTED_SECONDS = Number(opt('seconds', '238'));
+const EXPECTED_SECONDS = Number(opt('seconds', '230'));
+const EXPECTED_IDS = ['promise', 'discovery', 'journey', 'feeling', 'built', 'zones', 'whynow', 'market', 'position', 'founder', 'growth', 'pricing', 'velocity', 'ask', 'signature'];
+const APPENDIX_CLIPS = ['01-create', '02-use-and-revise', '03-reopen', 'ori-context-demo'];
 const PRODUCT = 'https://ori-fjrx.onrender.com/';
 const SIGNATURE = { line: 'Your phone, your story.', name: 'Zuyu Liu', email: 'zliu2017@illinois.edu', phone: '847-962-2868', links: ['mailto:zliu2017@illinois.edu', 'tel:+18479622868', PRODUCT] };
 let BASE = opt('base', '');
@@ -93,7 +98,8 @@ const dialogOpen = (page, id) => page.evaluate((sel) => {
 }, id);
 
 // Does the active scene fit its stage? Every visible element inside the scene must lie within the stage box, and the
-// scene must not scroll. Also reports horizontal page overflow and the bars' opacity.
+// scene must not scroll. Also reports horizontal page overflow and the bars' opacity. An element is measured by its
+// visible part: a cropping ancestor inside the scene (overflow other than visible, e.g. a screenshot crop) clips it.
 const fitReport = (page) => page.evaluate(() => {
   const slide = document.querySelector('.slide:not([hidden])');
   const stage = slide.querySelector('.stage');
@@ -105,8 +111,16 @@ const fitReport = (page) => page.evaluate(() => {
     if (el.closest('.sr-only, [hidden]')) continue;
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden') continue;
-    const r = el.getBoundingClientRect();
-    if (!r.width || !r.height) continue;
+    const b = el.getBoundingClientRect();
+    const r = { left: b.left, right: b.right, top: b.top, bottom: b.bottom };
+    for (let a = el.parentElement; a && a !== scene && scene.contains(a); a = a.parentElement) {
+      const ac = getComputedStyle(a);
+      if (ac.overflowX === 'visible' && ac.overflowY === 'visible') continue;
+      const c = a.getBoundingClientRect();
+      if (ac.overflowX !== 'visible') { r.left = Math.max(r.left, c.left); r.right = Math.min(r.right, c.right); }
+      if (ac.overflowY !== 'visible') { r.top = Math.max(r.top, c.top); r.bottom = Math.min(r.bottom, c.bottom); }
+    }
+    if (r.right - r.left <= 0 || r.bottom - r.top <= 0) continue;
     if (r.left < s.left - 1 || r.right > s.right + 1 || r.top < s.top - 1 || r.bottom > s.bottom + 1) outside.push(`${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]}`);
   }
   return {
@@ -193,6 +207,33 @@ async function checkBrowser(name, launchOptions) {
   }
   record(name, `#1..#${total} each open their scene`, badHashes.length === 0, badHashes.join('; '));
 
+  // The final-round order, and the old hashes: the merged scenes open 'built'; the retired #features opens the
+  // appendix's demo section (its recording plays there now).
+  const ids = await page.evaluate(() => (window.ORI_SCENES || []).map((sc) => sc.id));
+  if (EXPECTED_SCENES === 15) record(name, 'the final-round scene order', JSON.stringify(ids) === JSON.stringify(EXPECTED_IDS), ids.join(', '));
+  const builtAt = EXPECTED_IDS.indexOf('built') + 1;
+  const oldHashes = [];
+  for (const old of ['create', 'grow', 'reopen', 'use-revise']) {
+    await goScene(page, 1);
+    await page.evaluate((hsh) => { location.hash = hsh; }, `#${old}`);
+    await sleep(300);
+    const a = await active(page);
+    if (a.index !== builtAt || a.hash !== `#${builtAt}`) oldHashes.push(`#${old} → scene ${a.index} ${a.hash}`);
+  }
+  record(name, `#create, #grow, #reopen and #use-revise open 'built' (#${builtAt})`, oldHashes.length === 0, oldHashes.join('; '));
+  await goScene(page, 2);
+  await page.evaluate(() => { location.hash = '#features'; });
+  await sleep(400);
+  const featuresOpen = await dialogOpen(page, '#appendix');
+  const featuresHash = await page.evaluate(() => location.hash);
+  await page.keyboard.press('Escape');
+  await sleep(250);
+  await page.evaluate(() => { location.hash = '#no-such-scene'; });
+  await sleep(300);
+  const unknown = await active(page);
+  record(name, 'the retired #features opens the appendix demo; an unknown hash keeps the scene', featuresOpen && featuresHash === '#appendix-demo' && unknown.index === 2 && unknown.hash === '#2',
+    `#features → appendix open ${featuresOpen} ${featuresHash}; #no-such-scene → scene ${unknown.index} ${unknown.hash}`);
+
   // The last two scenes: Next on the second-to-last reaches the last; the last stays (Q&A) with Next disabled.
   await goScene(page, total - 1);
   await page.click('#next-btn');
@@ -274,75 +315,103 @@ async function checkBrowser(name, launchOptions) {
   await page.keyboard.press('Escape');
   await sleep(200);
 
-  // Media slots: each recording plays and says Sample mode; each screenshot loads and says Product screenshot.
+  // The main path plays no video: no presented scene contains a <video>, and any media slot on a scene shows its real
+  // screenshot, labelled. (A slot with a recording renders a <video>, so it fails here by design.)
+  const videoScenes = await page.evaluate(() => [...document.querySelectorAll('.slide')]
+    .filter((sl) => sl.querySelector('video'))
+    .map((sl) => Number(sl.dataset.index) + 1));
+  record(name, 'no main scene contains a video (the recordings play in the appendix)', videoScenes.length === 0, videoScenes.length ? `a video on scene ${videoScenes.join(', ')}` : `${total} scenes checked`);
   const slotScenes = await page.evaluate(() => [...document.querySelectorAll('.slide')]
     .filter((sl) => sl.querySelector('[data-slot]'))
     .map((sl) => Number(sl.dataset.index) + 1));
-  let recordings = 0;
-  let screenshots = 0;
-  const recordingScenes = [];
   for (const n of slotScenes) {
     await goScene(page, n);
     await sleep(600);
     const slots = await page.evaluate(() => [...document.querySelectorAll('.slide:not([hidden]) [data-slot]')].map((el) => ({ key: el.dataset.slot, state: el.dataset.state })));
     for (const slot of slots) {
-      if (slot.state === 'video') {
-        recordings += 1;
-        if (!recordingScenes.includes(n)) recordingScenes.push(n);
-        const clip = await page.evaluate(async (key) => {
-          const shell = document.querySelector(`.slide:not([hidden]) [data-slot="${key}"]`);
-          const video = shell.querySelector('video');
-          const label = (shell.querySelector('.media-label')?.textContent || '').trim();
-          let playError = '';
-          video.muted = true;
-          // play() never settles on a video with no source, so give it a few seconds.
-          try {
-            await Promise.race([video.play(), new Promise((_, reject) => setTimeout(() => reject(new Error('play() did not start within 4 s')), 4000))]);
-          } catch (e) { playError = String(e); }
-          return { label, playError };
-        }, slot.key);
-        await sleep(1800);
-        const media = await page.evaluate((key) => {
-          const video = document.querySelector(`.slide:not([hidden]) [data-slot="${key}"] video`);
-          return { t: video.currentTime, src: video.currentSrc, error: video.error ? video.error.code : 0, hidden: video.hidden, w: video.videoWidth, state: video.closest('[data-slot]').dataset.state };
-        }, slot.key);
-        await page.evaluate((key) => document.querySelector(`.slide:not([hidden]) [data-slot="${key}"] video`).pause(), slot.key);
-        // The founder's context recording is labelled Live AI (its UI shows the badge); the others are Sample mode.
-        const ok = media.state === 'video' && !media.hidden && media.t > 0.5 && media.error === 0 && /Sample mode|Live AI/.test(clip.label);
-        record(name, `scene ${n} "${slot.key}" recording plays with an honest label`, ok,
-          `label "${clip.label}"; ${media.src.split('/').pop()} at ${media.t.toFixed(1)} s, ${media.w}px wide${clip.playError ? `; play(): ${clip.playError}` : ''}`);
-      } else {
-        screenshots += 1;
-        const still = await page.evaluate((key) => {
-          const shell = document.querySelector(`.slide:not([hidden]) [data-slot="${key}"]`);
-          const img = shell.querySelector('.media-still');
-          return { state: shell.dataset.state, label: (shell.querySelector('.media-label')?.textContent || '').trim(), src: img.getAttribute('src') || '', loaded: img.complete && img.naturalWidth > 0, hidden: img.hidden };
-        }, slot.key);
-        record(name, `scene ${n} "${slot.key}" shows its real screenshot, labelled`, still.state === 'still' && still.loaded && !still.hidden && /^Product screenshot/.test(still.label) && /media\/stills\//.test(still.src),
-          `state ${still.state}; label "${still.label}"; ${still.src}`);
-      }
+      const still = await page.evaluate((key) => {
+        const shell = document.querySelector(`.slide:not([hidden]) [data-slot="${key}"]`);
+        const img = shell.querySelector('.media-still');
+        return { state: shell.dataset.state, label: (shell.querySelector('.media-label')?.textContent || '').trim(), src: img ? img.getAttribute('src') || '' : '', loaded: !!img && img.complete && img.naturalWidth > 0, hidden: !img || img.hidden };
+      }, slot.key);
+      record(name, `scene ${n} "${slot.key}" shows its real screenshot, labelled`, still.state === 'still' && still.loaded && !still.hidden && /^Product screenshot/.test(still.label) && /media\/stills\//.test(still.src),
+        `state ${still.state}; label "${still.label}"; ${still.src}`);
     }
   }
-  record(name, 'media slots: the three demo recordings (create, grow, context), each labelled', recordings >= 3, `${recordings} recordings, ${screenshots} screenshots, scenes ${slotScenes.join(', ') || 'none'}`);
-  if (recordingScenes.length) {
-    const n = recordingScenes[0];
-    await goScene(page, n);
-    await page.evaluate(async () => {
-      const v = document.querySelector('.slide:not([hidden]) [data-slot] video:not([hidden])');
-      if (v) { v.muted = true; try { await Promise.race([v.play(), new Promise((r) => setTimeout(r, 4000))]); } catch { /* checked above */ } }
-    });
-    await sleep(600);
-    const wasPlaying = await page.evaluate(() => {
-      const v = document.querySelector('.slide:not([hidden]) [data-slot] video:not([hidden])');
-      return !!v && !v.paused && v.currentTime > 0;
-    });
-    await goScene(page, n + 1);
-    const pausedAway = await page.evaluate((i) => {
-      const v = document.querySelector(`.slide[data-index="${i}"] [data-slot] video`);
-      return v ? v.paused : null;
-    }, n - 1);
-    record(name, 'a playing clip pauses when the scene changes', wasPlaying && pausedAway === true, `playing before=${wasPlaying}, paused after=${pausedAway}`);
+
+  // The appendix holds the four recordings: click to play only, each labelled, each paused when the appendix closes or
+  // the deck navigates.
+  await goScene(page, 3);
+  await page.click('#appendix-btn');
+  await sleep(400);
+  const clips = await page.evaluate(() => [...document.querySelectorAll('#appendix video')].map((v) => ({
+    srcs: [...v.querySelectorAll('source')].map((s) => s.getAttribute('src') || ''),
+    autoplay: v.autoplay || v.hasAttribute('autoplay'),
+    controls: v.controls,
+    preload: v.getAttribute('preload') || '',
+    paused: v.paused,
+    poster: v.getAttribute('poster') || '',
+    caption: (v.closest('figure')?.querySelector('figcaption')?.textContent || '').replace(/\s+/g, ' ').trim(),
+  })));
+  const clipNames = clips.map((c) => (c.srcs[0] || '').replace(/^media\//, '').replace(/\.mp4$/, ''));
+  const clipProblems = APPENDIX_CLIPS.filter((want) => !clipNames.includes(want)).map((want) => `${want} missing`);
+  clips.forEach((c, i) => {
+    const n = clipNames[i] || `clip ${i + 1}`;
+    if (!/\.mp4$/.test(c.srcs[0] || '') || !/\.webm$/.test(c.srcs[1] || '')) clipProblems.push(`${n}: sources ${c.srcs.join(', ')}`);
+    if (c.autoplay) clipProblems.push(`${n} autoplays`);
+    if (!c.controls) clipProblems.push(`${n} has no controls`);
+    if (!['none', 'metadata'].includes(c.preload)) clipProblems.push(`${n} preload "${c.preload}"`);
+    if (!c.paused) clipProblems.push(`${n} plays on open`);
+    if (!c.poster) clipProblems.push(`${n} has no poster`);
+    // The founder's context recording is labelled Live AI (its UI shows the badge); the others are Sample mode.
+    if (!(n === 'ori-context-demo' ? /Live AI/ : /Sample mode/).test(c.caption)) clipProblems.push(`${n} label "${c.caption}"`);
+  });
+  record(name, `the appendix holds the ${APPENDIX_CLIPS.length} recordings (MP4 + WebM, controls, poster, no autoplay, labelled)`, clips.length === APPENDIX_CLIPS.length && clipProblems.length === 0,
+    `${clips.length} clips: ${clipNames.join(', ')}${clipProblems.length ? `; ${clipProblems.join('; ')}` : ''}`);
+  const playReport = [];
+  let allPlayed = clips.length > 0;
+  for (let i = 0; i < clips.length; i++) {
+    const playError = await page.evaluate(async (k) => {
+      const v = document.querySelectorAll('#appendix video')[k];
+      v.scrollIntoView({ block: 'center' });
+      v.muted = true;
+      try {
+        await Promise.race([v.play(), new Promise((_, reject) => setTimeout(() => reject(new Error('play() did not start within 4 s')), 4000))]);
+        return '';
+      } catch (e) { return String(e); }
+    }, i);
+    await sleep(1500);
+    const m = await page.evaluate((k) => {
+      const v = document.querySelectorAll('#appendix video')[k];
+      const out = { t: v.currentTime, src: v.currentSrc.split('/').pop(), error: v.error ? v.error.code : 0 };
+      v.pause();
+      return out;
+    }, i);
+    const ok = m.t > 0.5 && m.error === 0 && !playError;
+    allPlayed = allPlayed && ok;
+    playReport.push(`${m.src || clipNames[i]} ${m.t.toFixed(1)} s${playError ? ` (${playError})` : ''}`);
   }
+  record(name, 'each appendix recording plays on request', allPlayed, playReport.join('; '));
+  // Pause when the appendix closes.
+  const startFirst = () => page.evaluate(async () => {
+    const v = document.querySelector('#appendix video');
+    v.muted = true;
+    try { await Promise.race([v.play(), new Promise((r) => setTimeout(r, 4000))]); } catch { /* checked above */ }
+    return !v.paused;
+  });
+  const playingBeforeClose = await startFirst();
+  await page.click('#appendix [data-close]');
+  await sleep(300);
+  const afterClose = await page.evaluate(() => ({ open: document.querySelector('#appendix').open, playing: [...document.querySelectorAll('#appendix video')].filter((v) => !v.paused).length }));
+  // Pause when the deck navigates (a hash change closes the appendix).
+  await page.click('#appendix-btn');
+  await sleep(300);
+  const playingBeforeNav = await startFirst();
+  await page.evaluate(() => { location.hash = '#4'; });
+  await sleep(400);
+  const afterNav = await page.evaluate(() => ({ open: document.querySelector('#appendix').open, playing: [...document.querySelectorAll('#appendix video')].filter((v) => !v.paused).length, scene: Number(document.querySelector('.slide:not([hidden])')?.dataset.index) + 1 }));
+  record(name, 'an appendix recording pauses when the appendix closes or the deck navigates', playingBeforeClose && !afterClose.open && afterClose.playing === 0 && playingBeforeNav && !afterNav.open && afterNav.playing === 0 && afterNav.scene === 4,
+    `close: playing before ${playingBeforeClose}, after ${afterClose.playing}; navigate to #4: playing before ${playingBeforeNav}, after ${afterNav.playing}, scene ${afterNav.scene}, appendix open ${afterNav.open}`);
 
   // The closing scene: only the signature line, the QR code (to the product, no visible URL) and the contact links.
   await goScene(page, total);
@@ -369,18 +438,49 @@ async function checkBrowser(name, launchOptions) {
     };
   });
   // The founder's closing slide: the signature line, Ori's logo and happy face, the QR with "Try Ori now" under it,
-  // and the contact details; no other text, no visible URL.
+  // the contact details and a small, quiet "Appendix" link; no other text, no visible URL.
   let rest = close.text.replace(/ \./g, '.');
-  const missing = [SIGNATURE.line, SIGNATURE.name, SIGNATURE.email, SIGNATURE.phone, 'Try Ori now'].filter((part) => {
+  const missing = [SIGNATURE.line, SIGNATURE.name, SIGNATURE.email, SIGNATURE.phone, 'Try Ori now', 'Appendix'].filter((part) => {
     const at = rest.indexOf(part);
     if (at < 0) return true;
     rest = rest.slice(0, at) + rest.slice(at + part.length);
     return false;
   });
   const extra = rest.replace(/\s+/g, ' ').trim();
-  record(name, 'closing scene: the signature line, the QR with "Try Ori now", Ori\'s face and the contact details, nothing else',
+  record(name, 'closing scene: the signature line, the QR with "Try Ori now", Ori\'s face, the contact details and the Appendix link, nothing else',
     close.line === SIGNATURE.line && !missing.length && !extra && close.images >= 2 && close.images <= 3 && !close.companion && JSON.stringify(close.links) === JSON.stringify([...SIGNATURE.links].sort()) && close.qrHref === PRODUCT,
     `line "${close.line}"; text "${close.text}"${missing.length ? `; missing ${missing.join(' | ')}` : ''}${extra ? `; extra "${extra}"` : ''}; images ${close.images}; links ${close.links.join(', ')}; QR ${close.qrSize}px → ${close.qrHref}; corner companion ${close.companion}`);
+  // The Appendix link: a small button that opens the appendix like the bar's Appendix button, by click or keyboard,
+  // clear of the QR code and the contact details.
+  const appendixLink = await page.evaluate(() => {
+    const b = document.querySelector('.slide:not([hidden]) .signature-appendix');
+    if (!b) return null;
+    const r = b.getBoundingClientRect();
+    const overlaps = (sel) => [...document.querySelectorAll(`.slide:not([hidden]) ${sel}`)].some((el) => {
+      const o = el.getBoundingClientRect();
+      return r.left < o.right && r.right > o.left && r.top < o.bottom && r.bottom > o.top;
+    });
+    return { tag: b.tagName.toLowerCase(), type: b.getAttribute('type'), font: parseFloat(getComputedStyle(b).fontSize), visible: r.width > 0 && r.height > 0, clear: !overlaps('.signature-qr') && !overlaps('.signature-contact') && !overlaps('.signature-cta') };
+  });
+  let openedByClick = false;
+  let openedByKey = false;
+  if (appendixLink) {
+    await page.click('.slide:not([hidden]) .signature-appendix');
+    await sleep(300);
+    openedByClick = await dialogOpen(page, '#appendix');
+    await page.click('#appendix [data-close]');
+    await sleep(250);
+    await page.focus('.slide:not([hidden]) .signature-appendix');
+    await page.keyboard.press('Enter');
+    await sleep(300);
+    openedByKey = await dialogOpen(page, '#appendix');
+    await page.click('#appendix [data-close]');
+    await sleep(250);
+  }
+  const stillClose = (await active(page)).index;
+  record(name, 'closing scene: the small Appendix link opens the appendix (click and keyboard), clear of the QR and contacts',
+    !!appendixLink && appendixLink.tag === 'button' && appendixLink.visible && appendixLink.clear && appendixLink.font <= 20 && openedByClick && openedByKey && stillClose === total,
+    appendixLink ? `font ${appendixLink.font}px (scaled); clear ${appendixLink.clear}; click opens ${openedByClick}; Enter opens ${openedByKey}; back on scene ${stillClose}` : 'no .signature-appendix on the closing scene');
 
   // Links: same-origin links must open (the QR's product link too, when the deck is served from the product); nothing
   // may point at a developer's machine.

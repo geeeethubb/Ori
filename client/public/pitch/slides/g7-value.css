@@ -1,0 +1,181 @@
+/* Group 7 · the layouts "built", "whynow" and "market" (presented as #5, #7 and #8).
+   Stage px on the 1600 x 900 design stage; flow-mode (phone) overrides under .is-flow. Every rule is scoped to its
+   layout. style.css removes motion under reduced motion. */
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Slide 5 · built: three screenshots, left to right, the change largest                            */
+/* ---------------------------------------------------------------------------------------------- */
+
+.layout-built .bt-body { padding-top: 22px; align-items: center; }
+.layout-built .bt-flow { display: flex; align-items: flex-end; justify-content: center; gap: 30px; }
+.layout-built .bt-flow > .flow-arrow { align-self: center; margin-top: -40px; }
+.layout-built .flow-arrow .kit-icon { width: 46px; height: 46px; stroke-width: 2.6; }
+.layout-built .bt-step { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.layout-built .bt-frame { position: relative; }
+.layout-built .bt-crop { position: relative; overflow: hidden; border-radius: 24px; background: var(--surface); box-shadow: 0 0 0 6px var(--ink), 0 30px 60px -36px rgba(14, 20, 40, 0.7); }
+.layout-built .bt-crop img { display: block; width: 100%; height: auto; max-width: none; }
+.layout-built .bt-crop.is-cropped img { margin-top: var(--bt-shift, 0); }
+.layout-built .bt-step-1 .bt-crop { width: 440px; border-radius: 26px; box-shadow: 0 30px 60px -36px rgba(14, 20, 40, 0.55); background: transparent; }
+.layout-built .bt-step-2 .bt-crop { height: 400px; }
+.layout-built .bt-step-3 .bt-crop { height: 520px; }
+.layout-built .bt-crop.is-cropped { width: auto; }
+.layout-built .bt-new-band { position: absolute; left: 0; right: 0; top: 45.6%; height: 26%; background: rgba(223, 255, 118, 0.42); mix-blend-mode: multiply; box-shadow: inset 6px 0 0 #b9e23a; }
+/* The chip sits on the photo's lower edge (top 23%), clear of the title, the date line and the new rows below. */
+.layout-built .bt-chip { position: absolute; right: -58px; top: 23%; transform: translateY(-100%) rotate(-3deg); display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 99px; background: var(--lime); color: var(--ink); font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -0.01em; white-space: nowrap; box-shadow: 0 14px 28px -16px rgba(22, 32, 57, 0.6); }
+.layout-built .bt-label { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 28px; letter-spacing: -0.02em; line-height: 1.15; color: var(--fg); white-space: nowrap; }
+.layout-built .bt-step-3 .bt-label { color: var(--accent); }
+.layout-built .bt-media-label { margin: 22px 0 0; text-align: center; }
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Slide 7 · whynow: the comparison (step 1), the Ori panel pops up over it (step 2), the overlay    */
+/* ---------------------------------------------------------------------------------------------- */
+
+.layout-whynow .wn-eyebrow { margin-bottom: 8px; color: var(--accent); }
+.layout-whynow h2.headline { font-size: 58px; }
+.layout-whynow .wn-proof { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 10px; margin: 12px 0 0; font-size: 24px; font-weight: 650; color: var(--fg); line-height: 1.2; }
+.layout-whynow .wn-stat { font-family: var(--font-display); font-weight: 800; font-size: 44px; letter-spacing: -0.04em; color: var(--accent); line-height: 1; }
+.layout-whynow .wn-source { font-size: 16px; font-weight: 650; color: var(--fg-muted); margin-left: 6px; }
+.layout-whynow .wn-body { padding-top: 34px; justify-content: flex-start; position: static; }
+
+/* Step 1 · the comparison: two groups of equal weight, the personal app (left) the hero */
+.layout-whynow .wn-arena { position: relative; }
+.layout-whynow .wn-compare { display: grid; grid-template-columns: 650px auto minmax(0, 1fr); align-items: start; gap: 0 52px; transition: opacity 0.35s ease; }
+.layout-whynow .wn-group { display: grid; gap: 16px; align-content: start; }
+.layout-whynow .wn-group-label { margin: 0; font-family: var(--font-display); font-size: 21px; line-height: 1.2; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 800; color: var(--fg-muted); }
+.layout-whynow .wn-own .wn-group-label { color: var(--accent); }
+.layout-whynow .wn-vs { align-self: center; margin-top: 42px; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); box-shadow: inset 0 0 0 2px var(--line-2); font-family: var(--font-display); font-weight: 800; font-size: 22px; color: var(--fg-muted); }
+.layout-whynow .wn-ff { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.layout-whynow .wn-tile { position: relative; aspect-ratio: 760 / 529; border-radius: 20px; overflow: hidden; background: #f5f6f4; box-shadow: 0 0 0 2px var(--line), 0 22px 40px -30px rgba(14, 20, 40, 0.6); }
+.layout-whynow .wn-tile img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.layout-whynow .wn-logo-tile { display: grid; place-items: center; background: var(--charcoal); box-shadow: 0 22px 40px -30px rgba(14, 20, 40, 0.6); }
+.layout-whynow .wn-logo-tile img { width: 58%; height: auto; object-fit: contain; }
+.layout-whynow .wn-panel-label { position: absolute; left: 12px; bottom: 12px; padding: 5px 15px; border-radius: 99px; background: var(--ink); color: var(--lime); font-family: var(--font-display); font-weight: 800; font-size: 20px; line-height: 1.2; letter-spacing: -0.01em; box-shadow: 0 8px 18px -10px rgba(14, 20, 40, 0.6); }
+.layout-whynow .wn-sellers { list-style: none; margin: 0; padding: 0; display: grid; gap: 20px; }
+.layout-whynow .wn-seller { display: grid; grid-template-columns: 262px minmax(0, 1fr); align-items: center; gap: 26px; margin: 0; }
+.layout-whynow .wn-shot { position: relative; display: block; width: 100%; height: 142px; padding: 0; border: 0; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 0 0 2px var(--line-2), 0 18px 36px -28px rgba(14, 20, 40, 0.6); cursor: zoom-in; }
+.layout-whynow .wn-shot img { display: block; width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.layout-whynow .wn-shot:hover { box-shadow: 0 0 0 3px var(--blue), 0 18px 36px -28px rgba(14, 20, 40, 0.6); }
+.layout-whynow .wn-shot-hint { position: absolute; right: 8px; bottom: 8px; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: rgba(22, 32, 57, 0.78); color: #fff; }
+.layout-whynow .wn-seller-text { display: grid; gap: 4px; min-width: 0; }
+.layout-whynow .wn-brand { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 26px; line-height: 1.1; letter-spacing: -0.01em; color: var(--fg); }
+.layout-whynow .wn-price { margin: 0; display: grid; gap: 2px; font-family: var(--font-display); font-weight: 800; font-size: 34px; line-height: 1.05; letter-spacing: -0.03em; color: var(--accent); }
+.layout-whynow .wn-what { font-family: var(--font-body); font-size: 18px; line-height: 1.2; font-weight: 700; letter-spacing: 0; color: var(--fg-muted); }
+
+/* Step 2 · the Ori panel pops up (scale 0.92 → 1 and a fade) and the comparison dims to 30% behind it. The dim is
+   keyed on the slide's final state, so any non-Next arrival (hash, overview, Previous) shows it too. */
+.layout-whynow:not(.is-building) .wn-compare { opacity: 0.3; }
+.layout-whynow .wn-ori { position: absolute; z-index: 5; left: 40px; right: 40px; top: 36px; bottom: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 52px; padding: 38px 60px 38px 54px; border-radius: 40px; background: var(--blue); color: #fff; box-shadow: 0 46px 90px -44px rgba(20, 30, 110, 0.9); transform-origin: 50% 70%; transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.12), visibility 0s linear 0s; }
+.layout-whynow.is-building .wn-ori[data-reveal]:not(.is-revealed) { opacity: 0; visibility: hidden; transform: scale(0.92); transition: opacity 0.35s ease, transform 0.35s ease, visibility 0s linear 0.35s; }
+.layout-whynow.wn-still .wn-ori, .layout-whynow.wn-still .wn-compare { transition: none; }
+.layout-whynow.wn-still.is-building .wn-ori[data-reveal]:not(.is-revealed) { transform: none; transition: none; }
+.layout-whynow .wn-crew { position: relative; width: 392px; height: 306px; }
+.layout-whynow .wn-ori-face { position: absolute; left: 0; top: 43px; }
+.layout-whynow .wn-crew-app { position: absolute; width: 88px; height: 88px; border-radius: 24%; display: grid; place-items: center; box-shadow: 0 16px 28px -14px rgba(6, 10, 50, 0.75); }
+.layout-whynow .wn-crew-app .kit-app-icon { display: block; width: 88px; height: 88px; }
+.layout-whynow .wn-crew-1 { left: 206px; top: 0; transform: rotate(-9deg); }
+.layout-whynow .wn-crew-2 { left: 296px; top: 96px; transform: rotate(7deg); }
+.layout-whynow .wn-crew-3 { left: 210px; top: 206px; transform: rotate(-5deg); }
+.layout-whynow .wn-crew-more { left: 304px; top: 214px; transform: rotate(6deg); border: 3px dashed rgba(255, 255, 255, 0.85); background: rgba(255, 255, 255, 0.1); color: #fff; box-shadow: none; }
+.layout-whynow .wn-line { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 68px; line-height: 1.04; letter-spacing: -0.035em; color: #fff; }
+.layout-whynow .wn-line span { display: block; }
+.layout-whynow .wn-line-2 { color: var(--lime); }
+
+/* The overlay: the full pricing page over the whole scene */
+.layout-whynow .scene { position: relative; }
+.layout-whynow .wn-zoom { position: absolute; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 48px 72px 36px; background: rgba(9, 13, 26, 0.97); cursor: zoom-out; }
+.layout-whynow .wn-zoom-figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 16px; max-width: 100%; max-height: 100%; }
+.layout-whynow .wn-zoom-img { width: auto; height: auto; max-width: 1456px; max-height: 740px; border-radius: 12px; background: #fff; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45); }
+.layout-whynow .wn-zoom-caption { margin: 0; color: #fff; font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -0.01em; text-align: center; }
+.layout-whynow .wn-zoom-close { position: absolute; top: 20px; right: 24px; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.14); color: #fff; }
+.layout-whynow .wn-zoom-close:focus-visible { outline-color: var(--lime); }
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Slide 8 · market: nested rings, SOM tied to the local first market                              */
+/* ---------------------------------------------------------------------------------------------- */
+
+.layout-market .mk-customer { margin: 14px 0 0; font-size: 26px; line-height: 1.3; font-weight: 650; color: var(--fg-muted); }
+.layout-market .mk-body { padding-top: 18px; justify-content: space-between; gap: 14px; }
+.layout-market .mk-graphic { --tam: 510px; --sam: 345px; --som: 194px; position: relative; width: 1180px; max-width: 100%; height: var(--tam); margin: 0 auto; }
+.layout-market .mk-rings { position: absolute; left: 0; bottom: 0; width: var(--tam); height: var(--tam); }
+.layout-market .mk-ring { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); border-radius: 50%; }
+.layout-market .mk-ring-1 { width: var(--tam); height: var(--tam); background: var(--blue-soft); box-shadow: inset 0 0 0 2px #cdd3fb; }
+.layout-market .mk-ring-2 { width: var(--sam); height: var(--sam); background: #cfd5ff; box-shadow: inset 0 0 0 2px #b3bcfb; }
+.layout-market .mk-ring-3 { width: var(--som); height: var(--som); background: var(--blue); color: #fff; box-shadow: 0 0 0 8px var(--lime), 0 24px 40px -22px rgba(36, 54, 201, 0.8); }
+.layout-market .mk-band { position: absolute; left: 0; right: 0; z-index: 1; }
+.layout-market .mk-band-1 { top: 20px; }
+.layout-market .mk-band-2 { top: calc(var(--tam) - var(--sam) + 20px); }
+.layout-market .mk-band-3 { top: calc(var(--tam) - var(--som) / 2); transform: translateY(-50%); }
+.layout-market .mk-ring-text { display: grid; justify-items: center; text-align: center; line-height: 1.1; }
+.layout-market .mk-tag { margin: 0; font-family: var(--font-display); font-size: 17px; letter-spacing: 0.14em; font-weight: 800; color: var(--blue-ink); }
+.layout-market .mk-value { margin: 4px 0 0; font-family: var(--font-display); font-weight: 800; font-size: 40px; letter-spacing: -0.04em; color: var(--ink); white-space: nowrap; }
+.layout-market .mk-title { margin: 4px 0 0; font-size: 18px; font-weight: 700; color: var(--ink-3); white-space: nowrap; }
+.layout-market .mk-band-3 .mk-tag { color: var(--lime); }
+.layout-market .mk-band-3 .mk-value { color: #fff; font-size: 31px; }
+.layout-market .mk-local { position: absolute; left: calc(var(--tam) / 2 + var(--som) / 2 + 8px); top: calc(var(--tam) - var(--som) / 2); transform: translateY(-50%); display: flex; align-items: center; }
+.layout-market .mk-link { display: block; width: 150px; border-top: 4px dashed var(--blue); }
+.layout-market .mk-local-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.layout-market .mk-place { display: flex; align-items: center; gap: 14px; padding: 10px 24px 10px 10px; border-radius: 99px; background: var(--surface); box-shadow: inset 0 0 0 2px var(--blue); font-family: var(--font-display); font-weight: 800; font-size: 28px; letter-spacing: -0.02em; color: var(--ink); white-space: nowrap; }
+.layout-market .mk-place-icon { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: var(--lime); color: var(--ink); flex: none; }
+.layout-market .mk-foot { margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 22px; font-size: 16px; line-height: 1.35; font-weight: 600; color: var(--fg-muted); }
+.layout-market .mk-sources { font-weight: 700; }
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Flow mode (phones): everything stacks                                                           */
+/* ---------------------------------------------------------------------------------------------- */
+
+.is-flow .layout-built .bt-flow { flex-direction: column; align-items: center; gap: 14px; }
+.is-flow .layout-built .bt-flow > .flow-arrow { margin: 0; transform: rotate(90deg); }
+.is-flow .layout-built .flow-arrow .kit-icon { width: 30px; height: 30px; }
+.is-flow .layout-built .bt-step { gap: 10px; width: 100%; }
+.is-flow .layout-built .bt-step-1 .bt-crop { width: min(100%, 320px); }
+.is-flow .layout-built .bt-step-2 .bt-crop { height: auto; width: min(72vw, 240px); }
+.is-flow .layout-built .bt-step-3 .bt-crop { height: auto; width: min(80vw, 280px); }
+.is-flow .layout-built .bt-chip { right: -10px; font-size: 14px; padding: 7px 12px; }
+.is-flow .layout-built .bt-label { font-size: 18px; }
+.is-flow .layout-built .bt-media-label { margin-top: 14px; }
+
+.is-flow .layout-whynow h2.headline { font-size: clamp(28px, 8.2vw, 38px); }
+.is-flow .layout-whynow .wn-proof { font-size: 15px; }
+.is-flow .layout-whynow .wn-stat { font-size: 28px; }
+.is-flow .layout-whynow .wn-source { font-size: 12px; }
+.is-flow .layout-whynow .wn-body { padding-top: 18px; }
+.is-flow .layout-whynow .wn-compare { grid-template-columns: minmax(0, 1fr); gap: 16px; opacity: 1; }
+.is-flow .layout-whynow .wn-group { gap: 10px; }
+.is-flow .layout-whynow .wn-group-label { font-size: 14px; }
+.is-flow .layout-whynow .wn-vs { justify-self: center; margin: 0; width: 44px; height: 44px; font-size: 16px; }
+.is-flow .layout-whynow .wn-ff { gap: 10px; }
+.is-flow .layout-whynow .wn-tile { border-radius: 14px; }
+.is-flow .layout-whynow .wn-panel-label { left: 8px; bottom: 8px; padding: 3px 10px; font-size: 13px; }
+.is-flow .layout-whynow .wn-sellers { gap: 12px; }
+.is-flow .layout-whynow .wn-seller { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr); gap: 12px; }
+.is-flow .layout-whynow .wn-shot { height: 84px; border-radius: 12px; }
+.is-flow .layout-whynow .wn-brand { font-size: 16px; }
+.is-flow .layout-whynow .wn-price { font-size: 20px; }
+.is-flow .layout-whynow .wn-what { font-size: 13px; }
+.is-flow .layout-whynow .wn-ori { position: relative; left: auto; right: auto; top: auto; bottom: auto; margin-top: 20px; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 16px; padding: 22px 16px; border-radius: 26px; text-align: center; }
+.is-flow .layout-whynow .wn-crew { position: static; width: auto; height: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+.is-flow .layout-whynow .wn-ori-face { position: relative; left: auto; top: auto; }
+.is-flow .layout-whynow .wn-crew-app, .is-flow .layout-whynow .wn-crew-app .kit-app-icon { position: static; width: 44px; height: 44px; }
+.is-flow .layout-whynow .wn-crew-more { border-width: 2px; }
+.is-flow .layout-whynow .wn-crew-more .kit-icon { width: 22px; height: 22px; }
+.is-flow .layout-whynow .wn-line { font-size: clamp(26px, 8vw, 34px); }
+.is-flow .layout-whynow .wn-zoom { position: fixed; z-index: 120; padding: 64px 12px 16px; }
+.is-flow .layout-whynow .wn-zoom-img { max-width: 100%; max-height: calc(100vh - 160px); max-height: calc(100dvh - 160px); }
+.is-flow .layout-whynow .wn-zoom-caption { font-size: 15px; }
+.is-flow .layout-whynow .wn-zoom-close { top: 10px; right: 10px; width: 46px; height: 46px; }
+
+.is-flow .layout-market .mk-customer { font-size: 16px; }
+.is-flow .layout-market .mk-graphic { --tam: min(86vw, 330px); --sam: calc(var(--tam) * 0.68); --som: calc(var(--tam) * 0.38); width: 100%; height: auto; display: grid; justify-items: center; gap: 22px; }
+.is-flow .layout-market .mk-rings { position: relative; left: auto; }
+.is-flow .layout-market .mk-band-1 { top: 12px; }
+.is-flow .layout-market .mk-band-2 { top: calc(var(--tam) - var(--sam) + 12px); }
+.is-flow .layout-market .mk-tag { font-size: 12px; }
+.is-flow .layout-market .mk-value { font-size: 24px; margin-top: 2px; }
+.is-flow .layout-market .mk-title { font-size: 12px; margin-top: 2px; }
+.is-flow .layout-market .mk-band-3 .mk-value { font-size: 20px; }
+.is-flow .layout-market .mk-local { position: static; transform: none; }
+.is-flow .layout-market .mk-link { display: none; }
+.is-flow .layout-market .mk-place { font-size: 16px; padding: 6px 14px 6px 6px; gap: 10px; white-space: normal; }
+.is-flow .layout-market .mk-place-icon { width: 36px; height: 36px; }
+.is-flow .layout-market .mk-place-icon .kit-icon { width: 20px; height: 20px; }
+.is-flow .layout-market .mk-foot { font-size: 12px; justify-content: flex-start; }

@@ -1,8 +1,10 @@
 // The Ori pitch: one scene data source for the slides, overview, progress, labels, hashes, notes and timing.
-// Authority: docs/ori-pitch-kit/ORI_PITCH_REVISION_BRIEF.md (the 16-slide revision: order, copy, budgets), with
-// two founder decisions: the brief's slide 2 (research evidence) lives in the appendix, not in the talk, and
-// slide 8 runs 25 s for the founder's recording. 15 presented scenes (the brief's slide N is scene N - 1 from
-// its slide 3 on), 238 seconds (3:58) of presenting; Q&A (two minutes) is separate and happens on scene 15.
+// Authority: the final-round revision brief (November 15, 2026: order, copy, budgets) plus the founder's
+// final-round decisions: old slides 5 and 6 merged into 'built'; the old context-import slide and every demo
+// recording live in the appendix (click to play); 'whynow' and 'market' follow 'zones', which stays exactly as it
+// was; the founder slide shows the four-step mechanism; and every slide is highly visual, with as little text as
+// possible (anything that can be said aloud lives in the spoken track or the cue). 15 presented scenes, 230
+// seconds (3:50) of presenting; Q&A (two minutes) is separate and happens on scene 15.
 //
 // Each scene:
 //   id         stable identifier: the slide's element id (scene-<id>) and a hash alias (#<id> opens it)
@@ -10,7 +12,7 @@
 //   label      a short name for the overview, the controls and the notes (not shown on the slide)
 //   headline   the slide's main line (also the overview title and the slide's accessible name)
 //   accent     optional: the part of the headline drawn in the accent colour (styling only)
-//   seconds    the rehearsal budget; the main path totals 238 (3:58)
+//   seconds    the rehearsal budget; the main path totals 230 (3:50)
 //   theme      'ink' for a dark scene (ink background, white type, lime emphasis); default is light
 //   companion  { expression, corner, size } or null for no companion. expression is one of the four
 //              expressions of the identity board (Listening, Thinking, Found something, Ready), drawn by
@@ -29,7 +31,7 @@ window.ORI_SCENES = [
     id: 'promise',
     label: 'Promise',
     headline: 'Your phone, your story.',
-    seconds: 7,
+    seconds: 15,
     companion: { expression: 'Ready', corner: true, size: 'large' },
     layout: 'promise',
     group: 'core',
@@ -57,7 +59,7 @@ window.ORI_SCENES = [
     id: 'discovery',
     label: 'Discovery and a friend’s insight',
     headline: 'Do you struggle to turn your ideas into something consistent?',
-    seconds: 19,
+    seconds: 17,
     companion: { expression: 'Listening', corner: true },
     layout: 'discovery',
     group: 'g1-evidence',
@@ -74,8 +76,8 @@ window.ORI_SCENES = [
       ],
       footnote: 'Informal conversations with 26 UIUC students.'
     },
-    spoken: 'We asked twenty-six UIUC students if they struggle to turn ideas into something consistent. Twenty-one said yes. Then a friend told us sometimes the hard part is pinpointing what the idea even is. A saved reel. A note that starts, “Why do I never…”',
-    cue: 'Straight from the promise to the question. The count first, then let the friend’s insight carry the moment. 21/26 is founder-reported, informal discovery with a convenience sample of UIUC students: not 21 users, paying customers or product-market fit, and never “80.8% of college students”. The friend’s words are paraphrased; no name, no testimonial. The reel and the note are illustrative. If asked for research: “Research behind this” in the appendix (47.6% of people who intended to exercise didn’t follow through; behavior changed about half as much as intention), physical activity only, and neither study measures Ori.',
+    spoken: 'We asked twenty-six UIUC students this question. Twenty-one said yes. A saved workout doesn’t get me through a workout. A saved photography reel doesn’t help me practice. What I lose is progress toward the things I wanted to get better at.',
+    cue: 'Name the personal cost of not following through. Straight from the promise to the question: the count first, then the cost in your own words (at most two examples aloud), then hand over to Ori on the next slide. The friend’s insight stays on screen; let it sit. 21/26 is founder-reported, informal discovery with a convenience sample of UIUC students: not 21 users, paying customers or product-market fit, and never “80.8% of college students”. The friend’s words are paraphrased; no name, no testimonial. The reel and the note are illustrative. If asked for research: “Research behind this” in the appendix (47.6% of people who intended to exercise didn’t follow through; behavior changed about half as much as intention), physical activity only, and neither study measures Ori.',
     appendix: ['research', 'discovery', 'sources']
   },
   {
@@ -84,32 +86,34 @@ window.ORI_SCENES = [
     label: 'Five stages, one Ori',
     headline: 'There is work between a spark and a habit.',
     accent: 'between a spark and a habit.',
-    seconds: 17,
+    seconds: 7,
     companion: { expression: 'Ready', corner: false },
     layout: 'journey',
     group: 'g2-journey',
     onScreen: {
+      // The labels explain themselves: one short line per stage, nothing under it (the founder's minimal-text
+      // priority). The renderer still draws an optional `fragment` (at most 4 words) under a label if one is added.
       stages: [
-        { name: 'Feel it', fragment: 'A feeling', icon: 'heart' },
-        { name: 'Name it', fragment: 'A clearer need', icon: 'pen' },
-        { name: 'Imagine it', fragment: 'Possibilities', icon: 'lightbulb' },
-        { name: 'Shape it', fragment: 'Your tool', icon: 'brush' },
-        { name: 'Build and iterate', fragment: 'Use and evolve', icon: 'refresh' }
+        { name: 'Notice a feeling', icon: 'heart' },
+        { name: 'Clarify the idea', icon: 'pen' },
+        { name: 'Imagine the outcome', icon: 'lightbulb' },
+        { name: 'Shape your solution', icon: 'brush' },
+        { name: 'Build, use, improve', icon: 'refresh' }
       ],
       together: 'Ori helps you through all five.',
       returnLine: 'And keeps growing with you.'
     },
-    spoken: 'We see five stages between a spark and a habit: feel it, name it, imagine it, shape it, then build and iterate. You can stall at any of them. Ori helps you through all five, and keeps growing with you.',
-    cue: 'Arriving with Next (→ or Space) reveals the stages one at a time; each Next reveals the next stage, and the fifth draws one path through all five with Ori at its center, then the path returns from Build and iterate to Feel it (“And keeps growing with you.”). Any other arrival (a link, the overview, Previous) shows the complete slide. Pause on the first transition when recalling the friend. A product framework, not a validated behavioral model or a guarantee of habit formation; never say most students stall at one stage or that every spark needs an app. The human task and Ori’s role for each stage are in the appendix.',
+    spoken: 'Ori helps you move from something you feel to something you can use—and keep improving.',
+    cue: 'Let the labels explain themselves. Arriving with Next (→ or Space) reveals the stages one at a time: Notice a feeling, Clarify the idea, Imagine the outcome, Shape your solution, Build, use, improve. The fifth draws one path through all five with Ori at its center, then the path returns from Build, use, improve to Notice a feeling (“And keeps growing with you.”). Any other arrival (a link, the overview, Previous) shows the complete slide. Click through without explaining each box; say the one line as the loop closes. “Imagine the outcome” is the useful change the person wants, before designing the tool. A product framework, not a validated behavioral model or a guarantee of habit formation; never say most students stall at one stage or that every spark needs an app. The human task and Ori’s role for each stage are in the appendix.',
     appendix: ['stages']
   },
   {
     id: 'feeling',
     aliases: ['bring'],
     label: 'Feeling to app',
-    headline: 'A feeling can become an app.',
-    accent: 'become an app.',
-    seconds: 14,
+    headline: 'Your context becomes something you can use.',
+    accent: 'something you can use.',
+    seconds: 12,
     companion: { expression: 'Listening', corner: false },
     layout: 'feeling',
     group: 'g2-journey',
@@ -122,90 +126,39 @@ window.ORI_SCENES = [
         { kind: 'summary', label: 'ChatGPT · Claude summary', icon: 'copy' }
       ],
       exchange: { ask: 'What should it focus on?', answer: 'Shadows and reflections.' },
-      output: { app: 'light', name: 'Light', still: 'media/stills/light-open-shadows-reflections.webp', alt: 'Light, the app Ori made: its camera icon, “Notice the light.”, this week’s prompt “Focus on shadows and reflections” and the shared photo as the first entry.', stillLabel: 'Product screenshot · Sample mode' },
-      secondary: ['Companion', 'Playground', 'Apps']
+      output: { app: 'light', name: 'Light', still: 'media/stills/light-open-shadows-reflections.webp', alt: 'Light, the app Ori made: its camera icon, “Notice the light.”, this week’s prompt “Focus on shadows and reflections” and the shared photo as the first entry.', stillLabel: 'Screenshots · Sample mode' },
+      secondary: ['Companion', 'Playground', 'Apps'],
+      // The destination, beside the My apps phone ("My apps · Add to home screen").
+      endpoint: 'Your own AI app store.'
     },
-    spoken: 'You don’t need a finished idea. Bring something that interests or bothers you: a summary from your AI, a reel, a photo, a thought. Ori helps you name it, then shapes your app.',
-    cue: 'You do not need a polished app specification. Everything on the left is something the person shares: a summary pasted from their own assistant, a reel link (saved as a link; Ori does not open or watch the reel), a photo they upload, a typed thought. ChatGPT and Claude are examples of where a summary comes from: Ori never reads anyone’s accounts, and nothing syncs. The exchange is the product’s own: the Make page asks “What should it focus on?”, and the words typed there became Light’s weekly prompt (“Focus on shadows and reflections”, Sample mode, the same words as the recordings on slides 5 and 6; the preview is the first frame of the slide-6 recording with its caption cropped); Ori asks at most one clarifying question, answered by typing. The thought is shortened from the real share in the stills; the photo is the CC0 demo photo. Companion → Playground → Apps is the product’s own structure.',
+    spoken: 'You don’t need a finished idea. Share a thought, a photo, a reel link, your AI’s summary. Ori helps you shape it into apps: your own AI app store.',
+    cue: 'The destination, not the mechanics: context becomes something you can use, and each app lands in My apps, your own AI app store, where the person can add it to the home screen. You do not need a polished app specification. Everything on the left is something the person shares: a summary pasted from their own assistant, a reel link (saved as a link; Ori does not open or watch the reel), a photo they upload, a typed thought. ChatGPT and Claude are examples of where a summary comes from: Ori never reads anyone’s accounts, and nothing syncs. The exchange is the product’s own: the Make page asks “What should it focus on?”, and the words typed there became Light’s weekly prompt (“Focus on shadows and reflections”, Sample mode, the same words as the demo recordings, which now play in the appendix demo section; the preview is the first frame of the use-and-revise recording with its caption cropped); Ori asks at most one clarifying question, answered by typing. The thought is shortened from the real share in the stills; the photo is the CC0 demo photo. Companion → Playground → Apps is the product’s own structure. Account-import mechanics (the context-import recording) are in the appendix, not on this slide.',
     appendix: ['demo']
   },
   {
-    id: 'create',
-    label: 'Create Light',
-    headline: 'From a thought to Light.',
-    accent: 'Light.',
-    seconds: 26,
-    companion: { expression: 'Found something', corner: true },
-    layout: 'create',
-    group: 'g3-demos',
+    id: 'built',
+    aliases: ['create', 'grow', 'use-revise', 'reopen'],
+    label: 'Built around you',
+    headline: 'Built around you. Ready to change with you.',
+    accent: 'Ready to change with you.',
+    seconds: 21,
+    companion: null,
+    layout: 'built',
+    group: 'g7-value',
     onScreen: {
-      media: 'create',
-      mediaLabel: 'Recording · Sample mode',
+      // Old slides 5 and 6 merged: three real Sample-mode screenshots of one flow, left to right, the last (the
+      // change) given the most space. No video on the main path: the recordings play in the appendix demo section.
+      // label: the short form the slide shows (visual first); title and detail stay for screen readers and the notes.
       steps: [
-        { title: 'Share the spark', detail: 'A photo, a thought', icon: 'image', still: 'media/stills/agent-share-composer-crop.webp', alt: 'Product screenshot: the composer with the person’s photo attached and the thought “I keep stopping for long shadows on brick walls in the late afternoon. I want to get better at noticing light on my walks.”' },
-        { title: 'Shape the idea', detail: 'Ori proposes Light', icon: 'sparkle', still: 'media/stills/agent-reply-light-card-crop.webp', alt: 'Product screenshot, Sample mode: Ori replies “Sample mode cannot read images, so I’m using your words. Want a place for the shots you notice?” above the Light card, “A photo journal shaped around you.”, with Preview Light and Keep inspiration.' },
-        { title: 'Open your app', detail: 'Your photo inside', app: 'light', still: 'media/stills/light-ready-card-crop.webp', alt: 'Product screenshot, Sample mode: Light’s card on its Ready screen, with its camera icon, “Notice the light.” and the person’s photo as its first entry.' }
+        { label: 'Your context', title: 'Start with your context', detail: 'A photo and a thought', still: 'media/stills/agent-share-composer-crop.webp', alt: 'Product screenshot: the composer with the person’s photo attached and the thought “I keep stopping for long shadows on brick walls in the late afternoon. I want to get better at noticing light on my walks.”' },
+        { label: 'Your app', title: 'Use your personal app', detail: 'Your photo and note, saved', still: 'media/stills/light-entry-before.webp', alt: 'Product screenshot, Sample mode: a Light entry: the photo, the observation “Low sun turns the brick wall gold”, and the fields Light, Where and Keeper.' },
+        { label: 'Change as you learn', title: 'Change it as you learn', detail: 'Same entry, new fields', still: 'media/stills/light-entry-after.webp', alt: 'Product screenshot, Sample mode: the same Light entry after the change: the same photo and observation, with the new fields Camera (Fuji X100V), Shutter and Aperture above Light, Where and Keeper.', chip: '+ Camera, shutter, aperture' }
       ],
-      // The founder's callout beside step 3: an action the person takes (the Ready screen's Add to home screen).
-      homeScreen: { title: 'Add it to your home screen', detail: 'Its own icon.', icon: 'squarePlus' },
-      stillsLabel: 'Product screenshots · Sample mode'
+      mediaLabel: 'Product screenshots · Sample mode'
     },
-    spoken: 'Here’s the real product, recorded in Sample mode with scripted responses. I want to get better at noticing light on my walks. I share a photo and that thought. Ori suggests a place for it. I shape one detail: shadows and reflections. I tap Make mine, and Light opens, with my photo already in it.',
-    cue: 'Say the first two sentences over the poster, then press → (or the clicker) to start the clip on “I share a photo”: the 12.8-second clip runs under the last four sentences (share 0–2 s, Ori’s suggestion 2–5 s, preview and focus 5–8 s, Make mine to Light 8–12.8 s) and holds Light’s last frame; the next → then moves on (Space or the play control also plays and pauses). Say once that this is Sample mode with scripted responses, not live AI. The recording shows a photo and a thought, Ori’s suggestion, a preview with one detail shaped (“Focus on shadows and reflections”), Make mine, and Light opening with the photo. If the clip cannot load, the slot shows a product screenshot: say so. Light is an illustrative user scenario, not another interview. The three pictures beside it are crops of real Sample-mode screenshots of the same flow (a separate capture: its focus words read “golden-hour shadows”), so the steps stay readable while the clip is paused.',
-    appendix: ['demo']
-  },
-  {
-    id: 'grow',
-    aliases: ['use-revise', 'reopen'],
-    label: 'Light grows with you',
-    headline: 'Your app grows with you.',
-    accent: 'grows with you.',
-    seconds: 26,
-    companion: { expression: 'Ready', corner: true },
-    layout: 'grow',
-    group: 'g3-demos',
-    onScreen: {
-      media: 'grow',
-      mediaLabel: 'Recording · Sample mode',
-      // One recording on this slide: the return clip (03-reopen) plays in the appendix demo section for Q&A.
-      // The loop reads Use it → More context → Better fit → (use it) again: the arc back carries "again".
-      loop: ['Use it', 'More context', 'Better fit'],
-      loopReturn: 'again',
-      mechanism: ['Tell Ori', 'Review', 'Update'],
-      // The real request typed in clip 02 and the fields it added (PRODUCT_FACTS.md §5), readable from the room.
-      ask: 'Add camera settings to my photo notes',
-      afterChip: '+ Camera, shutter, aperture',
-      before: { label: 'Before', still: 'media/stills/light-entry-before.webp', alt: 'Product screenshot, Sample mode: a Light entry before the change: the photo, the observation “Low sun turns the brick wall gold”, and the fields Light, Where and Keeper.' },
-      after: { label: 'After', still: 'media/stills/light-entry-after.webp', alt: 'Product screenshot, Sample mode: the same Light entry after the change: the same photo and observation, with the new fields Camera (Fuji X100V), Shutter and Aperture above Light, Where and Keeper.' },
-      stillsLabel: 'Product screenshots · Sample mode',
-      // The brief's takeaway for this slide, shown as well as spoken (the founder's brief outranks the density budget).
-      takeaway: 'New context. Better fit. Still your app.',
-    },
-    spoken: 'Now I use it: I save an observation. I ask Ori for camera settings, review the change, and apply it. Same photo, same note, new fields. New context, better fit, still my app.',
-    cue: 'Press → (or the clicker) to start the clip as you begin, with the first word (12.8 s): “review” lands on the review sheet, “apply it” on the Updated toast, “Same photo” as the entry opens. The clip holds its last frame, and the next → then moves on. The change is user-led: tell Ori → review → update. Do not describe passive monitoring or automatic background redesign; the vision is apps that grow with you, and what ships today is a change you ask for, review and keep. The proof is the same photo and note before and after the change. The 5.2-second return clip (a fresh browser session opens Light by its own link) plays in the appendix (A → 4. The demo) for Q&A: a way back, not a home-screen launch and not a formed habit. Before and After are real Sample-mode screenshots of the same change, captured separately from the clip (the camera name was typed in by hand, as a person would).',
+    spoken: 'Light starts with something I already care about. I can keep my observations, come back to them, and change the app as I learn. The tool changes without making me start over.',
+    cue: 'Explain the outcome, not the buttons. Three real Sample-mode screenshots of one flow: the share (a photo and a thought), a Light entry with a saved observation, and the same entry after the person asked Ori for camera settings, reviewed the change and applied it: same photo, same note, new fields. The change is user-led (tell Ori → review → update); never describe passive monitoring or automatic redesign. “Camera, shutter, aperture” is supporting evidence, not the point: the point is a photo journal that can change without losing earlier observations. The camera name was typed in by hand, as a person would. What is shown is AI creating and revising an app; AI staying useful inside an app (the Form and Fuel kind of experience on slide 7) is the vision, not shown here as shipped. The recordings (creating Light, using and revising it, reopening it by its own link) are Sample mode with scripted responses and play in the appendix for Q&A.',
     appendix: ['demo', 'foundation']
-  },
-  {
-    id: 'features',
-    label: 'Context and Playground',
-    headline: 'Bring your context. Explore what could be yours.',
-    accent: 'Explore what could be yours.',
-    seconds: 25,
-    companion: { expression: 'Found something', corner: false },
-    layout: 'features',
-    group: 'g3-demos',
-    onScreen: {
-      // One recording (the founder's, live AI) and three steps that follow its cue points in config.js.
-      media: 'context',
-      steps: [
-        { title: 'Bring your context', detail: 'Pasted from ChatGPT or Claude', icon: 'copy' },
-        { title: 'Ori connects the dots', detail: 'You review what it keeps', ori: true },
-        { title: 'Explore what fits you', detail: 'Choose a direction', icon: 'playground' }
-      ]
-    },
-    spoken: 'One more way in. I copy Ori’s prompt into my own AI, paste back what it wrote about me, and review it. Ori connects the dots: it reads the whole profile and organizes what it learned into my interests. Then my Playground suggests what could fit me next, shaped around what I shared.',
-    cue: 'Press → (or the clicker) to start the clip as you begin: the founder’s 23.65-second recording on the live site (the UI shows Live AI) fills the 25 seconds. Start each sentence as its step lights up: Bring your context (0 s) → Ori connects the dots (9 s; results from about 12.6 s) → Explore what fits you (15.9 s); never run ahead of the clip. The clip ends on its last frame with the suggestions on screen; the next → moves on. Never claim real-time speed: waiting may have been trimmed. Bring context from your AI: Ori gives you a prompt to copy; you paste it into ChatGPT, Claude, Gemini or any assistant you use, and paste or upload the answer back; you review what Ori keeps and can remove anything. Provider names are examples of where context comes from, never automatic account access. The Playground’s suggestions are based on what you shared; choosing one is the next step toward an app.',
-    appendix: ['demo']
   },
   {
     id: 'zones',
@@ -247,11 +200,108 @@ window.ORI_SCENES = [
     appendix: ['foundation', 'positioning']
   },
   {
+    id: 'whynow',
+    aliases: ['why-now', 'formfuel', 'personalized'],
+    label: 'Why now',
+    headline: 'AI can now build tools around your life.',
+    accent: 'tools around your life.',
+    seconds: 27,
+    companion: null,
+    layout: 'whynow',
+    group: 'g7-value',
+    onScreen: {
+      // Visual first (the founder: as little text as possible): short forms on the slide, full wording in the
+      // fields the slide keeps for screen readers, the overlay and the notes.
+      eyebrow: 'Why now',
+      // One compact proof line for "why now" (source W2 in the appendix): familiarity, not demand. The headline carries
+      // feasibility (W1, Anthropic 2025, in the cue and the appendix).
+      proof: '61% of U.S. adults 18–29 have used ChatGPT',
+      proofSource: 'Pew, 2026',
+      // Step 1, left (the hero of the comparison): what personalized software can do. The founder's own app, which he
+      // built with ChatGPT (founder-reported), independently of Ori: not made in Ori, not an Ori feature. label is the
+      // group's visible label; each panel shows a crop of the real screen (crop); the caption is read to screen readers.
+      example: {
+        name: 'Form and Fuel',
+        label: 'Built with ChatGPT',
+        caption: 'Form and Fuel, the founder’s own personal app, built with ChatGPT (not made in Ori)',
+        logo: 'media/formfuel/ff-logo.webp',
+        logoAlt: 'Form and Fuel logo: a white dumbbell on a green rounded square, with the words “Form & Fuel”.',
+        panels: [
+          { label: 'Plan', caption: 'Know what to do next', still: 'media/formfuel/ff-plan-crop.webp', crop: 'media/formfuel/ff-plan-crop.webp', alt: 'Form and Fuel, Train tab: “Today · Your workout, adjusted to you”, today’s session “Lower A · strength + abs” and its first exercise, Squat, 3 × 5–8 reps at 165 lb, with Log sets.' },
+          { label: 'Track', caption: 'Keep your progress', still: 'media/formfuel/ff-track-crop.webp', crop: 'media/formfuel/ff-track-crop.webp', alt: 'Form and Fuel, logging: the button “What should I hit next?” above Recent workouts: leg press 270 lb × 10 and 230 lb × 10, squat 165 lb × 7 and 135 lb × 7, all on Nov 12.' },
+          { label: 'Fuel', caption: 'Understand your meals', still: 'media/formfuel/ff-fuel-crop.webp', crop: 'media/formfuel/ff-fuel-crop.webp', alt: 'Form and Fuel, Fuel tab (cropped; personal targets left out): “Food today · Photo estimates, edit before saving” and the saved meals list (49 saved): steak with leafy greens and raw egg yolk, an estimated 700 kcal and 70 g protein, Nov 3.' }
+        ]
+      },
+      // FOUNDER DECISION (Nov 15, 12:45): slide 7 shows NO Ori price (it stays on slide 12) and no closing line beyond
+      // the playground one-liner. Arrival shows the whole comparison at once (Built with ChatGPT vs One service each);
+      // ONE click pops up the big Ori panel ("Not just one tool. An entire playground.") while the comparison dims.
+      // Do not re-add "Ori · proposed $15/month" or "And fitness is just one app." here.
+      // Step 1, right: specialists already sell fitness software, one service each. Three real pricing pages, in this
+      // order. crop is the thumbnail on the slide; full is the whole pricing page the overlay shows; short is the
+      // slide's caption (CoachRx and Everfit are labelled as coach software, so $79 never reads as an individual plan).
+      prices: {
+        title: 'One service each',
+        items: [
+          { name: 'Athletica', caption: '$19.90/month · individual endurance-training subscription', short: '$19.90/mo · endurance training', still: 'media/pricing/athletica-full.webp', crop: 'media/pricing/athletica-monthly.webp', full: 'media/pricing/athletica-full.webp', alt: 'Athletica pricing page: “Simple pricing. Full access. No tiers.” A free 2-week trial; Monthly $19.90/month; 6 months $99.00; Yearly $189.00/year.' },
+          { name: 'Everfit Pro', caption: 'From $19/month · coach software for 5 clients', short: 'From $19/mo · coach software', still: 'media/pricing/everfit-full.webp', crop: 'media/pricing/everfit-pro.webp', full: 'media/pricing/everfit-full.webp', alt: 'Everfit pricing page, billed monthly: Starter free for up to 5 clients; Pro from $19/mo for 5 clients ($3.8 per client); Studio from $105/mo for 50 clients; Enterprise by contact.' },
+          { name: 'CoachRx', caption: '$79/month · coach software for 6–50 clients', short: '$79/mo · coach software', still: 'media/pricing/coachrx-full.webp', crop: 'media/pricing/coachrx-79.webp', full: 'media/pricing/coachrx-full.webp', alt: 'CoachRx pricing page: “How many clients do you coach?” set to 25; Monthly, 6–50 clients, $79/month, billed monthly; free for 14 days.' }
+        ]
+      },
+      // Step 2 · the Ori panel (one click): Ori, a playful cluster of personal apps with room for more, and the key
+      // takeaway as the one-liner. No price.
+      playground: { line: 'Not just one tool.', accent: 'An entire playground.', apps: ['light', 'riff', 'people'], alt: 'Ori, with a few of your personal apps: Light, Riff and People, and room for more' },
+      mediaLabel: 'Founder-supplied screenshots'
+    },
+    spoken: 'Why now? AI can already build working apps in a conversation, and 61% of U.S. adults under 30 have used ChatGPT. I built Form and Fuel with ChatGPT, around my own routine. Others charge for one service each: don’t pay $20 a month for one swing; coaches pay $80 a month for one monkey bar. Ori isn’t just one tool. It’s an entire playground.',
+    cue: 'Arriving with Next shows the whole comparison at once: Form and Fuel (built with ChatGPT) beside one service each (three real pricing pages); one click brings up the Ori panel, “Not just one tool. An entire playground.”, and the comparison dims behind it; any other arrival shows the Ori panel. The swing and monkey-bar line is spoken only. Say it accurately: Athletica is about $20 a month for one person’s endurance training; CoachRx’s $79 is what a coach pays to manage 6–50 clients, so say “coaches pay $80”, never that a person pays $80 for their own plan. Form and Fuel is the founder’s own personal app, which he built with ChatGPT: not made in Ori and not an Ori feature, it shows the kind of experience Ori is designed to enable. Ori’s price stays on slide 12. The screenshots are real; food values are estimates; the founder’s calorie and protein targets are personal, never advice; “49 saved” means saved meals, not days or users; energy and recovery tracking is founder-reported and not in these screenshots. The pricing pages show that specialist vendors sell paid fitness software, nothing more: not demand for Ori and not willingness to pay. Athletica ($19.90/month) is an individual endurance-training subscription; CoachRx ($79/month for 6–50 clients) and Everfit Pro (from $19/month for 5 clients; Everfit also has a free Starter plan) are software for coaching businesses, so never present $79 as an individual plan. Do not bring up Ori’s price here (it is on slide 12) and never claim savings; never promise that Ori replaces coaches, wearables or every fitness app. Click a pricing page to show it full size; any key or click closes it. Why now: conversational tools can already build interactive apps (Anthropic documented it in June 2025): feasibility, and competition, not something unique to Ori. Pew (February 2026 survey): 61% of U.S. adults 18–29 have ever used ChatGPT: familiarity, not daily use or demand for Ori.',
+    appendix: ['business', 'sources']
+  },
+  {
+    id: 'market',
+    aliases: ['market-size', 'tam'],
+    label: 'Market size',
+    headline: 'A broad opportunity. A focused first market.',
+    accent: 'A focused first market.',
+    seconds: 16,
+    companion: null,
+    layout: 'market',
+    group: 'g7-value',
+    onScreen: {
+      customer: 'For people with recurring interests and responsibilities',
+      // A transparent population-and-price model (brief section 5; sources M1–M4 in the appendix), drawn as nested
+      // rings (slides/g8-market.js). ring: the ring's large value; short: its visible label (the 25% assumption and the
+      // 1,000 subscribers stay visible); title, math and note are read to screen readers (and in the cue).
+      cards: [
+        { tag: 'TAM', value: '~$44.2B/year', ring: '~$44.2B/yr', short: 'U.S. smartphone adults', title: 'U.S. adult smartphone owners', math: '~245M people × $180/year', note: 'Modeled ceiling at $15/month' },
+        { tag: 'SAM', value: '~$3.4B/year', ring: '~$3.4B/yr', short: '18–34 · 25% assumed', title: 'Ages 18–34 with a recurring need', math: '~76M × 25% × $180/year', note: '25% qualification assumption' },
+        { tag: 'SOM', value: '$180K ARR', ring: '$180K ARR', short: '1,000 subscribers', title: '1,000 retained full-price subscribers', math: '1,000 × $15 × 12', note: 'Illustrative 24-month UIUC + Chicago scenario' }
+      ],
+      // Pins on the dot map at their real positions. start: where Ori begins (UIUC and Chicago); next: possible next
+      // places, not commitments (the founder is in San Francisco this summer). No dates and no launch claims on the slide.
+      pins: [
+        { name: 'UIUC', lat: 40.11, lon: -88.23, kind: 'start' },
+        { name: 'Chicago', lat: 41.88, lon: -87.63, kind: 'start' },
+        { name: 'Purdue', lat: 40.42, lon: -86.91, kind: 'next' },
+        { name: 'Ohio State', lat: 40.0, lon: -83.03, kind: 'next' },
+        { name: 'San Francisco', lat: 37.77, lon: -122.42, kind: 'next' }
+      ],
+      legend: { start: 'Start', next: 'Next' },
+      local: ['UIUC students', 'Young professionals in Chicago'],
+      footnote: 'Illustrative model at proposed $15/month. SAM qualification and SOM conversion are unvalidated assumptions.',
+      footnoteShort: 'Illustrative model at proposed $15/month; assumptions unvalidated',
+      sources: 'U.S. Census Bureau 2025 · Pew Research Center 2026',
+      sourcesShort: 'Census · Pew'
+    },
+    spoken: 'At our proposed $15 a month, the national model is large. We start smaller: UIUC and Chicago, then campuses like Purdue and Ohio State, and San Francisco this summer. First, prove people return and pay.',
+    cue: 'Say “model” and “scenario”; the local audience is not captured customers. The map: UIUC and Chicago (solid pins) are where Ori starts; Purdue, Ohio State and San Francisco (outlined pins) are possible next places, not commitments, partnerships or launches. The founder is in San Francisco this summer. TAM: 269,763,509 U.S. adults (Census, Vintage 2025) × 91% smartphone ownership (Pew 2026) = 245,484,793 people × $180 ≈ $44.19B a year: a population ceiling at the proposed price, not a measured market for personal AI apps. SAM: 78,500,906 adults aged 18–34 × 97% = 76,145,879 × 25% (an unvalidated qualification assumption: a recurring need, comfort with AI, interest in personal software) = 19,036,470 × $180 ≈ $3.43B a year (at 10%: $1.37B; at 40%: $5.48B). SOM: an illustrative 24-month scenario (about November 2026 to November 2028): 20,000 qualified prospects across UIUC and Chicago → 25% start a trial (5,000) → 50% activate (2,500) → 50% reach the full $15 (1,250) → 80% still paying (1,000) × $15 × 12 = $180,000 annualized revenue at the endpoint, before costs: not a forecast, not achieved ARR, not cash collected in year one (lower case 252 subscribers, $45,360; higher 2,160, $388,800). Local context: UIUC enrolls 61,060 (fall 2026); Chicago has 728,505 residents aged 20–34 (CMAP 2026, ACS 2020–2024): context, not people we can reach, and never added together. Reaching 20,000 qualified prospects needs channels beyond the 150 warm invitations: an operating requirement, not proven distribution. If asked: “Is $3.4B a published market estimate?” No: a population-and-price model with a labeled assumption.',
+    appendix: ['business', 'sources']
+  },
+  {
     id: 'position',
     label: 'Competitor map',
     headline: 'Personal context, turned into everyday apps.',
     accent: 'turned into everyday apps.',
-    seconds: 16,
+    seconds: 12,
     companion: { expression: 'Found something', corner: false },
     layout: 'position',
     group: 'g4-position',
@@ -277,8 +327,8 @@ window.ORI_SCENES = [
       vision: { name: 'Ori vision', note: 'apps on your phone that keep growing with you', x: 0.93, y: 0.91 },
       supporting: 'From an unclear spark to an app that keeps growing.'
     },
-    spoken: 'App stores start from an app you already know you need. Builders are powerful. Assistants like Claude overlap with us. Ori starts earlier, from your context and unclear ideas, and ends in personal apps you return to.',
-    cue: 'A positioning map, not a benchmark: placements are qualitative judgments about product focus. Claude documents interactive apps, persistent storage and connected tools; Lovable builds, iterates and deploys apps with backends; Notion offers AI connectors and agent memories. Never say competitors only chat, forget everything, cannot store data or cannot build apps. Ori’s proposed advantage is the integrated, phone-first personal journey and lower friction for this user, not exclusive ownership of those capabilities. The solid Ori marks what ships today: shared notes, photos, links and pasted summaries become distinct apps with their own link and icon, changed only when the person asks Ori and reviews. The outlined “Ori vision” is not shipped: apps verified on phone home screens, sharing from other apps, apps that adapt in the background. Sources in the appendix.',
+    spoken: 'Specialist apps go deep. Builders and assistants overlap with us. The ambition is an AI-native phone experience: tools built around the person, with their interests and progress carried forward.',
+    cue: 'Explain the map in customer terms, then land the ambition. Specialist apps give depth in one activity. AI builders help people create software. General AI assistants already offer context, app creation and, increasingly, persistence: they overlap with Ori. Ori aims to make an evolving collection of personal apps one coherent daily phone experience, including for someone who starts without an app specification. The differentiator to test is the complete experience and continued usefulness, not exclusive access to an AI model. A positioning map, not a benchmark: placements are qualitative judgments about product focus. Claude documents interactive apps, persistent storage and connected tools; Lovable builds, iterates and deploys apps with backends; Notion offers AI connectors and agent memories. Never say competitors only chat, forget everything, cannot remember context, cannot store data or cannot build apps. Ori’s proposed advantage is the integrated, phone-first personal journey and lower friction for this user, not exclusive ownership of those capabilities. The solid Ori marks what ships today: shared notes, photos, links and pasted summaries become distinct apps with their own link and icon, changed only when the person asks Ori and reviews. The outlined “Ori vision” is not shipped: apps verified on phone home screens, sharing from other apps, apps that adapt in the background. Sources in the appendix.',
     appendix: ['positioning', 'sources']
   },
   {
@@ -287,28 +337,38 @@ window.ORI_SCENES = [
     label: 'Founder and pilot',
     headline: 'I’m building with the community I already know.',
     accent: 'the community I already know.',
-    seconds: 19,
+    seconds: 26,
     companion: { expression: 'Listening', corner: true },
     layout: 'founder',
     group: 'g5-growth',
     onScreen: {
-      founder: { name: 'Zuyu Liu', line: 'UIUC · Engineering × business', initials: 'ZL' },
+      // As little text as possible (the founder's priority): the name and the three direct roles. The friends in
+      // OTCR, CUBE, VCA and business fraternities are in the cue and the appendix, not on the slide.
+      founder: { name: 'Zuyu Liu', initials: 'ZL' },
       groups: [
         { name: 'Founders — Illinois Entrepreneurs', role: 'President', kind: 'lead' },
         { name: 'IBC', role: 'Project Manager', kind: 'member' },
-        { name: 'Hoeft T&M', role: 'Student', kind: 'member' },
-        { name: 'Friends in OTCR, CUBE, VCA, and business fraternities', kind: 'friends' }
+        { name: 'Hoeft T&M', role: 'Student', kind: 'member' }
       ],
-      evidence: { yes: 21, total: 26, label: 'of the 26 students I spoke with share this problem.' },
-      pipeline: ['Relationships', 'Personal onboarding', 'Observe', 'Product iteration', 'Referrals'],
-      goalsLabel: 'Pilot goals',
+      evidence: { yes: 21, total: 26, label: 'of 26 students said yes' },
+      // The acquisition mechanism, one step per Next (icons from the project's set). test: the question drawn
+      // under that step (what the pilot measures). invitation: the slide's one sentence, under the first step.
+      mechanism: [
+        { step: 'Warm introduction', icon: 'app:people' },
+        { step: 'One useful personal app', icon: 'ui:phone' },
+        { step: 'Later-day use', icon: 'app:calendar', test: 'Will they use it again next week?' },
+        { step: 'Referral', icon: 'ui:share' }
+      ],
+      invitation: 'Bring one recurring thing you want to do better. Leave with a tool shaped around it.',
+      // Short labels (the date's "by" is in the spoken track and the screen-reader label).
+      goalsLabel: 'Goals',
       goals: [
-        { figure: '150', label: 'invitations', date: 'by Dec 1, 2026' },
-        { figure: '50', label: 'enrolled', date: 'by Dec 15, 2026' }
+        { figure: '150', label: 'invitations', date: 'Dec 1' },
+        { figure: '50', label: 'enrolled', date: 'Dec 15' }
       ]
     },
-    spoken: 'I’m Zuyu. I lead Founders at UIUC and manage projects at IBC. Eighty-one percent of the twenty-six students I spoke with share this problem. I’ll onboard, observe, iterate, and ask for referrals. Goals: 150 invitations by December 1st, 50 enrolled by the 15th.',
-    cue: 'Who I am, why I can reach these people, what I do next. The pipeline reveals one stage per click: arriving with → (or the clicker) shows Relationships; each → reveals the next stage (Personal onboarding, Observe, Product iteration, Referrals, then the Pilot goals), and the → after the goals moves on. Any other arrival shows the whole slide. Personal access, not partnerships: Founders, IBC and T&M are direct roles; OTCR, CUBE, VCA and business fraternities are friends to ask for introductions. No logos, member counts, endorsements or agreements. 81% is 21 of the 26 students in founder-reported, informal discovery conversations (a convenience sample of UIUC students); it links back to the discovery question, not product adoption, and is never “81% of college students”. The pipeline is a proposed recruiting and feedback mechanism, not a measured funnel. Only the two dated goals are on the slide; the invitation allocation and the activation and week-four definitions are in the appendix for Q&A.',
+    spoken: 'I’m Zuyu. I lead Founders at UIUC and manage projects at IBC, so I start with warm introductions. The invitation: bring one recurring thing you want to do better; leave with a tool shaped around it. Then the test: will they use it again next week? Then referrals. Goals: 150 invitations by December 1st, 50 enrolled by the 15th.',
+    cue: 'Spend time on the mechanism and what you will measure. The mechanism reveals one step per click: arriving with → (or the clicker) shows Warm introduction with the invitation; each → reveals the next step (One useful personal app; Later-day use with “Will they use it again next week?”; Referral; then the goals), and the → after the goals moves on. Any other arrival shows the whole slide. What you measure, in plain words: later-day use (target 30 of 50 completing a meaningful action on a later day within the first 14 days; 15 of 50 during days 22–28), prompted and unprompted returns, introductory payment, the first $15 payment and renewal separately, and founder time per activated user. The first cohort stays the appendix’s students with real follow-ups: Form and Fuel shows personal-app value, while the pilot tests the first repeatable Ori workflow. Personal access, not partnerships: Founders, IBC and T&M are direct roles; OTCR, CUBE, VCA and business fraternities are friends to ask for introductions. No logos, member counts, endorsements, mailing lists or agreements. 81% is 21 of the 26 students in founder-reported, informal discovery conversations (a convenience sample of UIUC students); it links back to the discovery question, not product adoption, and is never “81% of college students”. The mechanism is a proposed recruiting and feedback loop, not a measured funnel. The dates are December 1 and 15, 2026; the invitation allocation and the activation and week-four definitions are in the appendix for Q&A.',
     appendix: ['gtm', 'discovery']
   },
   {
@@ -336,10 +396,18 @@ window.ORI_SCENES = [
         ]
       },
       channels: ['UIUC', 'Other campuses', 'Young professionals'],
+      // The evidence gates: each must hold before the next step of growth.
+      gatesLabel: 'Evidence gates',
+      gates: [
+        { label: 'Useful returns', icon: 'ui:history' },
+        { label: 'Paid use', icon: 'app:wallet' },
+        { label: 'Repeatable onboarding', icon: 'ui:refresh' },
+        { label: 'Wider distribution', icon: 'app:globe' }
+      ],
       yc: { logo: 'assets/yc-logo.png', title: 'YC Fall 2027', label: 'Application goal' }
     },
-    spoken: 'We start at UIUC, then other campuses and young professionals. Our 2027 goals: 100,000 registered users by September, and a YC application for Fall.',
-    cue: 'Goals, not traction, a forecast or a budget: cumulative distinct registered users, month-end, on an honest linear scale. The 50 people targeted for enrollment by December 15 are the initial cohort; January is the pilot and observation checkpoint, not a new start. Burden of proof if asked: 50 in January to 100,000 in September is a 2,000-fold increase in eight months, about 159% compounded monthly growth; the last two months need 75,000 more registrations, about 1,230 a day. YC Fall 2027 is an application goal: no acceptance, backing or endorsement, and no deadline is stated.',
+    spoken: 'Start at UIUC, then earn each step: useful returns, paid use, repeatable onboarding, wider distribution. Goals: 100,000 registered users by September, and a YC Fall application.',
+    cue: 'Each gate earns the next: useful returns → paid use → repeatable onboarding → wider distribution (other campuses, then young professionals). YC is about building a repeatable consumer business, not the reason acquisition will happen. Goals, not traction, a forecast or a budget: cumulative distinct registered users, month-end, on an honest linear scale. The 50 people targeted for enrollment by December 15 are the initial cohort; January is the pilot and observation checkpoint, not a new start. Burden of proof if asked: 50 in January to 100,000 in September is a 2,000-fold increase in eight months, about 159% compounded monthly growth; the last two months need 75,000 more registrations, about 1,230 a day. YC Fall 2027 is an application goal: no acceptance, backing or endorsement, and no deadline is stated.',
     appendix: ['roadmap', 'sources']
   },
   {
@@ -348,7 +416,7 @@ window.ORI_SCENES = [
     label: 'Pricing',
     headline: 'Try it. Make it yours. Keep it.',
     accent: 'Keep it.',
-    seconds: 10,
+    seconds: 9,
     companion: { expression: 'Thinking', corner: true },
     layout: 'pricing',
     group: 'g5-growth',
@@ -365,8 +433,8 @@ window.ORI_SCENES = [
         { label: 'Room to grow', icon: 'plant' }
       ]
     },
-    spoken: 'Our proposed pricing: fourteen days free, then seven-fifty a month for two months, then fifteen. For personal fit, your progress, and room to grow.',
-    cue: 'Proposed terms: a free trial, not a free tier; no billing is implemented, and conversion, renewal and margins are not proven. If asked how we measure it: useful return → actual paid conversion → renewal → cost to serve, defined in the appendix. The eight-week pilot can test engagement and introductory payment; the two-month introductory price means it cannot by itself show a full-price renewal.',
+    spoken: 'Our proposed price: $15 a month after the trial and introductory period, for personal apps people keep using across their lives.',
+    cue: 'One sentence on price, then move on. The ladder on screen (14 days free, $7.50 a month for two months, then $15) says the rest. The $15 is an experiment, not validated willingness to pay; runtime AI, hosting, storage, support and trial-user costs still matter. Proposed terms: a free trial, not a free tier; no billing is implemented, and conversion, renewal and margins are not proven. If asked how we measure it: useful return → actual paid conversion → renewal → cost to serve, defined in the appendix. The eight-week pilot can test engagement and introductory payment; the two-month introductory price means it cannot by itself show a full-price renewal.',
     appendix: ['business']
   },
   {
@@ -400,7 +468,7 @@ window.ORI_SCENES = [
     id: 'ask',
     label: 'The ask',
     headline: '$10,000. 0% equity.',
-    seconds: 12,
+    seconds: 21,
     theme: 'ink',
     companion: { expression: 'Ready', corner: false },
     layout: 'ask',
@@ -414,11 +482,22 @@ window.ORI_SCENES = [
         { label: 'Context infrastructure', note: 'ChatGPT, Claude, Instagram, your phone', icon: 'link' }
       ],
       timeline: '8 weeks',
+      // The founder's explicit next step (Nov 15): an invitation to partner, never an agreed partnership.
+      next: {
+        label: 'Next step',
+        line: 'Launch Ori as a startup with Kearney PERLab.',
+        accent: 'with Kearney PERLab.',
+        gives: [
+          { verb: 'Develop', what: 'AI expertise', icon: 'app:sparkle' },
+          { verb: 'Deploy', what: 'professional team', icon: 'app:rocket' },
+          { verb: 'Expand', what: 'beyond students', icon: 'app:globe' }
+        ]
+      },
       bottomLine: 'Help us build a phone that grows with you.',
       bottomAccent: 'grows with you.'
     },
-    spoken: 'Ten thousand dollars, zero percent equity: the perks of a hackathon. It funds a reliable product, a fifty-person pilot, and context infrastructure: the key to making this your AI-native phone.',
-    cue: 'A playful prize ask, not an investment round or an agreed award. Context infrastructure is future work the money would fund: easier ways for Ori to get context from ChatGPT, Claude, Instagram and the phone. Today a person pastes a summary and no account is read; never say Ori reads them now. The suggested allocation ($4,000 product reliability and device testing, $2,000 AI usage and hosting, $2,000 recruiting and research logistics, $2,000 contingency; context infrastructure has no separate line yet) and what the money does not fund are in the appendix. The bottom line stays on screen. Then Next to the closing slide.',
+    spoken: 'Ten thousand dollars, zero percent equity: the perks of a hackathon. It funds a reliable product, a fifty-person pilot, and context infrastructure. Next, I want to launch Ori as a startup with Kearney PERLab: your AI expertise to develop it, your team to deploy it, your network to reach beyond students.',
+    cue: 'The prize ask, then the explicit next step: launching Ori as a startup with Kearney PERLab. Say it as an invitation (“I’d love to partner with Kearney PERLab”): never imply that Kearney has agreed, endorsed Ori or committed resources. What a partnership would add beyond the $10,000: AI expertise to develop Ori, a professional team and resources to deploy it, and Kearney’s network and customer base to expand Ori’s use cases beyond students (for example young professionals). Look at the judges on “your”. The $10,000 is a playful prize ask, not an investment round or an agreed award. Context infrastructure is future work the money would fund: easier ways for Ori to get context from ChatGPT, Claude, Instagram and the phone. Today a person pastes a summary and no account is read; never say Ori reads them now. The suggested allocation ($4,000 product reliability and device testing, $2,000 AI usage and hosting, $2,000 recruiting and research logistics, $2,000 contingency; context infrastructure has no separate line yet) and what the money does not fund are in the appendix. The next-step band stays on screen. Then Next to the closing slide.',
     appendix: ['ask']
   },
   {
@@ -456,5 +535,5 @@ window.ORI_APPENDIX_SECTIONS = {
   business: 'Pricing and economics questions',
   velocity: 'How we used Velocity AI, expanded',
   ask: 'The ask, the budget and Q&A',
-  companion: 'About Ori’s expressions'
+  companion: 'Meet Ori — a little companion'
 };

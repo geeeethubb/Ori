@@ -202,15 +202,20 @@ describe('the pitch deck data (client/public/pitch)', () => {
   const scenes = deck.ORI_SCENES;
   const html = fs.readFileSync(path.join(PITCH_DIR, 'index.html'), 'utf8');
 
-  it('presents the revision brief’s scenes without slide 2, in order, in 238 s (3:58)', () => {
-    // docs/ori-pitch-kit/ORI_PITCH_REVISION_BRIEF.md, section 5, with two founder decisions: slide 2 (the research
-    // evidence) moved to the appendix and its 12 s were not redistributed; slide 8 runs 25 s for his recording.
-    expect(scenes.map((s) => s.seconds)).toEqual([7, 19, 17, 14, 26, 26, 25, 13, 16, 19, 12, 10, 15, 12, 7]);
-    expect(scenes.reduce((sum, s) => sum + s.seconds, 0)).toBe(238);
-    expect(scenes.map((s) => s.layout)).toEqual(['promise', 'discovery', 'journey', 'feeling', 'create', 'grow', 'features', 'zones', 'position', 'founder', 'growth', 'pricing', 'velocity', 'ask', 'signature']);
+  it('presents the final-round scenes in order, in 230 s (3:50)', () => {
+    // The final-round revision: create and grow merged into 'built', the context recording left the main deck, and
+    // why now and the market follow the zones scene. Every recording now plays only in the appendix.
+    const order = ['promise', 'discovery', 'journey', 'feeling', 'built', 'zones', 'whynow', 'market', 'position', 'founder', 'growth', 'pricing', 'velocity', 'ask', 'signature'];
+    expect(scenes.map((s) => s.id)).toEqual(order);
+    expect(scenes.map((s) => s.layout)).toEqual(order);
+    expect(scenes.map((s) => s.seconds)).toEqual([15, 17, 7, 12, 21, 13, 27, 16, 12, 26, 12, 9, 15, 21, 7]);
+    expect(scenes.reduce((sum, s) => sum + s.seconds, 0)).toBe(230);
     const names = scenes.flatMap((s) => [s.id, ...(s.aliases ?? [])]);
     expect(new Set(names).size).toBe(names.length);
     expect(names).not.toContain('evidence');
+    expect(names).not.toContain('features');
+    // The old hashes of the merged scenes open 'built'.
+    expect(scenes.find((s) => s.id === 'built')?.aliases).toEqual(expect.arrayContaining(['create', 'grow', 'use-revise', 'reopen']));
     // Nothing spoken still refers to the removed slide.
     for (const scene of scenes) expect(scene.spoken, scene.id).not.toMatch(/47\.6|Wanting needs a bridge|intended to exercise/i);
   });
@@ -240,7 +245,9 @@ describe('the pitch deck data (client/public/pitch)', () => {
       expect(scene.cue, scene.id).toBeTruthy();
       expect(builtIn.has(scene.layout) || typeof deck.ORI_SLIDES[scene.layout] === 'function', `${scene.id}: renderer for "${scene.layout}"`).toBe(true);
       if (scene.layout === 'signature') expect(scene.companion, 'Ori’s happy face inside the close, not in the corner').toEqual({ expression: 'Ready', corner: false });
-      else expect(['Listening', 'Thinking', 'Found something', 'Ready'], scene.id).toContain(scene.companion?.expression);
+      // A scene may leave the companion out (companion: null, e.g. the picture-led built, whynow and market scenes);
+      // when it has one, the expression is one of the identity board's four.
+      else if (scene.companion !== null) expect(['Listening', 'Thinking', 'Found something', 'Ready'], scene.id).toContain(scene.companion?.expression);
       for (const id of scene.appendix ?? []) {
         expect(deck.ORI_APPENDIX_SECTIONS[id], `${scene.id} → appendix ${id}`).toBeTruthy();
         expect(html, `appendix-${id} in index.html`).toContain(`id="appendix-${id}"`);
@@ -285,6 +292,35 @@ describe('the pitch deck data (client/public/pitch)', () => {
         else expect(slot.label, `${key}: the recordings are Sample mode`).toBe('Recorded product demo · Sample mode');
       }
     }
+  });
+
+  it('plays every recording only in the appendix: four clips, click to play, labelled, with the identity board and sources', () => {
+    const start = html.indexOf('id="appendix"');
+    expect(start, 'the appendix dialog').toBeGreaterThan(-1);
+    const appendix = html.slice(start);
+    const videos = [...appendix.matchAll(/<video\b[^>]*>[\s\S]*?<\/video>/g)].map((m) => m[0]);
+    expect(videos).toHaveLength(4);
+    for (const clip of ['01-create', '02-use-and-revise', '03-reopen', 'ori-context-demo']) {
+      const video = videos.find((v) => v.includes(`media/${clip}.mp4`));
+      expect(video, clip).toBeTruthy();
+      expect(video, `${clip}: MP4 then WebM`).toMatch(new RegExp(`media/${clip}\\.mp4[\\s\\S]*media/${clip}\\.webm`));
+      expect(video, `${clip}: poster`).toContain(`data-poster="media/${clip}-poster.jpg"`);
+      expect(video, `${clip}: controls`).toMatch(/<video\b[^>]*\bcontrols\b/);
+      expect(video, `${clip}: never autoplays`).not.toMatch(/autoplay/);
+      expect(video, `${clip}: preload none or metadata`).toMatch(/preload="(none|metadata)"/);
+    }
+    // Only the appendix holds videos: the page outside it has none, and no scene uses a retired video layout.
+    expect(html.slice(0, start)).not.toMatch(/<video\b/);
+    for (const scene of scenes) expect(['create', 'grow', 'features'], scene.id).not.toContain(scene.layout);
+    expect(appendix).toContain('<strong>Create a personal app</strong> Recording · Sample mode');
+    expect(appendix).toContain('<strong>Make it grow with you</strong> Recording · Sample mode');
+    expect(appendix).toContain('<strong>Bring your context</strong> Recording · Live AI');
+    expect(appendix).toMatch(/<img src="assets\/ori\/identity-board\.png"[^>]*loading="lazy"/);
+    expect(appendix).toContain('Meet Ori — a little companion');
+    expect(appendix).toContain('Listening. Thinking. Finding possibilities. Ready to help.');
+    for (const id of ['m1', 'm2', 'm3', 'm4', 'w1', 'w2', 'p1', 'p2', 'p3']) expect(appendix, id).toContain(`id="appendix-${id}"`);
+    for (const figure of ['$44.19B/year', '$3.43B/year', '$180,000', '$19.90/month', '$79/month for 6–50']) expect(appendix, figure).toContain(figure);
+    expect(appendix).not.toMatch(/\$79\s*→\s*\$15/);
   });
 
   it('loads only files that exist', () => {

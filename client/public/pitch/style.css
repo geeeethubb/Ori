@@ -314,10 +314,27 @@ h2.headline { font-size: var(--fs-h1); }
 .in-presentation .topbar:has(:focus-visible), .in-presentation .controls:has(:focus-visible) { opacity: 1; pointer-events: auto; }
 .in-presentation .deck-progress { opacity: 0; transition: opacity 0.2s ease; }
 .in-presentation.chrome-peek .deck-progress { opacity: 1; }
-/* The return recording, played in the appendix demo section. */
+/* The four recordings, played on request in the appendix demo section (the timed deck shows no video). */
 .appendix-clip { margin: 14px 0 18px; display: grid; gap: 8px; justify-items: start; }
 .appendix-clip video { display: block; width: 195px; max-width: 100%; height: auto; aspect-ratio: 390 / 844; border-radius: 18px; background: var(--ink); box-shadow: 0 0 0 4px var(--ink); }
 .appendix-clip figcaption { max-width: 60ch; font-size: 15px; line-height: 1.45; color: var(--muted); }
+.appendix-clips { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 20px 24px; margin: 16px 0 20px; }
+.appendix-clips .appendix-clip { margin: 0; width: 195px; max-width: 100%; }
+.appendix-clips .appendix-clip.is-wide { width: 235px; }
+.appendix-clip.is-wide video { width: 235px; aspect-ratio: 464 / 832; }
+.appendix-clips figcaption strong { display: block; color: var(--ink); }
+/* Ori's identity board in the companion section: one large, legible image. */
+.appendix-board { margin: 8px 0 18px; display: grid; gap: 10px; }
+.appendix-board h4 { margin: 0; }
+.appendix-board img { display: block; width: 100%; height: auto; aspect-ratio: 1536 / 1024; border-radius: 16px; background: var(--ink); }
+.appendix-board figcaption { font-size: 15px; color: var(--muted); }
+.appendix-model li { margin-bottom: 4px; }
+/* The closing slide's quiet way into the appendix: small muted type in the bottom-right corner, clear of the QR. */
+.layout-signature .scene-body.signature-body { position: relative; }
+.signature-appendix { position: absolute; right: 24px; bottom: 0; z-index: 1; padding: 6px 10px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 17px; font-weight: 600; letter-spacing: 0.02em; color: var(--on-ink-muted); opacity: 0.7; cursor: pointer; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 4px; }
+.signature-appendix:hover, .signature-appendix:focus-visible { opacity: 1; color: #fff; text-decoration-color: var(--lime); }
+.signature-appendix:focus-visible { outline: 3px solid var(--lime); outline-offset: 3px; }
+.is-flow .signature-appendix { position: static; order: 2; align-self: flex-start; margin-top: 12px; font-size: 15px; }
 /* An expanded clip owns the screen: the bars never cover its close button, label or controls. */
 .in-presentation.media-expanded .topbar, .in-presentation.media-expanded .controls, .in-presentation.media-expanded .deck-progress { opacity: 0; pointer-events: none; visibility: hidden; }
 .in-presentation:not(.chrome-peek) #deck { cursor: none; }

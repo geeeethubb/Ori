@@ -1,5 +1,29 @@
 # Ori pitch: integration notes
 
+## Final round (November 15, 2026): what changed
+
+The final-round deck keeps **15 presented scenes, now 230 seconds (3:50)**, in this order: promise, discovery,
+journey, feeling, **built** (old create + grow merged; `#create`, `#grow`, `#use-revise` and `#reopen` open it),
+zones (unchanged), **whynow** (Form and Fuel as an independently built example, with labeled price references),
+**market** (the model, with its footnote), position, founder (a four-step click-through: Warm introduction → One
+useful personal app → Later-day use → Referral), growth, pricing, velocity, ask, signature. Budgets
+15/18/8/12/21/13/30/18/12/28/12/9/15/12/7. Slides stay highly visual: as little on-slide text as possible.
+
+- **No video on the main path.** All four recordings (01-create, 02-use-and-revise, 03-reopen and the founder's
+  ori-context-demo) play only in the appendix's demo section (`#appendix-demo`): poster, MP4 then WebM, controls,
+  `preload="none"`, never autoplay; they pause when the appendix closes or the deck navigates. The retired
+  `#features` hash opens that section. The config.js media slots point at the same files.
+- **Appendix additions only** (no rebuild): the identity board (`assets/ori/identity-board.png`, “Meet Ori — a
+  little companion”) in section 12; sources M1–M4, W1–W2 and P1–P3 in section 1; the market model (TAM, SAM, SOM)
+  and the price references in section 9.
+- **Slide 15** gains a small, quiet “Appendix” button (bottom right; keyboard accessible) that opens the appendix
+  like the bar's Appendix button. Next on 15 does nothing further.
+- **Checks:** `scripts/check-pitch.mjs` (no main-path video, the four appendix clips, old hashes, the closing slide
+  with its Appendix link, 230 s), `scripts/check-pitch-density.mjs` (whynow 70 words, market 60 with the map labels,
+  founder 70, built the default 35) and `tests/unit/pitch-route.test.ts` (the new ids, layouts and budgets; the appendix clips, board and sources).
+
+The sections below describe the earlier revisions and remain the reference for the engine and the kit.
+
 The Kearney hackathon pitch is a standalone static page, served by the Ori site at **`/pitch/`** (outside the
 app shell). It tells the story of `ORI_PITCH_REVISION_BRIEF.md` in **15 presented scenes and 238 seconds
 (3:58)**. The brief is the authority for this revision and overrides the older pitch documents where they
@@ -259,10 +283,10 @@ Presented slide numbers (the brief's slide numbers in brackets). The file names 
 
 | Slot | Slide | Shot (brief §4) | Today | Files for the new recording | Aspect | Poster | Cues |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | 5 (brief 6) | A · Thought to Light, 20–25 s | `01-create.mp4`/`.webm` (12.8 s, Sample mode); fallback still `stills/light-open-first-photo.webp` | `media/06-thought-to-light.mp4` and `.webm` | 390 / 844 (portrait phone; record 390 × 844 or 780 × 1688) | `media/06-thought-to-light-poster.jpg` | 3 suggested: share the spark · shape the idea · open your app |
-| `grow` | 6 (brief 7) | B · Light grows with me, 20–25 s | `02-use-and-revise.mp4`/`.webm` (12.8 s, Sample mode); fallback `stills/light-entry-after.webp` | `media/07-light-grows.mp4` and `.webm` | 390 / 844 | `media/07-light-grows-poster.jpg` | optional: before · tell Ori · review · after |
+| `create` | appendix, 4. The demo (final round: no video on the main path) | A · Thought to Light, 20–25 s | `01-create.mp4`/`.webm` (12.8 s, Sample mode); fallback still `stills/light-open-first-photo.webp` | `media/06-thought-to-light.mp4` and `.webm` | 390 / 844 (portrait phone; record 390 × 844 or 780 × 1688) | `media/06-thought-to-light-poster.jpg` | 3 suggested: share the spark · shape the idea · open your app |
+| `grow` | appendix, 4. The demo | B · Light grows with me, 20–25 s | `02-use-and-revise.mp4`/`.webm` (12.8 s, Sample mode); fallback `stills/light-entry-after.webp` | `media/07-light-grows.mp4` and `.webm` | 390 / 844 | `media/07-light-grows-poster.jpg` | optional: before · tell Ori · review · after |
 | `return` | appendix, 4. The demo (moved off 6, brief 7) | E · One tap back to Light, 3–5 s, optional | `03-reopen.mp4`/`.webm` (5.2 s, Sample mode; a fresh browser session opens Light's link); fallback `stills/light-gallery-observation.webp` | `media/07-back-to-light.mp4` and `.webm` | 390 / 844 | `media/07-back-to-light-poster.jpg` | none |
-| `context` | 7 (brief 8) | C + D · Bring context from my AI, then the Playground: the founder's recording | `ori-context-demo.mp4`/`.webm` (23.65 s, H.264/VP9, no audio, filmed on a phone against the live site; label “Recorded product demo · Live AI”; never claim real-time speed); a real screenshot as fallback | delivered (wired by group 3 in `config.js`) | 464 / 832 | `media/ori-context-demo-poster.jpg` (its first frame) | 0 s Bring your context · 9.0 s Ori connects the dots (results from 12.6 s) · 15.9 s Explore what fits you |
+| `context` | appendix, 4. The demo | C + D · Bring context from my AI, then the Playground: the founder's recording | `ori-context-demo.mp4`/`.webm` (23.65 s, H.264/VP9, no audio, filmed on a phone against the live site; label “Recorded product demo · Live AI”; never claim real-time speed); a real screenshot as fallback | delivered (wired by group 3 in `config.js`) | 464 / 832 | `media/ori-context-demo-poster.jpg` (its first frame) | 0 s Bring your context · 9.0 s Ori connects the dots (results from 12.6 s) · 15.9 s Explore what fits you |
 | `playground` | retired from 7 (brief 8) | D · Playground | covered by the `context` recording; the slot may remain in `config.js` unused | — | 390 / 844 | — | — |
 
 **Switching a slot to a new recording** (no layout change):
@@ -309,7 +333,7 @@ What changed, by confirmed finding (presented numbers):
 - **Slide 5:** the spoken track and cue start the clip on “I share a photo”, so the footage never races ahead;
   step 2's crop leads with Ori's Light proposal instead of the Sample-mode line.
 - **Slide 4:** the exchange and the Light preview use the recordings' focus words (“Shadows and reflections”); the
-  preview is the first frame of the slide-6 recording, caption cropped.
+  preview is the first frame of the use-and-revise recording (appendix demo section), caption cropped.
 - **Slides 2, 8, 9, 14:** the insight card has no tail; Assignments shows its due-soon card at full resolution and
   the Sample-mode label is a caption, not a chip; the map's examples are 20 px ink-3 and its axis titles 18 px;
   the ask's Ori is 176 px, aligned to the hero.
@@ -415,8 +439,8 @@ arrives; a missing file falls back to the slot's real screenshot. For every slot
 
 | Slot | Slide | Brief shot · suggested length | What to record (brief §4) | Files to drop into `media/` | Aspect | Poster | Cue points | The `config.js` line to change |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | 5 (brief 6) | A · Thought to Light · about 20–25 s | Share a photo and a thought → answer one useful clarification or choose a proposal → preview → open Light; hold the finished app so the payoff is readable. | `06-thought-to-light.mp4` (+ `06-thought-to-light.webm`) | 390 / 844 portrait (record 390 × 844 or 780 × 1688) | `06-thought-to-light-poster.jpg` | Measure in the final cut, three: share the spark · shape the idea · open your app → `cues: [0, s2, s3]`; slide 5's three steps then follow the clip. Never guess. | `sources: ['media/06-thought-to-light.mp4', 'media/06-thought-to-light.webm'],` (today `01-create`, 12.8 s) |
-| `grow` | 6 (brief 7) | B · Light grows with me · about 20–25 s | Open Light with an existing entry → add a real observation or context → ask for one supported change → review and apply → show the change with the original entry still present. | `07-light-grows.mp4` (+ `.webm`) | 390 / 844 | `07-light-grows-poster.jpg` | None needed (slide 6 does not follow cues); leave `cues: []`. | `sources: ['media/07-light-grows.mp4', 'media/07-light-grows.webm'],` (today `02-use-and-revise`, 12.8 s) |
+| `create` | Appendix, 4. The demo (final round: no video on the main path) | A · Thought to Light · about 20–25 s | Share a photo and a thought → answer one useful clarification or choose a proposal → preview → open Light; hold the finished app so the payoff is readable. | `06-thought-to-light.mp4` (+ `06-thought-to-light.webm`) | 390 / 844 portrait (record 390 × 844 or 780 × 1688) | `06-thought-to-light-poster.jpg` | Measure in the final cut, three: share the spark · shape the idea · open your app → `cues: [0, s2, s3]`; slide 5's three steps then follow the clip. Never guess. | `sources: ['media/06-thought-to-light.mp4', 'media/06-thought-to-light.webm'],` (today `01-create`, 12.8 s) |
+| `grow` | Appendix, 4. The demo (the use-and-revise recording) | B · Light grows with me · about 20–25 s | Open Light with an existing entry → add a real observation or context → ask for one supported change → review and apply → show the change with the original entry still present. | `07-light-grows.mp4` (+ `.webm`) | 390 / 844 | `07-light-grows-poster.jpg` | None needed (the appendix clip does not follow cues); leave `cues: []`. | `sources: ['media/07-light-grows.mp4', 'media/07-light-grows.webm'],` (today `02-use-and-revise`, 12.8 s) |
 | `return` | Appendix, 4. The demo (moved off slide 6; the brief allows either) | E · One tap back to Light · about 3–5 s, optional | On a real phone, tap Light's home-screen icon and show the saved entry; otherwise keep the direct-link recording and describe it as one. A home-screen claim needs real phone footage. | `07-back-to-light.mp4` (+ `.webm`) | 390 / 844 (a phone take may differ: keep its own aspect) | `07-back-to-light-poster.jpg` | None | `sources: ['media/07-back-to-light.mp4', 'media/07-back-to-light.webm'],` (for Setup), **and** the two `<source>` lines in `index.html` under `#appendix-return-clip`, which is where it plays (today `03-reopen`, 5.2 s) |
-| `context` | 7 (brief 8) | C (+ D) · Bring context from my AI → Playground · delivered, 23.65 s | Delivered: the founder's phone recording on the live site (copy the prompt, paste the AI-written profile, add it; Ori organizes what it learned; the Playground suggests directions). | `ori-context-demo.mp4` + `.webm` (in place) | 464 / 832 | `ori-context-demo-poster.jpg` (in place) | `cues: [0, 9.0, 15.9]` (in place: Bring your context · Ori connects the dots · Explore what fits you) | Nothing to change. For a new take: `sources: ['media/<new>.mp4', 'media/<new>.webm'],`, then re-measure the three cues and keep the label “Recorded product demo · Live AI” (never claim real-time speed). |
+| `context` | Appendix, 4. The demo (the founder's recording) | C (+ D) · Bring context from my AI → Playground · delivered, 23.65 s | Delivered: the founder's phone recording on the live site (copy the prompt, paste the AI-written profile, add it; Ori organizes what it learned; the Playground suggests directions). | `ori-context-demo.mp4` + `.webm` (in place) | 464 / 832 | `ori-context-demo-poster.jpg` (in place) | `cues: [0, 9.0, 15.9]` (in place: Bring your context · Ori connects the dots · Explore what fits you) | Nothing to change. For a new take: `sources: ['media/<new>.mp4', 'media/<new>.webm'],`, then re-measure the three cues and keep the label “Recorded product demo · Live AI” (never claim real-time speed). |
 | `playground` | Retired from slide 7 (brief 8) | D · Playground · about 8–12 s, or stills | Open the Playground → show a few possibilities → choose one → hold on the next step. Covered today by the end of the `context` recording. | Only with a layout change: `08-playground.mp4` (+ `.webm`) | 390 / 844 | `08-playground-poster.jpg` | None | `sources: ['media/08-playground.mp4', 'media/08-playground.webm'],` (the slot is not placed on any slide; placing it needs a slide change) |

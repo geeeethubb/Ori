@@ -1,88 +1,55 @@
-# Ori pitch: timing estimate (15 presented scenes, 3:58)
+# Ori final round: run of show (15 slides, 3:50)
 
-**This is an automated timing estimate, not a spoken run.** The numbers below come from counting the words in
-each scene's spoken track in `client/public/pitch/scenes.js`; nobody spoke and no timer was read. Before the
-event, do one full run out loud with the timer in the notes panel (N) and adjust what you say, not the budgets.
+The spoken lines and cues live in `client/public/pitch/scenes.js` (press **N** in the deck for notes and the
+timer); if a line there changes, that version wins. Budgets total **230 s (3:50)**; Q&A (two minutes) happens on
+slide 15. Estimates below are words ÷ 2.5 (150 words a minute), read from `window.ORI_PITCH_TIMING`: about
+**502 words, 201 s**, so roughly 29 s spare for clicks and pauses. Only a spoken run with the timer confirms it.
 
-## How it is counted
+**Clicks:** → , PageDown, Space or the clicker. Slides **3, 7 and 10** build in place when you arrive with →
+(each → reveals the next part; the → after the last part moves on). Arriving any other way shows the full slide.
+No video plays on the main path: the three demo recordings are click-to-play in the **Appendix** (top bar, or the
+Appendix link on slide 15).
 
-- **Budgets:** the revision brief's allocation (`ORI_PITCH_REVISION_BRIEF.md`, section 5) with two founder
-  decisions. The brief's slide 2 (the research evidence, “Wanting is only the beginning.”) is not presented: it
-  is “Research behind this” in the appendix, and its 12 s were **not** redistributed, so the talk is shorter. The
-  brief's slide 8 (presented #7) runs **25 s** instead of 15 s for the founder's 23.65-second recording. Total:
-  **238 s (3:58)** for scenes 1–15. The two minutes of Q&A are separate and happen on scene 15.
-- **Numbering:** presented #1 is the brief's slide 1; from the brief's slide 3 on, presented number = brief
-  number − 1.
-- **Speech estimate:** spoken-track words ÷ 2.5 (150 words a minute), the same rule the notes panel shows for
-  each scene and `window.ORI_PITCH_TIMING` exposes. A hyphenated compound counts once (“AI-native”,
-  “twenty-one”); numbers in digits count as said aloud (150 = “one hundred fifty”, three words;
-  2027 = “twenty twenty-seven”, two). Acronyms said letter by letter (UIUC, IBC, YC) count as one word each,
-  so scenes with them take longer to say than the estimate.
-- **Checked:** `pitch.js` warns in the console if any track exceeds its budget or the budgets do not total 238 s,
-  and `scripts/check-pitch.mjs` (default `--scenes 15`, `--seconds 238`) fails then; both pass with these
-  tracks. The figures below were read from `window.ORI_PITCH_TIMING` in the running deck.
+| # | Slide | Budget | Ends | Clicks on the slide | Say |
+|---:|---|---:|---:|---|---|
+| 1 | Your phone, your story | 15 s | 0:15 | — | Your own opening, then: “Ori is an AI-native phone experience: apps that grow with you, on the phone you already own.” |
+| 2 | Discovery (21 of 26) | 17 s | 0:32 | — | “We asked twenty-six UIUC students this question. Twenty-one said yes. A saved workout doesn’t get me through a workout. A saved photography reel doesn’t help me practice. What I lose is progress toward the things I wanted to get better at.” |
+| 3 | Five stages | 7 s | 0:39 | 4 more → after arriving (five stages, then the loop) | “Ori helps you move from something you feel to something you can use—and keep improving.” |
+| 4 | Your context becomes something you can use | 12 s | 0:51 | — | “You don’t need a finished idea. Share a thought, a photo, a reel link, your AI’s summary. Ori helps you shape it into apps: your own AI app store.” |
+| 5 | Built around you | 21 s | 1:12 | — | “Light starts with something I already care about. I can keep my observations, come back to them, and change the app as I learn. The tool changes without making me start over.” |
+| 6 | What you love. What you need to get done. | 13 s | 1:25 | — | “Ori works for what you love, photography in Light, practice in Riff, and for what you need to get done, follow-ups in People. One companion. Personal apps. Both grow with you.” |
+| 7 | Why now | 27 s | 1:52 | 1 more → (the big Ori panel: “Not just one tool. An entire playground.”) | “Why now? AI can already build working apps in a conversation, and 61% of U.S. adults under 30 have used ChatGPT. I built Form and Fuel with ChatGPT, around my own routine. Others charge for one service each: don’t pay $20 a month for one swing; coaches pay $80 a month for one monkey bar. Ori isn’t just one tool. It’s an entire playground.” |
+| 8 | Market size | 16 s | 2:08 | — | “At our proposed $15 a month, the national model is large. We start smaller: UIUC and Chicago, then campuses like Purdue and Ohio State, and San Francisco this summer. First, prove people return and pay.” |
+| 9 | Positioning map | 12 s | 2:20 | — | “Specialist apps go deep. Builders and assistants overlap with us. The ambition is an AI-native phone experience: tools built around the person, with their interests and progress carried forward.” |
+| 10 | Founder and pilot | 26 s | 2:46 | 4 more → (four mechanism steps, then the pilot goals) | “I’m Zuyu. I lead Founders at UIUC and manage projects at IBC, so I start with warm introductions. The invitation: bring one recurring thing you want to do better; leave with a tool shaped around it. Then the test: will they use it again next week? Then referrals. Goals: 150 invitations by December 1st, 50 enrolled by the 15th.” |
+| 11 | Start at UIUC. Grow from there. | 12 s | 2:58 | — | “Start at UIUC, then earn each step: useful returns, paid use, repeatable onboarding, wider distribution. Goals: 100,000 registered users by September, and a YC Fall application.” |
+| 12 | Pricing | 9 s | 3:07 | — | “Our proposed price: $15 a month after the trial and introductory period, for personal apps people keep using across their lives.” |
+| 13 | Velocity | 15 s | 3:22 | — | “Velocity helped us ask better questions. Build something new? What makes it useful? Can it change safely? Will people keep it? Each answer became a product decision or a test for our pilot.” |
+| 14 | The ask | 21 s | 3:43 | — | “Ten thousand dollars, zero percent equity: the perks of a hackathon. It funds a reliable product, a fifty-person pilot, and context infrastructure. Next, I want to launch Ori as a startup with Kearney PERLab: your AI expertise to develop it, your team to deploy it, your network to reach beyond students.” |
+| 15 | Signature and Q&A | 7 s | 3:50 | — (stay here for Q&A) | “Your phone, your story. Scan the code, create your own account, and try Ori. Thank you.” |
 
-## Result
+## Reminders
 
-| # | Brief | Scene | Budget | Planned end | Spoken words | Est. speech | Spare |
-|---:|---:|---|---:|---:|---:|---:|---:|
-| 1 | 1 | Promise | 7 s | 0:07 | 17 | 6.8 s | 0.2 s |
-| — | 2 | Evidence and takeaway: appendix only (“Research behind this”) | — | — | — | — | — |
-| 2 | 3 | Discovery and a friend’s insight | 19 s | 0:26 | 44 | 17.6 s | 1.4 s |
-| 3 | 4 | Five stages, one Ori | 17 s | 0:43 | 40 | 16.0 s | 1.0 s |
-| 4 | 5 | Feeling to app | 14 s | 0:57 | 33 | 13.2 s | 0.8 s |
-| 5 | 6 | Create Light | 26 s | 1:23 | 55 | 22.0 s | 4.0 s |
-| 6 | 7 | Light grows with you | 26 s | 1:49 | 33 | 13.2 s | 12.8 s |
-| 7 | 8 | Context and Playground (the founder's recording) | 25 s | 2:14 | 53 | 21.2 s | 3.8 s |
-| 8 | 9 | Interests and workflows | 13 s | 2:27 | 31 | 12.4 s | 0.6 s |
-| 9 | 10 | Competitor map | 16 s | 2:43 | 37 | 14.8 s | 1.2 s |
-| 10 | 11 | Founder and pilot | 19 s | 3:02 | 43 | 17.2 s | 1.8 s |
-| 11 | 12 | Growth goal | 12 s | 3:14 | 27 | 10.8 s | 1.2 s |
-| 12 | 13 | Pricing | 10 s | 3:24 | 24 | 9.6 s | 0.4 s |
-| 13 | 14 | Velocity AI | 15 s | 3:39 | 33 | 13.2 s | 1.8 s |
-| 14 | 15 | The ask | 12 s | 3:51 | 29 | 11.6 s | 0.4 s |
-| 15 | 16 | Signature and Q&A | 7 s | 3:58 | 17 | 6.8 s | 0.2 s |
-| | | **Total** | **238 s** | **3:58** | **516** | **206.4 s** | **31.6 s** |
+- **2:** Name the personal cost of not following through. At most two examples aloud; never “80.8% of college
+  students” (26 informal conversations).
+- **3:** Let the labels explain themselves. Click through; say the one line as the loop closes.
+- **4:** The destination, not the mechanics. Ori never reads accounts or watches a reel; people share things.
+- **5:** Explain the outcome, not the buttons. Screenshots are Sample mode; changes happen when the person asks.
+- **7:** Arrive on the comparison: Form and Fuel (yours, built with ChatGPT, not made in Ori) against one service
+  each. Click once for the Ori panel and land the line: not just one tool, an entire playground. CoachRx's $79 is
+  what a coach pays for 6–50 clients ("coaches pay $80"); no Ori price on this slide.
+- **8:** Say “model” and “scenario”; the local audience is not captured customers. Purdue, Ohio State and San
+  Francisco are possible next places, not commitments.
+- **9:** Assistants and builders overlap with Ori; never say a competitor cannot remember context or build apps.
+- **10:** Spend time on the mechanism and what you will measure: later-day use, returns, payment, founder time.
+  Relationships are personal access, not partnerships.
+- **11:** 100,000 is a goal; YC Fall 2027 is an application goal.
+- **12:** One sentence on price, then move on. $15 is proposed.
+- **13:** Keep Velocity on screen for its full 15 seconds.
+- **14:** The $10,000, then the next step: launching Ori as a startup with Kearney PERLab. Say it as an invitation
+  (“I’d love to partner with you”), never as an agreed partnership. Look at the judges on each “your”.
+- **15:** Leave it up for Q&A. Recordings, the companion board, sources and formulas are in the Appendix.
 
-- **Every track fits its budget.** Estimated speech totals 206.4 s, leaving about 32 s across 15 scenes for
-  transitions, the five-stage build on scene 3 and pauses.
-- **The opening hands straight to the discovery question:** scene 1's track ends on the promise, and scene 2
-  opens with “We asked twenty-six UIUC students…”. Nothing spoken refers to the removed research slide; if a
-  judge asks for research, the discovery notes link “Research behind this” (A, then the panel at the top of
-  Sources), with its scope: physical activity only, and neither study measures Ori.
-- **Scene 7 follows the founder's clip** (23.65 s; cue points 0 s Bring your context, 9.0 s Ori connects the
-  dots, results from about 12.6 s, 15.9 s Explore what fits you). Press → (or the clicker) to start the clip as the scene opens and start each
-  sentence as its step lights up: about 22 words (≈ 8.8 s) for the first step, 17 (≈ 6.8 s) for the second,
-  14 (≈ 5.6 s) for the third, so the narration never runs ahead of the footage. Do not claim real-time speed:
-  the waiting may have been trimmed. The clip ends on its last frame with the suggestions on screen; the next → moves on.
-- **Scene 5: say the disclaimer and the thought first,** then press → (or the clicker) to start the clip on “I share a photo”: the 12.8 s clip
-  runs under the last four sentences (share 0–2 s, Ori's suggestion 2–5 s, preview and focus 5–8 s, Make mine to
-  Light 8–12.8 s), so the footage never runs ahead of the words. It holds Light's last frame; the next → moves on.
-- **Scene 6: press → (or the clicker) to start the clip with the first word.** “review” lands on the review sheet, “apply it” on the Updated
-  toast and “Same photo” as the entry opens; the 12.8 s clip then holds its last frame and the next → moves on.
-  The 5.2 s return clip now plays in the appendix (A → 4. The demo) for Q&A, so scene 6 has 12.8 s spare: let
-  the Before/After pair sit rather than adding words.
-- **When the founder's replacement clips arrive** (20–25 s each, per the shot list), start each with the first
-  word and re-time the sentences to its steps; a 20–25 s clip started late would overrun the 26 s budget.
-- **Tightest scenes:** 1 promise and 15 signature (0.2 s each), 12 pricing and 14 ask (0.4 s each), 8 interests
-  and workflows (0.6 s). Scenes 10 and 11 were trimmed (to 43 and 27 words) because their acronyms and long
-  numbers take longer to say than the count suggests: a synthesized-speech check before the trim put 10 at about
-  21 s of 19 and 11 at about 13 s of 12. Check 10 and 11 first in the spoken run; scene 15 can run over because
-  Q&A follows on the same slide.
-- The Velocity AI scene (13) keeps its full 15 seconds on screen and in speech.
-- **Clicker and keys:** start full screen with F or the Present button; →, PageDown or Space move on. On scenes 5, 6
-  and 7 the first → or PageDown (what a clicker sends) starts the clip, like a build step, and the next one moves on
-  whether or not the clip is still playing; Space plays or pauses a clip, then moves on once it has ended. Previous,
-  links and the overview never start a clip. After clicking any control with the mouse, the keys go back to
-  the slides, so Space never re-presses that control.
-- **Q&A with an expanded clip in full screen:** close it by clicking outside it, with its collapse button or with
-  ×. The browser keeps Esc for leaving full screen; that also closes the clip, then press F to return. The return
-  clip (Light opening by its own link) plays in the appendix: A → 4. The demo.
+## Tightest slides
 
-## What this does not show
-
-- How long the words take when Zuyu says them. 150 words a minute is a planning rate; nerves speed people up and
-  pauses slow them down. Only a spoken run with the timer can confirm 3:58.
-- Clip timing on the day: a recording plays only when started (→, the clicker, Space or its play button).
-- Live conditions: the room's display, the clicker, a slow network, or an official time limit other than four
-  minutes. If the event's limit differs, use that limit.
+The ask (20.4 s of 21), discovery (16.4 of 17), feeling (11.6 of 12), positioning (11.6 of 12), zones (12.4 of 13), pricing (8.4 of 9) and the close (6.4 of 7). UIUC, IBC, YC and PERLab take longer to say than the count suggests: rehearse 10, 11 and 14 first.

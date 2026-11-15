@@ -12,8 +12,9 @@
   const appendixNames = window.ORI_APPENDIX_SECTIONS || {};
   const registry = window.ORI_SLIDES && typeof window.ORI_SLIDES === 'object' ? window.ORI_SLIDES : {};
   const ICONS = window.ORI_ICONS || { app: {}, ui: {} };
-  // 15 presented scenes, 238 s (3:58): the brief's slide 2 moved to the appendix and slide 8 runs 25 s.
-  const TARGET_SECONDS = 238;
+  // 15 presented scenes, 230 s (3:50): the final-round order (create and grow merged into 'built'; why now and the
+  // market added). Every recording lives in the appendix: the main path shows screenshots, never a video.
+  const TARGET_SECONDS = 230;
   const EXPECTED_SCENES = 15;
   const WORDS_PER_SECOND = 2.5; // about 150 spoken words a minute
   // The design stage: every scene is laid out at 1600 x 900 and scaled to fit (stage mode). Narrow and
@@ -689,6 +690,8 @@
     const qrImage = h('img', { src: qr.src, alt: qr.alt || 'QR code', width: '384', height: '384', decoding: 'async' });
     // Ori inside the slide (the scene's companion has corner: false), in its Ready expression unless the scene names another.
     const face = ori((scene.companion && scene.companion.expression) || 'Ready', { size: 112, className: 'signature-ori' });
+    // A small, quiet way into the appendix for Q&A (it opens it exactly like the Appendix button in the bar).
+    const appendixLinkButton = h('button', { class: 'signature-appendix', type: 'button', title: 'Sources, definitions and the recordings (A)', onclick: (e) => openAppendix(null, pointerOpener(e)) }, 'Appendix');
     return {
       head: null,
       bodyClass: 'signature-body',
@@ -705,7 +708,7 @@
           qrHref
             ? h('a', { class: 'signature-qr', href: qrHref, target: '_blank', rel: 'noopener noreferrer', 'aria-label': `${qr.alt || 'QR code'} (opens a new tab)` }, qrImage)
             : h('span', { class: 'signature-qr' }, qrImage),
-          h('p', { class: 'signature-cta' }, face, qr.caption ? h('span', { class: 'signature-cta-text' }, qr.caption) : null)))],
+          h('p', { class: 'signature-cta' }, face, qr.caption ? h('span', { class: 'signature-cta-text' }, qr.caption) : null))), appendixLinkButton],
     };
   };
 
@@ -1057,6 +1060,8 @@
 
   for (const dialog of Object.values(dialogs)) {
     dialog.addEventListener('close', () => {
+      // A clip started in a dialog (the appendix's recordings) never keeps playing once the dialog is closed.
+      pauseVideos(dialog);
       const back = openers.get(dialog);
       openers.delete(dialog);
       if (dialog === dialogs.appendix && current >= 0) replaceHash(`#${current + 1}`);
@@ -1098,8 +1103,13 @@
 
   function openAppendix(section, opener) {
     const dialog = dialogs.appendix;
-    // The appendix's return clip gets its poster only when the appendix opens: nothing downloads before it is needed.
-    for (const v of dialog.querySelectorAll('video[data-poster]:not([poster])')) v.poster = v.dataset.poster;
+    // The appendix's clips get their posters only when the appendix opens: nothing downloads before it is needed.
+    // They also switch to preload="metadata" then, so a click anywhere on a poster starts that clip (with "none",
+    // only the small play button does). Nothing autoplays.
+    for (const v of dialog.querySelectorAll('video[data-poster]:not([poster])')) {
+      v.poster = v.dataset.poster;
+      if (v.preload === 'none') v.preload = 'metadata';
+    }
     openDialog(dialog, opener);
     const target = section ? document.getElementById(`appendix-${section}`) : null;
     if (target && dialog.contains(target)) {
@@ -1439,7 +1449,8 @@
   /* ---------------------------------------------------------------------------------------- */
 
   // Scenes that moved into the appendix: their old hashes open the appendix panel instead.
-  const RETIRED_SCENES = Object.freeze({ evidence: 'research', research: 'research', 'scene-evidence': 'research' });
+  // The old #features scene (the founder's context recording) now plays in the appendix's demo section.
+  const RETIRED_SCENES = Object.freeze({ evidence: 'research', research: 'research', 'scene-evidence': 'research', features: 'demo', 'scene-features': 'demo' });
 
   function parseHash(hash) {
     let raw = '';
@@ -1473,7 +1484,9 @@
       replaceHash(`#${target.index + 1}`); // #velocity and #04 become the canonical #14 and #4
       return;
     }
+    // An unknown hash: the first load opens scene 1; later, the deck stays where it is and the address says so.
     if (initial) go(0, { updateHash: false });
+    else if (current >= 0 && !$('dialog[open]')) replaceHash(`#${current + 1}`);
   }
   window.addEventListener('hashchange', () => applyHash(false));
 

@@ -69,7 +69,7 @@ Small supporting line: “Starting on the phone you already own.”
 
 **Story beat:** Show the recognizable Ori character beside a personal collection: photography, music, people, and one unfinished spark. The phone is a glimpse of the destination. The next scene explains why that destination matters.
 
-**Optional longer opening, outside the four-minute track:** “The smartphone put a world of software in our pockets. The next step is software that can take shape around our own lives. That's the phone we're building toward with Ori.” This preserves the ambition behind the original 2007 reference without spending the opening on someone else's story. A Jobs quotation is optional; customer discovery is the stronger core.
+**Optional longer opening, outside the four-minute track:** “The smartphone put a world of software in our pockets. The next step is software that can take shape around our own lives. That's the phone we're building toward with Ori.” Customer discovery is the stronger core.
 
 ## 2. Research and customer discovery: a broad gap, then a local insight
 

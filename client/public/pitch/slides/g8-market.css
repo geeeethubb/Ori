@@ -1,0 +1,44 @@
+/* Slide 8 (market): TAM ⊃ SAM ⊃ SOM rings (left) beside a dot map of the contiguous United States with the first
+   places pinned (right). mk2- names, so the older .layout-market .mk-* rules in g7-value.css match nothing. Both SVGs
+   are 540 units tall and share one rendered height, so the dashed SOM link lines up across them. */
+.layout-market .mk2-customer { margin: 12px 0 0; font-size: 26px; line-height: 1.3; font-weight: 650; color: var(--fg-muted); }
+.layout-market .scene-body.mk2-body { padding-top: 14px; justify-content: space-between; gap: 8px; }
+.layout-market .mk2-graphic { position: relative; flex: 1 1 auto; min-height: 0; max-height: 540px; display: flex; align-items: flex-end; justify-content: center; gap: 24px; }
+.layout-market .mk2-rings, .layout-market .mk2-map { display: block; flex: none; height: 100%; width: auto; max-width: 100%; overflow: visible; }
+.layout-market .mk2-rings { aspect-ratio: 540 / 540; }
+.layout-market .mk2-map { aspect-ratio: 860 / 540; }
+
+.layout-market .mk2-ring-1 { fill: var(--blue-soft); stroke: #cdd3fb; stroke-width: 2; }
+.layout-market .mk2-ring-2 { fill: #cfd5ff; stroke: #b3bcfb; stroke-width: 2; }
+.layout-market .mk2-ring-3 { fill: var(--blue); stroke: var(--lime); stroke-width: 8; }
+.layout-market .mk2-ring-text text { text-anchor: middle; font-family: var(--font-display); }
+.layout-market .mk2-tag { font-size: 17px; letter-spacing: 0.14em; font-weight: 800; fill: var(--blue-ink); }
+.layout-market .mk2-value { font-size: 42px; letter-spacing: -0.04em; font-weight: 800; fill: var(--ink); }
+.layout-market .mk2-title { font-size: 19px; font-weight: 700; fill: var(--ink-3); font-family: var(--font-body); }
+.layout-market .mk2-ring-text-3 .mk2-tag { fill: var(--lime); }
+.layout-market .mk2-ring-text-3 .mk2-value { fill: #fff; font-size: 33px; }
+.layout-market .mk2-ring-text-3 .mk2-title { fill: #e3e7ff; font-size: 17px; }
+
+.layout-market .mk2-dots { fill: none; stroke: #c3cbf2; stroke-width: 5.4; stroke-linecap: round; }
+.layout-market .mk2-link { fill: none; stroke: var(--blue); stroke-width: 4; stroke-dasharray: 10 9; stroke-linecap: round; }
+.layout-market .mk2-leader { stroke: var(--ink-3); stroke-width: 1.6; }
+.layout-market .mk2-pin-start { fill: var(--blue); stroke: var(--lime); stroke-width: 4.5; }
+.layout-market .mk2-pin-next { fill: var(--surface); stroke: var(--blue); stroke-width: 3; }
+.layout-market .mk2-pin-label { font-family: var(--font-display); font-size: 23px; font-weight: 800; letter-spacing: -0.01em; fill: var(--ink); paint-order: stroke; stroke: var(--canvas); stroke-width: 7px; stroke-linejoin: round; }
+.layout-market .mk2-pin-label.is-next { fill: var(--ink-3); font-weight: 700; }
+.layout-market .mk2-legend-text { font-family: var(--font-display); font-size: 19px; font-weight: 750; fill: var(--ink-3); }
+
+.layout-market .mk2-foot { margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 22px; font-size: 16px; line-height: 1.35; font-weight: 600; color: var(--fg-muted); }
+.layout-market .mk2-sources { font-weight: 700; }
+
+/* Phone (flow): the rings, then the map, each scaled to the width; the cross-SVG link is hidden. */
+.is-flow .layout-market .mk2-customer { font-size: 16px; }
+.is-flow .layout-market .scene-body.mk2-body { gap: 14px; }
+.is-flow .layout-market .mk2-graphic { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 12px; max-height: none; }
+.is-flow .layout-market .mk2-legend-next { transform: translateX(34px); }
+.is-flow .layout-market .mk2-rings { width: min(100%, 320px); height: auto; }
+.is-flow .layout-market .mk2-map { width: 100%; height: auto; }
+.is-flow .layout-market .mk2-link { display: none; }
+.is-flow .layout-market .mk2-pin-label { font-size: 30px; stroke-width: 8px; }
+.is-flow .layout-market .mk2-legend-text { font-size: 28px; }
+.is-flow .layout-market .mk2-foot { font-size: 12px; justify-content: flex-start; }

@@ -3,8 +3,8 @@
 // pitch.js calls each one once, as renderer(scene, kit), when it builds the deck. Styles: slides/g5-growth.css.
 // Every size is in stage px (the 1600 x 900 design stage); the SVGs are drawn 1:1 on it.
 // Motion (CSS, on .slide.active): the community lines draw, the goal line draws left to right, the price steps
-// rise. The founder's pipeline builds one stage per Next (kit.reveal, ghosted until its step, as on the journey
-// slide) and each arrow draws as its stage arrives; the pilot goals are its last step. Each explains a
+// rise. The founder's four-step mechanism builds one step per Next (kit.reveal, ghosted until its step, as on the
+// journey slide) and each arrow draws as its step arrives; the pilot goals are its last step. Each explains a
 // relationship; reduced motion removes all of it (style.css), so every step then switches instantly.
 (() => {
   const slides = (window.ORI_SLIDES = window.ORI_SLIDES || {});
@@ -36,18 +36,18 @@
   /* Slide 11 · founder: who Zuyu is, why he can reach these people, what he does next          */
   /* ------------------------------------------------------------------------------------------ */
 
+  // Fallback icons by step name, used when a mechanism step names no icon (or an icon the set lacks).
   const PIPELINE_ICONS = {
-    Relationships: ['app:people', 'ui:person'],
-    'Personal onboarding': ['app:footprints', 'ui:person'],
-    Observe: ['app:binoculars', 'ui:history'],
-    'Product iteration': ['ui:refresh', 'ui:history'],
-    Referrals: ['ui:share', 'ui:send'],
+    'Warm introduction': ['app:people', 'ui:person'],
+    'One useful personal app': ['ui:phone', 'ui:sparkle'],
+    'Later-day use': ['app:calendar', 'ui:history'],
+    Referral: ['ui:share', 'ui:send'],
   };
 
   slides.founder = (scene, kit) => {
     const { h, svg } = kit;
     const o = scene.onScreen;
-    const ROW = 280; // the community row's height; the chips are spaced to match the connector ends
+    const ROW = 256; // the community row's height; the chips are spaced to match the connector ends
     const CHIP = 52;
     const centers = o.groups.map((_, i) => CHIP / 2 + (i * (ROW - CHIP)) / Math.max(1, o.groups.length - 1));
     const DISC = 160;
@@ -65,7 +65,7 @@
     const community = h('div', { class: 'fd-community' },
       h('div', { class: 'fd-who' }, h('span', { class: 'fd-disc-wrap' }, disc, h('span', { class: 'fd-initials', 'aria-hidden': 'true' }, o.founder.initials)),
         h('p', { class: 'fd-name' }, o.founder.name),
-        h('p', { class: 'fd-line' }, o.founder.line)),
+        o.founder.line ? h('p', { class: 'fd-line' }, o.founder.line) : null),
       links,
       h('ul', { class: 'fd-groups', 'aria-label': 'Groups Zuyu belongs to or knows' },
         o.groups.map((g) => h('li', { class: `fd-group is-${g.kind}` }, h('b', null, g.name), g.role ? h('span', { class: 'fd-role' }, ` · ${g.role}`) : null))));
@@ -85,20 +85,31 @@
       dots,
       h('p', { class: 'fd-evidence-label' }, o.evidence.label));
 
-    // What next: the pipeline, icons and labels only (a proposed mechanism, not a measured funnel). A process to
-    // click through, like the journey's five stages: stage n (its node, its arrow, its label) is revealed at
-    // step n, ghosted until then; the pilot goals are the last step. pitch.js starts at step 1 only on an arrival
-    // by Next; any other arrival shows every step.
-    const stages = o.pipeline;
+    // What next: the acquisition mechanism, icons and 1–4-word steps (a proposed loop, not a measured funnel). A
+    // process to click through, like the journey's five stages: step n (its node, its arrow, its label) is
+    // revealed at step n, ghosted until then. The invitation (the slide's one sentence) arrives with the first
+    // step; a step's test question (what the pilot measures) arrives with that step; the pilot goals are the last
+    // step. pitch.js starts at step 1 only on an arrival by Next; any other arrival shows every step.
+    const mech = (o.mechanism || (o.pipeline || []).map((step) => ({ step }))).slice(0, 5);
+    const stages = mech.map((m) => m.step);
     const steps = stages.length + 1;
-    const pipeline = h('div', { class: 'fd-pipeline' },
+    const cols = { '--fd-n': String(mech.length) };
+    const pipeline = h('div', { class: 'fd-pipeline', style: cols },
       h('div', { class: 'fd-lane', 'aria-hidden': 'true' },
-        stages.map((step, i) => kit.reveal(h('span', { class: 'fd-cell' },
-          // The arrow into this stage, centred on the boundary with the stage before it.
+        mech.map((m, i) => kit.reveal(h('span', { class: 'fd-cell' },
+          // The arrow into this step, centred on the boundary with the step before it.
           i ? svg('svg', { class: 'fd-arrow', viewBox: '0 0 120 24', width: '120', height: '24' },
             svg('path', { d: 'M4 12 H112' }), svg('path', { d: 'M100 3 L114 12 L100 21' })) : null,
-          h('span', { class: 'fd-node' }, pickIcon(kit, PIPELINE_ICONS[step] || ['ui:sparkle'], 52))), i + 1, { ghost: true }))),
-      h('ol', { class: 'fd-steps', 'aria-label': 'Pipeline' }, stages.map((step, i) => kit.reveal(h('li', null, step), i + 1, { ghost: true }))));
+          h('span', { class: 'fd-node' }, pickIcon(kit, [m.icon, ...(PIPELINE_ICONS[m.step] || []), 'ui:sparkle'].filter(Boolean), 48))), i + 1, { ghost: true }))),
+      h('ol', { class: 'fd-steps', 'aria-label': 'How the pilot grows' }, mech.map((m, i) => kit.reveal(h('li', null, m.step), i + 1, { ghost: true }))),
+      // Under the steps: the invitation (under the first two) and each step's test question (under its step).
+      h('div', { class: 'fd-notes' },
+        o.invitation ? kit.reveal(h('p', { class: 'fd-invite', style: { 'grid-column': '1 / span 2' } },
+          h('span', { class: 'fd-invite-icon', 'aria-hidden': 'true' }, kit.icon('ui:send', { size: 24 })),
+          h('span', null, o.invitation)), 1, { ghost: true }) : null,
+        mech.map((m, i) => (m.test ? kit.reveal(h('p', { class: 'fd-test', style: { 'grid-column': String(i + 1) } },
+          h('span', { class: 'fd-test-icon', 'aria-hidden': 'true' }, kit.icon('ui:help', { size: 22 })),
+          h('span', null, m.test)), i + 1, { ghost: true }) : null))));
 
     // Two dated goals, under "Pilot goals": the pipeline's last step.
     const goals = h('div', { class: 'fd-goals' },
@@ -107,12 +118,13 @@
         h('span', { class: 'fd-goal-icon', 'aria-hidden': 'true' }, kit.icon('app:calendar', { size: 28 })),
         h('b', { class: 'fd-goal-figure' }, g.figure),
         h('span', { class: 'fd-goal-label' }, ` ${g.label} `),
-        h('span', { class: 'fd-goal-date' }, g.date)))));
+        h('span', { class: 'fd-goal-date' }, /^by /.test(g.date) ? g.date : `· ${g.date}`)))));
     kit.reveal(goals, steps, { ghost: true });
 
     return {
       steps,
-      stepLabels: [...stages, `${o.goalsLabel}: ${o.goals.map((g) => `${g.figure} ${g.label} ${g.date}`).join('; ')}`],
+      stepLabels: [...mech.map((m, i) => [m.step, i === 0 ? o.invitation : null, m.test].filter(Boolean).join('. ')),
+        `${o.goalsLabel}: ${o.goals.map((g) => `${g.figure} ${g.label} ${/^by /.test(g.date) ? '' : 'by '}${g.date}`).join('; ')}`],
       head: twoLineHead(scene, kit),
       bodyClass: 'fd-body',
       body: [h('div', { class: 'fd-top' }, community, evidence), pipeline, goals],
@@ -129,7 +141,7 @@
     const c = o.chart;
     const fmt = kit.formatNumber;
     // Plot geometry (stage px). Linear y from 0 to c.max, so the early months sit near zero, as they should.
-    const W = 820, H = 560, L = 124, R = 40, T = 34, B = 66;
+    const W = 820, H = 480, L = 124, R = 40, T = 34, B = 66;
     const pw = W - L - R, ph = H - T - B;
     const n = c.points.length;
     const X = (i) => L + (i * pw) / (n - 1);
@@ -170,7 +182,8 @@
     ]);
 
     const chart = h('figure', { class: 'gw-chart' },
-      h('figcaption', { class: 'gw-chart-head' }, h('b', { class: 'gw-title' }, c.title), kit.tag(c.flag, { tone: 'strong' })),
+      // The title already says "goal", so no separate "Goal" chip beside it.
+      h('figcaption', { class: 'gw-chart-head' }, h('b', { class: 'gw-title' }, c.title)),
       h('div', { class: 'gw-plot' }, plot, plotLabels));
 
     // The channels as a small branch: UIUC first, then the two next groups.
@@ -199,10 +212,17 @@
         ? h('p', { class: 'gw-yc-title' }, title.slice(0, split), h('br'), title.slice(split + 1))
         : h('p', { class: 'gw-yc-title' }, title));
 
+    // The evidence gates, in order: each must hold before the next step of growth (icons and 1–2 words each).
+    const gates = (o.gates || []).length ? h('div', { class: 'gw-gates' },
+      o.gatesLabel ? kit.tag(o.gatesLabel, { tone: 'strong', className: 'gw-gates-tag' }) : null,
+      h('p', { class: 'gw-gate-row' }, kit.arrowJoin(o.gates, (g) => h('span', { class: 'gw-gate' },
+        h('span', { class: 'gw-gate-icon', 'aria-hidden': 'true' }, pickIcon(kit, [g.icon, 'ui:check'].filter(Boolean), 24)),
+        h('span', null, g.label))))) : null;
+
     return {
       head: oneLineHead(scene, kit),
       bodyClass: 'gw-body',
-      body: h('div', { class: 'gw-grid' }, chart, h('div', { class: 'gw-side' }, yc, branch)),
+      body: [gates, h('div', { class: 'gw-grid' }, chart, h('div', { class: 'gw-side' }, yc, branch))].filter(Boolean),
     };
   };
 

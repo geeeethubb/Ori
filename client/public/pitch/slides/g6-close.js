@@ -193,10 +193,27 @@
             h('div', { class: 'ak-use-text' },
               h('span', { class: 'ak-use-label' }, u.label),
               u.note ? h('span', { class: 'ak-use-note' }, u.note) : null))))),
-        h('p', { class: 'ak-bottom' }, accentAt > 0
+        // The explicit next step (an invitation to partner, never an agreed partnership): one line, then what a
+        // partnership would add, as three short chips. Falls back to the old bottom line without onScreen.next.
+        o.next ? nextStep(kit, o.next) : h('p', { class: 'ak-bottom' }, accentAt > 0
           ? [bottom.slice(0, accentAt), h('span', { class: 'ak-bottom-accent' }, o.bottomAccent), bottom.slice(accentAt + o.bottomAccent.length)]
           : bottom),
       ],
     };
   };
+
+  function nextStep(kit, n) {
+    const { h } = kit;
+    const line = String(n.line || '');
+    const at = n.accent ? line.lastIndexOf(n.accent) : -1;
+    return h('div', { class: 'ak-next' },
+      h('p', { class: 'ak-next-head' },
+        h('span', { class: 'ak-next-label' }, n.label),
+        h('span', { class: 'ak-next-line' }, at > 0
+          ? [line.slice(0, at), h('span', { class: 'ak-next-accent' }, n.accent), line.slice(at + n.accent.length)]
+          : line)),
+      h('ul', { class: 'ak-gives' }, (n.gives || []).map((g) => h('li', { class: 'ak-give' },
+        h('span', { class: 'ak-give-icon', 'aria-hidden': 'true' }, kit.icon(g.icon, { size: 22 })),
+        h('span', { class: 'ak-give-text' }, h('b', null, g.verb), ' ', g.what)))));
+  }
 })();

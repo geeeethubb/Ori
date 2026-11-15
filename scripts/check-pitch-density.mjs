@@ -8,11 +8,15 @@
 // For each slide (arrived at by its hash, so step reveals show their complete state) it measures, inside the slide
 // only (not the deck's header, footer or navigation, not hidden or screen-reader-only text):
 //   words        visible words; budget 35, or a per-slide budget for slides the brief makes denser
-//                (promise 50, kept from the original deck; discovery 50; create 40, the founder's home-screen callout; grow 45, the brief requires its takeaway; growth 50, founder 70, positioning map 70, Velocity 60); --budget overrides
+//                (promise 50, kept from the original deck; discovery 50; feeling 45; whynow 70, the Form and Fuel example and
+//                its labeled price references; market 60, the model, its footnote and the map labels; growth 50, founder 70,
+//                the four-step mechanism, the invitation, the test question and the two goals the founder kept; positioning map 70,
+//                Velocity 60; built keeps the default 35); --budget overrides
 //   headline     words in the headline; at most 12
 //   longest      the longest single text block other than the headline; at most 16 words (no paragraphs in cards)
-//   visual       share of the slide covered by visuals (images, SVG, video, canvas, background images and text-free
-//                shapes such as dots, bars and rings); fails under 15%, warns under 25% (not judged on the minimal signature slide)
+//   visual       share of the slide covered by visuals (images, SVG, video, canvas, background images and text-free or
+//                text-light shapes, whose labels cover under a fifth of them,
+//                such as dots, bars and rings); fails under 15%, warns under 25% (not judged on the minimal signature slide)
 //   text         share of the slide covered by text boxes (reported, not judged)
 // It saves a screenshot of every slide and storyboard.png (all slides in order, small) to judge the visual story.
 // Exit code 1 if any slide fails.
@@ -37,7 +41,7 @@ let BASE = opt('base', '');
 const budgets = [];
 args.forEach((a, i) => { if (a === '--budget' && args[i + 1]) { const [k, v] = args[i + 1].split('='); budgets.push([k, Number(v)]); } });
 const DEFAULT_BUDGET = 35;
-const DENSE = [[/promise/, 50], [/discover/, 50], [/^feeling$/, 45], [/^create$/, 40], [/^grow$/, 45], [/growth|roadmap|goal/, 50], [/founder|gtm|community/, 70], [/position|map|compet/, 70], [/velocity/, 60]];
+const DENSE = [[/promise/, 50], [/discover/, 50], [/^feeling$/, 45], [/^whynow$/, 70], [/^market$/, 60], [/growth|roadmap|goal/, 50], [/founder|gtm|community/, 70], [/position|map|compet/, 70], [/velocity/, 60], [/^ask$/, 50]];
 const budgetFor = (id) => {
   for (const [k, v] of budgets) if (id === k || id.includes(k)) return v;
   for (const [rx, v] of DENSE) if (rx.test(id)) return v;
@@ -132,7 +136,20 @@ for (let n = 1; n <= total; n++) {
       const bgImage = cs.backgroundImage && cs.backgroundImage !== 'none' && !/gradient/.test(cs.backgroundImage);
       const textFree = !el.innerText || !el.innerText.trim();
       const painted = (cs.backgroundColor && !/rgba\(0, 0, 0, 0\)|transparent/.test(cs.backgroundColor)) || (parseFloat(cs.borderTopWidth) > 0 && cs.borderTopStyle !== 'none');
-      const shape = textFree && painted && a < stageArea * 0.6;
+      let shape = textFree && painted && a < stageArea * 0.6;
+      // A text-light shape is a graphic too: a ring or bubble with a short label inside (the market-size rings), whose
+      // text covers under a fifth of its area. A card of sentences stays text.
+      if (!shape && !textFree && painted && a < stageArea * 0.6) {
+        let covered = 0;
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        const range = document.createRange();
+        while (walker.nextNode()) {
+          if (!walker.currentNode.textContent.trim()) continue;
+          range.selectNodeContents(walker.currentNode);
+          for (const tr of range.getClientRects()) covered += clipArea(tr);
+        }
+        shape = covered < a * 0.2;
+      }
       if (media || bgImage || shape) cands.push({ el, a });
     }
     const outer = cands.filter((c) => !cands.some((o) => o !== c && o.el.contains(c.el)));

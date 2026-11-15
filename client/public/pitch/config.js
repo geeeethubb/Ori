@@ -6,7 +6,8 @@ window.ORI_PITCH = {
   // The live product (the closing slide's QR code encodes this address; it is never shown as text).
   productUrl: 'https://ori-fjrx.onrender.com/',
 
-  // Media slots: every video or screenshot position in the deck, by key. A slide places a slot with
+  // Media slots, by key. The final-round deck plays no video on its main path: the four recordings below play on
+  // request in the appendix (4. The demo), which uses the same files. A slide may still place a slot with
   // kit.media('<key>'); docs/ori-pitch-kit/PITCH_INTEGRATION.md ("Media slots") has the founder's table.
   //   sources     the recording, in order of preference: H.264 MP4 first (Safari, iPhones), then WebM.
   //               Empty = no recording yet: the slot shows its still.
@@ -21,7 +22,7 @@ window.ORI_PITCH = {
   // still to a neutral frame with the label. Nothing downloads until its scene (or the next one) is shown.
   media: {
     create: {
-      slide: 5,
+      slide: 'appendix (4. The demo; off the main path)',
       title: 'A · Thought to Light',
       sources: ['media/01-create.mp4', 'media/01-create.webm'],
       poster: 'media/01-create-poster.jpg',
@@ -34,7 +35,7 @@ window.ORI_PITCH = {
       describe: 'A photo and a thought, Ori suggests a place for it, a preview with one detail shaped, then Light opens with the photo in it.',
     },
     grow: {
-      slide: 6,
+      slide: 'appendix (4. The demo; off the main path)',
       title: 'B · Light grows with me',
       sources: ['media/02-use-and-revise.mp4', 'media/02-use-and-revise.webm'],
       poster: 'media/02-use-and-revise-poster.jpg',
@@ -47,7 +48,7 @@ window.ORI_PITCH = {
       describe: 'Save an observation, ask for camera settings, review the change on the same photo, apply it: the same photo and note, now with camera fields.',
     },
     return: {
-      slide: 'appendix (4. The demo; moved from #6)',
+      slide: 'appendix (4. The demo; off the main path)',
       title: 'E · Back to Light',
       sources: ['media/03-reopen.mp4', 'media/03-reopen.webm'],
       poster: 'media/03-reopen-poster.jpg',
@@ -59,13 +60,13 @@ window.ORI_PITCH = {
       cues: [],
       describe: 'A fresh browser session opens Light by its own link and finds the same photo, note and camera setting.',
     },
-    // The founder's own recording (slide 8 of the brief, presented #7): filmed on a phone against the live site,
+    // The founder's own recording (in the appendix since the final round): filmed on a phone against the live site,
     // so it shows live AI (the product's "Live AI" badge). The waiting may be trimmed: never claim real-time speed.
     // Cue points measured in the footage: 0 s bring your context (copy the prompt, paste the profile, Add it),
     // 9.0 s Ori connects the dots (Ori reads it; "Added 25 things we learned" from 12.6 s), 15.9 s explore what
     // fits you (the Playground's suggestions). At the end the clip holds its last frame (no loop).
     context: {
-      slide: 7,
+      slide: 'appendix (4. The demo; off the main path)',
       title: 'C · Bring your context → Playground',
       sources: ['media/ori-context-demo.mp4', 'media/ori-context-demo.webm'],
       poster: 'media/ori-context-demo-poster.jpg',

@@ -47,12 +47,14 @@
       `<path class="jr-return" pathLength="1" d="M${x5} ${J.cy} C1416 ${J.cy} 1416 ${J.bottom} 1150 ${J.bottom} L274 ${J.bottom} C8 ${J.bottom} ${lastControl.join(' ')} ${tip.join(' ')}"/>`,
       `<polygon class="jr-head" points="${arrowHead(tip, lastControl)}"/>`,
     ].join(''));
+    // Each stage: its icon, its label and one short line (the fragment; omitted when the scene has none).
     const stageItems = stages.map((s, i) => kit.reveal(h('li', { class: 'jr-stage', style: { '--jr-i': String(i) } },
       h('span', { class: 'jr-node', 'aria-hidden': 'true' }, kit.icon(s.icon, { size: 60, strokeWidth: 1.9 })),
-      h('h3', { class: 'jr-name' }, kit.sr(`Stage ${i + 1}: `), s.name)), i + 1, { ghost: true }));
+      h('h3', { class: 'jr-name' }, kit.sr(`Stage ${i + 1}: `), s.name),
+      s.fragment ? h('p', { class: 'jr-fragment' }, s.fragment) : null), i + 1, { ghost: true }));
     return {
       steps,
-      stepLabels: stages.map((s, i) => (i === steps - 1 ? `${s.name}. ${together} ${returnLine}` : s.name)),
+      stepLabels: stages.map((s, i) => (i === steps - 1 ? `${s.name}. ${together} ${returnLine}` : `${s.name}${s.fragment ? `: ${s.fragment}` : ''}`)),
       bodyClass: 'jr-body',
       body: h('div', { class: 'jr-map' },
         kit.reveal(loop, steps),
@@ -148,6 +150,8 @@
       h('span', { class: 'fe-store' },
         h('b', { class: 'fe-app-name' }, store.title),
         h('span', { class: 'fe-store-chip' }, kit.icon('squarePlus', { size: 20 }), h('span', null, store.action))),
+      // The endpoint, under My apps: where every app the person makes ends up.
+      o.endpoint ? h('span', { class: 'fe-endpoint' }, o.endpoint) : null,
       h('figcaption', { class: 'fe-caption' }, String(output.stillLabel).replace(/^Product screenshot\b(?!s)/, 'Product screenshots')));
 
     return {

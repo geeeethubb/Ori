@@ -16,7 +16,7 @@
 .layout-founder .fd-top { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 64px; align-items: center; }
 
 /* Who and why: Zuyu, lines to each group (solid: his roles; dotted: friends), the group chips. */
-.layout-founder .fd-community { display: grid; grid-template-columns: 160px 250px max-content; height: 280px; align-items: start; }
+.layout-founder .fd-community { display: grid; grid-template-columns: 160px 250px max-content; height: 256px; align-items: start; }
 .layout-founder .fd-who { position: relative; z-index: 1; }
 .layout-founder .fd-disc-wrap { position: relative; display: block; width: 160px; height: 160px; }
 .layout-founder .fd-disc { display: block; width: 160px; height: 160px; }
@@ -25,14 +25,14 @@
 .layout-founder .fd-initials { position: absolute; inset: 0; display: grid; place-items: center; color: var(--lime); font-family: var(--font-display); font-weight: 800; font-size: 60px; letter-spacing: -0.04em; line-height: 1; }
 .layout-founder .fd-name { margin: 16px 0 0; font-family: var(--font-display); font-weight: 800; font-size: 40px; line-height: 1.05; letter-spacing: -0.035em; white-space: nowrap; color: var(--fg); }
 .layout-founder .fd-line { margin: 6px 0 0; font-size: 20px; line-height: 1.3; font-weight: 650; color: var(--fg-muted); white-space: nowrap; }
-.layout-founder .fd-links { display: block; width: 250px; height: 280px; overflow: visible; }
+.layout-founder .fd-links { display: block; width: 250px; height: 256px; overflow: visible; }
 .layout-founder .fd-link path { fill: none; stroke: var(--ink-3); stroke-width: 2.5; stroke-linecap: round; }
 .layout-founder .fd-link circle { fill: var(--ink-3); }
 .layout-founder .fd-link.is-lead path { stroke: var(--ink); stroke-width: 4; }
 .layout-founder .fd-link.is-lead circle { fill: var(--ink); }
 .layout-founder .fd-link.is-friends path { stroke: var(--muted); stroke-dasharray: 2 9; stroke-width: 3.5; }
 .layout-founder .fd-link.is-friends circle { fill: var(--muted); }
-.layout-founder .fd-groups { list-style: none; margin: 0; padding: 0; height: 280px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; }
+.layout-founder .fd-groups { list-style: none; margin: 0; padding: 0; height: 256px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; }
 .layout-founder .fd-group { display: flex; align-items: center; height: 52px; box-sizing: border-box; padding: 0 22px; border-radius: 99px; font-size: 20px; line-height: 1.2; white-space: nowrap; background: var(--card); border: 2px solid var(--ink-3); color: var(--fg); }
 .layout-founder .fd-group b { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.01em; }
 .layout-founder .fd-role { font-weight: 600; white-space: pre; }
@@ -52,21 +52,26 @@
 .layout-founder .fd-evidence-label { margin: 0; max-width: 340px; text-wrap: balance; font-size: 24px; line-height: 1.3; font-weight: 650; color: var(--fg); }
 
 /* What next: the pipeline on its lane, labels under the nodes. */
-.layout-founder .fd-pipeline { margin-top: 36px; }
-.layout-founder .fd-lane { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; height: 152px; border-radius: 76px; background: var(--blue-soft); }
+.layout-founder .fd-pipeline { margin-top: 26px; }
+.layout-founder .fd-lane { display: grid; grid-template-columns: repeat(var(--fd-n, 5), minmax(0, 1fr)); align-items: center; height: 124px; border-radius: 62px; background: var(--blue-soft); }
 .layout-founder .fd-cell { position: relative; display: grid; place-items: center; height: 100%; }
-.layout-founder .fd-node { display: grid; place-items: center; width: 116px; height: 116px; border-radius: 50%; background: #fff; color: var(--blue); box-shadow: inset 0 0 0 3px var(--blue); }
+.layout-founder .fd-node { display: grid; place-items: center; width: 98px; height: 98px; border-radius: 50%; background: #fff; color: var(--blue); box-shadow: inset 0 0 0 3px var(--blue); }
 .layout-founder .fd-cell:last-child .fd-node { background: var(--blue); color: #fff; }
 .layout-founder .fd-arrow { position: absolute; left: 0; top: 50%; width: 120px; height: 24px; margin: -12px 0 0 -60px; overflow: visible; }
 .layout-founder .fd-arrow path { fill: none; stroke: var(--blue); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
-.layout-founder .fd-steps { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); text-align: center; font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -0.01em; line-height: 1.2; color: var(--fg); }
+.layout-founder .fd-steps { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(var(--fd-n, 5), minmax(0, 1fr)); text-align: center; font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -0.01em; line-height: 1.2; color: var(--fg); }
 
 /* Pilot goals: two dated targets. */
-.layout-founder .fd-goals { display: flex; align-items: center; gap: 28px; margin-top: 30px; }
+.layout-founder .fd-notes { display: grid; grid-template-columns: repeat(var(--fd-n, 5), minmax(0, 1fr)); align-items: start; margin-top: 14px; }
+.layout-founder .fd-invite { display: flex; align-items: flex-start; gap: 12px; margin: 0 28px 0 0; padding: 12px 22px; border-radius: 24px 24px 24px 6px; background: var(--lilac-soft); border: 2px solid var(--lilac); font-size: 22px; font-weight: 650; line-height: 1.3; color: var(--fg); }
+.layout-founder .fd-invite-icon { display: inline-flex; flex: none; margin-top: 2px; color: var(--blue-ink); }
+.layout-founder .fd-test { justify-self: center; display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 9px 18px; border-radius: 999px; background: var(--lime); color: var(--ink); font-family: var(--font-display); font-weight: 800; font-size: 21px; line-height: 1.2; letter-spacing: -0.01em; white-space: nowrap; }
+.layout-founder .fd-test-icon { display: inline-flex; }
+.layout-founder .fd-goals { display: flex; align-items: center; gap: 28px; margin-top: 20px; }
 .layout-founder .fd-goal-list { list-style: none; margin: 0; padding: 0; display: flex; gap: 56px; }
 .layout-founder .fd-goal { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
 .layout-founder .fd-goal-icon { align-self: center; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; background: var(--lime); color: var(--ink); margin-right: 4px; }
-.layout-founder .fd-goal-figure { font-family: var(--font-display); font-weight: 800; font-size: 52px; line-height: 1; letter-spacing: -0.045em; color: var(--fg); }
+.layout-founder .fd-goal-figure { font-family: var(--font-display); font-weight: 800; font-size: 46px; line-height: 1; letter-spacing: -0.045em; color: var(--fg); }
 .layout-founder .fd-goal-label { font-family: var(--font-display); font-weight: 800; font-size: 26px; white-space: pre; color: var(--fg); }
 .layout-founder .fd-goal-date { font-size: 22px; font-weight: 600; color: var(--fg-muted); }
 
@@ -82,12 +87,20 @@
 /* Slide 12 · growth                                                                               */
 /* ---------------------------------------------------------------------------------------------- */
 
+.layout-growth .gw-gates { display: flex; align-items: center; gap: 20px; margin: 0 0 18px; }
+.layout-growth .gw-gate-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin: 0; }
+.layout-growth .gw-gate { display: inline-flex; align-items: center; gap: 10px; padding: 7px 20px 7px 7px; border-radius: 999px; background: var(--blue-soft); font-family: var(--font-display); font-weight: 800; font-size: 24px; line-height: 1.1; letter-spacing: -0.01em; color: var(--fg); white-space: nowrap; }
+.layout-growth .gw-gate-icon { display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 50%; background: #fff; color: var(--blue); }
+.layout-growth .gw-gate-row > .gw-gate:last-child { background: var(--ink); color: #fff; }
+.layout-growth .gw-gate-row > .gw-gate:last-child .gw-gate-icon { background: var(--lime); color: var(--ink); }
+.layout-growth .gw-gates .flow-arrow { display: inline-flex; color: var(--blue); }
+.layout-growth .gw-gates .flow-arrow .kit-icon { width: 28px; height: 28px; }
 .layout-growth .gw-grid { display: grid; grid-template-columns: 820px minmax(0, 1fr); gap: 60px; align-items: center; }
 .layout-growth .gw-chart { margin: 0; display: grid; gap: 8px; }
 .layout-growth .gw-chart-head { display: flex; align-items: center; gap: 16px; }
 .layout-growth .gw-title { font-family: var(--font-display); font-weight: 800; font-size: 32px; letter-spacing: -0.025em; color: var(--fg); }
 .layout-growth .gw-plot { position: relative; width: 820px; }
-.layout-growth .gw-svg { display: block; width: 820px; height: 560px; overflow: visible; }
+.layout-growth .gw-svg { display: block; width: 820px; height: 480px; overflow: visible; }
 .layout-growth .gw-svg .gw-gridline { stroke: var(--line); stroke-width: 1.5; }
 .layout-growth .gw-svg .gw-baseline { stroke: var(--ink); stroke-width: 2.5; }
 .layout-growth .gw-area { fill: var(--blue-soft); }
@@ -175,6 +188,13 @@
 .is-flow .layout-founder .fd-arrow { display: none; }
 .is-flow .layout-founder .fd-steps { font-size: 11px; letter-spacing: -0.025em; margin-top: 8px; }
 .is-flow .layout-founder .fd-steps li { min-width: 0; padding: 0 1px; }
+.is-flow .layout-founder .fd-notes { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 14px; }
+.is-flow .layout-founder .fd-invite,
+.is-flow .layout-founder .fd-test { grid-column: 1 / -1 !important; }
+.is-flow .layout-founder .fd-invite { margin: 0; padding: 10px 14px; gap: 8px; font-size: 15px; }
+.is-flow .layout-founder .fd-invite-icon .kit-icon { width: 18px; height: 18px; }
+.is-flow .layout-founder .fd-test { justify-self: start; padding: 7px 12px; font-size: 14px; white-space: normal; }
+.is-flow .layout-founder .fd-test-icon .kit-icon { width: 16px; height: 16px; }
 .is-flow .layout-founder .fd-goals { flex-wrap: wrap; gap: 10px; margin-top: 20px; }
 .is-flow .layout-founder .fd-goal-list { flex-direction: column; gap: 8px; }
 .is-flow .layout-founder .fd-goal { flex-wrap: wrap; white-space: normal; gap: 6px; }
@@ -184,6 +204,14 @@
 .is-flow .layout-founder .fd-goal-label { font-size: 16px; }
 .is-flow .layout-founder .fd-goal-date { font-size: 14px; }
 
+.is-flow .layout-growth .gw-gates { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
+/* Phones: one gate per line with a downward arrow between them, so no arrow ends a wrapped line pointing at nothing. */
+.is-flow .layout-growth .gw-gate-row { flex-direction: column; align-items: flex-start; flex-wrap: nowrap; gap: 2px; }
+.is-flow .layout-growth .gw-gates .flow-arrow { margin-left: 10px; transform: rotate(90deg); }
+.is-flow .layout-growth .gw-gate { gap: 6px; padding: 4px 12px 4px 4px; font-size: 14px; white-space: normal; }
+.is-flow .layout-growth .gw-gate-icon { width: 28px; height: 28px; }
+.is-flow .layout-growth .gw-gate-icon .kit-icon { width: 16px; height: 16px; }
+.is-flow .layout-growth .gw-gates .flow-arrow .kit-icon { width: 16px; height: 16px; }
 .is-flow .layout-growth .gw-grid { grid-template-columns: minmax(0, 1fr); gap: 22px; }
 .is-flow .layout-growth .gw-title { font-size: 18px; }
 .is-flow .layout-growth .gw-plot { width: 100%; }

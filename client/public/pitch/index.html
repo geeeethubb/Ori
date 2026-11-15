@@ -10,23 +10,27 @@
   <link rel="icon" href="assets/ori/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="assets/fonts/manrope-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
   <!-- ?v= changes with each published revision, so a browser never mixes a cached engine with new scene data. -->
-  <link rel="stylesheet" href="style.css?v=16.5">
-  <link rel="stylesheet" href="slides/g1-evidence.css?v=16.5">
-  <link rel="stylesheet" href="slides/g2-journey.css?v=16.5">
-  <link rel="stylesheet" href="slides/g3-demos.css?v=16.5">
-  <link rel="stylesheet" href="slides/g4-position.css?v=16.5">
-  <link rel="stylesheet" href="slides/g5-growth.css?v=16.5">
-  <link rel="stylesheet" href="slides/g6-close.css?v=16.5">
-  <script src="config.js?v=16.5" defer></script>
-  <script src="scenes.js?v=16.5" defer></script>
-  <script src="assets/icons.js?v=16.5" defer></script>
-  <script src="slides/g1-evidence.js?v=16.5" defer></script>
-  <script src="slides/g2-journey.js?v=16.5" defer></script>
-  <script src="slides/g3-demos.js?v=16.5" defer></script>
-  <script src="slides/g4-position.js?v=16.5" defer></script>
-  <script src="slides/g5-growth.js?v=16.5" defer></script>
-  <script src="slides/g6-close.js?v=16.5" defer></script>
-  <script src="pitch.js?v=16.5" defer></script>
+  <link rel="stylesheet" href="style.css?v=17.0">
+  <link rel="stylesheet" href="slides/g1-evidence.css?v=17.0">
+  <link rel="stylesheet" href="slides/g2-journey.css?v=17.0">
+  <link rel="stylesheet" href="slides/g3-demos.css?v=17.0">
+  <link rel="stylesheet" href="slides/g4-position.css?v=17.0">
+  <link rel="stylesheet" href="slides/g5-growth.css?v=17.0">
+  <link rel="stylesheet" href="slides/g6-close.css?v=17.0">
+  <link rel="stylesheet" href="slides/g7-value.css?v=17.0">
+  <link rel="stylesheet" href="slides/g8-market.css?v=17.0">
+  <script src="config.js?v=17.0" defer></script>
+  <script src="scenes.js?v=17.0" defer></script>
+  <script src="assets/icons.js?v=17.0" defer></script>
+  <script src="slides/g1-evidence.js?v=17.0" defer></script>
+  <script src="slides/g2-journey.js?v=17.0" defer></script>
+  <script src="slides/g3-demos.js?v=17.0" defer></script>
+  <script src="slides/g4-position.js?v=17.0" defer></script>
+  <script src="slides/g5-growth.js?v=17.0" defer></script>
+  <script src="slides/g6-close.js?v=17.0" defer></script>
+  <script src="slides/g7-value.js?v=17.0" defer></script>
+  <script src="slides/g8-market.js?v=17.0" defer></script>
+  <script src="pitch.js?v=17.0" defer></script>
 </head>
 <body>
 <div class="app-shell">
@@ -59,7 +63,7 @@
 
 <dialog id="overview" class="overview-dialog" aria-labelledby="overview-title">
   <div class="dialog-header">
-    <div><p class="eyebrow">The story · 238 seconds · Q&amp;A on the last scene</p><h2 id="overview-title">Fifteen scenes. Under four minutes.</h2></div>
+    <div><p class="eyebrow">The story · 230 seconds · Q&amp;A on the last scene</p><h2 id="overview-title">Fifteen scenes. Under four minutes.</h2></div>
     <button class="icon-button" type="button" data-close aria-label="Close overview">✕</button>
   </div>
   <div id="overview-grid"></div>
@@ -75,7 +79,7 @@
     <button class="icon-button" type="button" data-close aria-label="Close notes">✕</button>
   </div>
   <div class="timer-bar" id="timer-bar">
-    <div class="timer-readout"><b id="timer-display">0:00</b><span id="timer-target">/ 3:58 target</span></div>
+    <div class="timer-readout"><b id="timer-display">0:00</b><span id="timer-target">/ 3:50 target</span></div>
     <button id="timer-toggle" class="pill-button" type="button" aria-pressed="false">Start timer</button>
     <button id="timer-reset" class="text-button" type="button">Reset</button>
   </div>
@@ -96,7 +100,7 @@
     <div><p class="eyebrow">Presentation setup</p><h2 id="setup-title">Media slots and links</h2></div>
     <button class="icon-button" type="button" data-close aria-label="Close setup">✕</button>
   </div>
-  <p class="setup-intro">Every recording and screenshot in the deck comes from a media slot in <code>config.js</code>. To try a new recording before publishing it, preview it in its slot here: it plays in this tab only, and nothing is uploaded or published. To publish it, add the files to <code>media/</code> and list them in the slot (see <code>docs/ori-pitch-kit/PITCH_INTEGRATION.md</code>).</p>
+  <p class="setup-intro">Every media slot is listed in <code>config.js</code>. The timed deck plays no video: the four recordings play in the appendix (4. The demo), from the same files, so a new recording also goes into that section of <code>index.html</code>. To try a new recording before publishing it, preview it in its slot here: it plays in this tab only, and nothing is uploaded or published. To publish it, add the files to <code>media/</code> and list them in the slot (see <code>docs/ori-pitch-kit/PITCH_INTEGRATION.md</code>).</p>
   <div id="setup-media" aria-label="Media slots"></div>
   <h3>Links</h3>
   <p class="setup-links" id="setup-links"></p>
@@ -121,7 +125,7 @@
       <li><a href="#appendix-business" data-appendix-link="business">Pricing and economics questions</a></li>
       <li><a href="#appendix-velocity" data-appendix-link="velocity">How we used Velocity AI, expanded</a></li>
       <li><a href="#appendix-ask" data-appendix-link="ask">The ask, the budget and Q&amp;A</a></li>
-      <li><a href="#appendix-companion" data-appendix-link="companion">About Ori’s expressions</a></li>
+      <li><a href="#appendix-companion" data-appendix-link="companion">Meet Ori — a little companion</a></li>
     </ol>
   </nav>
 
@@ -171,6 +175,15 @@
         <tr id="appendix-c4"><th scope="row">C4</th><td>Notion, <a href="https://www.notion.com/help/view-your-notion-agent-memories" target="_blank" rel="noopener noreferrer">View your Notion Agent memories</a>: agent memories.</td><td>Memory exists elsewhere too; Ori does not claim it alone.</td></tr>
         <tr id="appendix-y1"><th scope="row">Y1</th><td>Y Combinator, <a href="https://www.ycombinator.com/apply" target="_blank" rel="noopener noreferrer">Apply to Y Combinator</a>, checked November 15, 2026: Winter 2027 timing, late applications and applications for future batches.</td><td>Timing facts only. No application decision, acceptance, backing or endorsement is implied.</td></tr>
         <tr id="appendix-y2"><th scope="row">Y2</th><td>Y Combinator, <a href="https://www.ycombinator.com/early-decision" target="_blank" rel="noopener noreferrer">Early Decision</a>, checked November 15, 2026: student applications for future batches.</td><td>Eligibility to apply implies no admission.</td></tr>
+        <tr id="appendix-m1"><th scope="row">M1</th><td>U.S. Census Bureau, <a href="https://www.census.gov/data/tables/time-series/demo/popest/2020s-national-detail.html" target="_blank" rel="noopener noreferrer">National Population by Characteristics: 2020–2025</a> (June 2026 release; <a href="https://www2.census.gov/programs-surveys/popest/tables/2020-2025/national/asrh/nc-est2025-agesex.xlsx" target="_blank" rel="noopener noreferrer">NC-EST2025-AGESEX</a>): 2025 national adult and age-group counts.</td><td>Population counts, not demand. Market model inputs (slide 8).</td></tr>
+        <tr id="appendix-m2"><th scope="row">M2</th><td>Pew Research Center, <a href="https://www.pewresearch.org/internet/fact-sheet/mobile/" target="_blank" rel="noopener noreferrer">Americans’ Use of Mobile Devices in 2026</a>, October 19, 2026: smartphone ownership (survey January 30–June 18, 2026).</td><td>Ownership, not willingness to pay.</td></tr>
+        <tr id="appendix-m3"><th scope="row">M3</th><td>University of Illinois System, <a href="https://news.uillinois.edu/view/7815/1740318621" target="_blank" rel="noopener noreferrer">Fall enrollment tops 102,000</a>, September 9, 2026: UIUC 61,060.</td><td>UIUC only; the system total is not UIUC. Local context, not SOM.</td></tr>
+        <tr id="appendix-m4"><th scope="row">M4</th><td>CMAP, <a href="https://cmap.illinois.gov/wp-content/uploads/dlm_uploads/Chicago.pdf" target="_blank" rel="noopener noreferrer">Chicago Community Data Snapshot</a>, June 2026 release, page 3: Chicago city residents age 20–34 (ACS 2020–2024).</td><td>Local context, not SOM.</td></tr>
+        <tr id="appendix-w1"><th scope="row">W1</th><td>Anthropic, <a href="https://claude.com/resources/articles/build-artifacts" target="_blank" rel="noopener noreferrer">Turn ideas into interactive AI-powered apps</a>, June 25, 2025, with later updates: conversational AI app creation is feasible.</td><td>Feasibility and competitive overlap, not demand for Ori.</td></tr>
+        <tr id="appendix-w2"><th scope="row">W2</th><td>Pew Research Center, <a href="https://www.pewresearch.org/chart/chatgpt-tops-the-list-of-chatbots-americans-use-across-age-groups/" target="_blank" rel="noopener noreferrer">ChatGPT use across age groups</a>, June 17, 2026: 61% ever-use among ages 18–29 (survey February 17–23, 2026).</td><td>Ever-use, not daily use or willingness to pay.</td></tr>
+        <tr id="appendix-p1"><th scope="row">P1</th><td><a href="https://athletica.ai/pricing" target="_blank" rel="noopener noreferrer">Athletica pricing</a>: $19.90/month, $99 per six months, $189/year; individual endurance training. The consumer reference (slide 7).</td><td>One consumer app’s list price, checked November 15, 2026.</td></tr>
+        <tr id="appendix-p2"><th scope="row">P2</th><td><a href="https://www.coachrx.app/pricing" target="_blank" rel="noopener noreferrer">CoachRx pricing</a>: $79/month for 6–50 coaching clients.</td><td>Software for coaching businesses, not a consumer price; no savings claim.</td></tr>
+        <tr id="appendix-p3"><th scope="row">P3</th><td><a href="https://everfit.io/pricing/" target="_blank" rel="noopener noreferrer">Everfit pricing</a>: Pro from $19/month for five clients; a free Starter plan also exists.</td><td>Software for coaching businesses, not a consumer price.</td></tr>
         <tr><th scope="row">Local</th><td>Founder-reported informal discovery: 21 yes responses among 26 UIUC students to the question on slide 2; one friend’s paraphrased insight about pinpointing what an idea is.</td><td>A convenience sample. No representative prevalence estimate, stage-by-stage measurement, paid-demand validation or quote transcript.</td></tr>
       </tbody>
     </table></div>
@@ -199,11 +212,11 @@
     <div class="table-wrap"><table>
       <thead><tr><th scope="col">Stage</th><th scope="col">In short</th><th scope="col">The human task</th><th scope="col">Ori’s intended role</th></tr></thead>
       <tbody>
-        <tr><th scope="row">1. Feel it</th><td>A feeling</td><td>Something interests or bothers you.</td><td>Capture the spark with the context you choose to share.</td></tr>
-        <tr><th scope="row">2. Name it</th><td>A clearer need</td><td>Put that interest or need into words.</td><td>Ask a useful question; reflect possible meanings.</td></tr>
-        <tr><th scope="row">3. Imagine it</th><td>Possibilities</td><td>Work out what an ideal outcome would feel like.</td><td>Explore several useful directions.</td></tr>
-        <tr><th scope="row">4. Shape it</th><td>Your tool</td><td>Turn the desired outcome into a concrete tool or workflow.</td><td>Propose a personal app or adapt an existing one.</td></tr>
-        <tr><th scope="row">5. Build and iterate</th><td>Use and evolve</td><td>Use it, learn, and change it.</td><td>Support useful actions and revisions while retaining progress.</td></tr>
+        <tr><th scope="row">1. Notice a feeling</th><td>A feeling</td><td>Something interests or bothers you.</td><td>Capture the spark with the context you choose to share.</td></tr>
+        <tr><th scope="row">2. Clarify the idea</th><td>A clearer need</td><td>Put that interest or need into words.</td><td>Ask a useful question; reflect possible meanings.</td></tr>
+        <tr><th scope="row">3. Imagine the outcome</th><td>Possibilities</td><td>Work out what an ideal outcome would feel like.</td><td>Explore several useful directions.</td></tr>
+        <tr><th scope="row">4. Shape your solution</th><td>Your tool</td><td>Turn the desired outcome into a concrete tool or workflow.</td><td>Propose a personal app or adapt an existing one.</td></tr>
+        <tr><th scope="row">5. Build, use, improve</th><td>Use and evolve</td><td>Use it, learn, and change it.</td><td>Support useful actions and revisions while retaining progress.</td></tr>
       </tbody>
     </table></div>
     <p><strong>“Ori helps you through all five.”</strong> The connected path on the slide is the product journey: one companion from the first feeling to an app you keep using. Stage five loops back (“And keeps growing with you”): using something changes what you want. Inside stage five, the demo shows the small loop of a change you ask for: <strong>Tell Ori → Review → Update</strong>.</p>
@@ -214,29 +227,52 @@
 
   <section class="appendix-section" id="appendix-demo" aria-labelledby="appendix-demo-title">
     <h3 id="appendix-demo-title">4. The demo: recordings, screenshots and media slots</h3>
-    <p>One example, Light, carries the proof: the same personal app and the same saved photo through creation, use, a revision and a return. Light is an illustrative user scenario, not an additional customer interview.</p>
+    <p>One example, Light, carries the proof: the same personal app and the same saved photo through creation, use, a revision and a return. Light is an illustrative user scenario, not an additional customer interview. The timed deck shows screenshots only; the four recordings play here, on request.</p>
+    <div class="appendix-clips">
+      <figure class="appendix-clip" id="appendix-create-clip">
+        <video controls playsinline preload="none" width="195" height="422" data-poster="media/01-create-poster.jpg" aria-describedby="appendix-create-caption">
+          <source src="media/01-create.mp4" type="video/mp4">
+          <source src="media/01-create.webm" type="video/webm">
+        </video>
+        <figcaption id="appendix-create-caption"><strong>Create a personal app</strong> Recording · Sample mode</figcaption>
+      </figure>
+      <figure class="appendix-clip" id="appendix-grow-clip">
+        <video controls playsinline preload="none" width="195" height="422" data-poster="media/02-use-and-revise-poster.jpg" aria-describedby="appendix-grow-caption">
+          <source src="media/02-use-and-revise.mp4" type="video/mp4">
+          <source src="media/02-use-and-revise.webm" type="video/webm">
+        </video>
+        <figcaption id="appendix-grow-caption"><strong>Make it grow with you</strong> Recording · Sample mode</figcaption>
+      </figure>
+      <figure class="appendix-clip is-wide" id="appendix-context-clip">
+        <video controls playsinline preload="none" width="235" height="422" data-poster="media/ori-context-demo-poster.jpg" aria-describedby="appendix-context-caption">
+          <source src="media/ori-context-demo.mp4" type="video/mp4">
+          <source src="media/ori-context-demo.webm" type="video/webm">
+        </video>
+        <figcaption id="appendix-context-caption"><strong>Bring your context</strong> Recording · Live AI</figcaption>
+      </figure>
+      <figure class="appendix-clip" id="appendix-return-clip">
+        <video controls playsinline preload="none" width="195" height="422" data-poster="media/03-reopen-poster.jpg" aria-describedby="appendix-return-caption">
+          <source src="media/03-reopen.mp4" type="video/mp4">
+          <source src="media/03-reopen.webm" type="video/webm">
+        </video>
+        <figcaption id="appendix-return-caption"><strong>Come back to it</strong> Recording · Sample mode · its own link, not a home-screen launch</figcaption>
+      </figure>
+    </div>
     <div class="table-wrap"><table>
-      <thead><tr><th scope="col">Slide</th><th scope="col">Media</th><th scope="col">What it shows</th><th scope="col" class="num">Length</th></tr></thead>
+      <thead><tr><th scope="col">Media</th><th scope="col">What it shows</th><th scope="col" class="num">Length</th></tr></thead>
       <tbody>
-        <tr><th scope="row">5</th><td>Recording 01 · Create</td><td>A photo and a thought; Ori suggests a place for it; a preview with one detail shaped (“Focus on shadows and reflections”); Make mine; Light opens with the photo in it.</td><td class="num">12.8 s</td></tr>
-        <tr><th scope="row">6</th><td>Recording 02 · Use and revise</td><td>Save an observation (“Low sun turns the brick wall gold”). Tell Ori: “Add camera settings to my photo notes.” Review the change on the same photo. Apply it: the same photo and note, now with camera fields.</td><td class="num">12.8 s</td></tr>
-        <tr><th scope="row">Here</th><td>Recording 03 · Return</td><td>A fresh browser session opens Light by its own link and finds the same photo, note and camera setting. It plays below, for questions (it is no longer on slide 6).</td><td class="num">5.2 s</td></tr>
-        <tr><th scope="row">7</th><td>The founder’s recording · Bring your context → Playground</td><td>Filmed by the founder on a phone against the live site; the screen shows Live AI. Copy Ori’s prompt, paste the profile an AI wrote and add it; Ori reads it and organizes what it learned (“Added 25 things we learned”), each fact editable or removable; the Playground then suggests directions that fit. Waiting may have been trimmed, so no real-time speed is claimed.</td><td class="num">23.65 s</td></tr>
+        <tr><th scope="row">Recording 01 · Create</th><td>A photo and a thought; Ori suggests a place for it; a preview with one detail shaped (“Focus on shadows and reflections”); Make mine; Light opens with the photo in it.</td><td class="num">12.8 s</td></tr>
+        <tr><th scope="row">Recording 02 · Use and revise</th><td>Save an observation (“Low sun turns the brick wall gold”). Tell Ori: “Add camera settings to my photo notes.” Review the change on the same photo. Apply it: the same photo and note, now with camera fields.</td><td class="num">12.8 s</td></tr>
+        <tr><th scope="row">Recording 03 · Return</th><td>A fresh browser session opens Light by its own link and finds the same photo, note and camera setting.</td><td class="num">5.2 s</td></tr>
+        <tr><th scope="row">The founder’s recording · Bring your context → Playground</th><td>Filmed by the founder on a phone against the live site; the screen shows Live AI. Copy Ori’s prompt, paste the profile an AI wrote and add it; Ori reads it and organizes what it learned (“Added 25 things we learned”), each fact editable or removable; the Playground then suggests directions that fit. Waiting may have been trimmed, so no real-time speed is claimed.</td><td class="num">23.65 s</td></tr>
       </tbody>
     </table></div>
-    <figure class="appendix-clip" id="appendix-return-clip">
-      <video controls playsinline preload="none" width="195" height="422" data-poster="media/03-reopen-poster.jpg" aria-describedby="appendix-return-caption">
-        <source src="media/03-reopen.mp4" type="video/mp4">
-        <source src="media/03-reopen.webm" type="video/webm">
-      </video>
-      <figcaption id="appendix-return-caption"><strong>Recording 03 · Return · Sample mode.</strong> Light opens again from its own link in a fresh browser session (5.2 s): a way back, not a home-screen launch.</figcaption>
-    </figure>
-    <p><strong>Status.</strong> All four are real recordings of the working product, not a live demo. Recordings 01–03 (slides 5 and 6, and the return clip above) were made in <strong>Sample mode: scripted responses, not live AI</strong>, and each says so. The founder’s recording on slide 7 shows <strong>live AI</strong> on the hosted site, and its slot says “Recorded product demo · Live AI”. Screenshots are labeled “Product screenshot”, with “Sample mode” where the screen shows Sample-mode content.</p>
+    <p><strong>Status.</strong> All four are real recordings of the working product, not a live demo, and none plays in the timed deck. Recordings 01–03 were made in <strong>Sample mode: scripted responses, not live AI</strong>, and each says so. The founder’s recording shows <strong>live AI</strong> on the hosted site and is labeled “Recording · Live AI”. Screenshots are labeled “Product screenshot”, with “Sample mode” where the screen shows Sample-mode content.</p>
     <p><strong>A change you ask for, not background adaptation.</strong> Light changes because the person tells Ori what they need, reviews the change and applies it. Passive monitoring, automatic redesign in the background and external automation are not shipped capabilities; “apps that grow with you” is the vision this loop starts.</p>
     <p><strong>Return, not a home-screen claim.</strong> The return recording opens Light’s own link in a fresh browser session. It does not show a launch from a phone’s home screen, so the pitch makes no home-screen claim. It shows saved progress and a way back, not that anyone formed a habit.</p>
     <p><strong>Files.</strong> H.264 MP4 (for Safari and iPhones) and WebM versions of each recording. Recordings 01–03 are 390 × 844 at 25 frames a second: the phone-sized app area of the original captures, cropped from a larger, empty gray canvas; nothing in them was trimmed, sped up or retimed. The founder’s recording is 464 × 832 at 60 frames a second, 23.65 s, with no audio, filmed on a phone; its waiting may have been trimmed. Before a clip plays, its slot shows the recording’s first frame with the app on screen.</p>
     <p><strong>Fallback.</strong> If no version of a recording can play, its slot shows a real product screenshot instead, labeled as one. Nothing on a slide is a generated image of the product.</p>
-    <p><strong>New recordings.</strong> The founder’s recording on slide 7 covers C (bring context from my AI) and D (the Playground). A (thought to Light), B (Light grows with me) and E (one tap back to Light) remain optional replacements; each drops into its media slot without a layout change.</p>
+    <p><strong>New recordings.</strong> The founder’s recording covers C (bring context from my AI) and D (the Playground). A (thought to Light), B (Light grows with me) and E (one tap back to Light) remain optional replacements; each drops into its media slot without a layout change.</p>
     <p><strong>Scope.</strong> Pasting a summary, uploading a file or sharing a link does not give Ori access to anyone’s ChatGPT, Claude, Gemini or Instagram account: a shared link is saved as a link, and Ori does not open or watch the reel. Native share-sheet integration and background automation are future capabilities.</p>
   </section>
 
@@ -246,7 +282,7 @@
     <ul>
       <li><strong>Useful actions.</strong> Each app does something real for its activity, such as saving an observation, timing a practice session or completing a follow-up, rather than only showing a generated screen.</li>
       <li><strong>Durable records.</strong> What a person saves belongs to their app and stays when they come back.</li>
-      <li><strong>Careful revisions.</strong> A change to an app’s design must keep the records that make it useful: the same photo and note before and after the change on slide 6.</li>
+      <li><strong>Careful revisions.</strong> A change to an app’s design must keep the records that make it useful: the same photo and note before and after the change in recording 02.</li>
     </ul>
     <p class="appendix-note">Implementation foundations, not the pitch’s story. What counts as implemented rests on current code and a working recording.</p>
   </section>
@@ -288,7 +324,7 @@
       </tbody>
     </table></div>
     <p><strong>Personal access, not partnerships.</strong> Founders, IBC and T&amp;M are direct roles; OTCR, CUBE, VCA and business fraternities are friends to ask for introductions. No institutional partnership, logo, member count, mailing-list permission, ambassador, endorsement or agreement is claimed, and personal access is not guaranteed distribution.</p>
-    <p><strong>The mechanism (proposed).</strong> Relationships → personal onboarding → observe → product iteration → referrals. Relationships allow personal onboarding; observing people shows where they stall; that drives product iteration; a useful experience may lead to referrals. A proposed recruiting and feedback mechanism, not a measured conversion funnel.</p>
+    <p><strong>The mechanism (proposed, slide 10).</strong> Warm introduction → one useful personal app → later-day use → referral. The test is “Will they use it again next week?”; the invitation is “Bring one recurring thing you want to do better. Leave with a tool shaped around it.” We observe where people stall and iterate on the product. A proposed recruiting and feedback mechanism, not a measured conversion funnel.</p>
     <p><strong>Pilot goals (on the slide).</strong> 150 invitations by December 1, 2026, and 50 enrolled by December 15, 2026: the initial cohort. We observe the first ten sessions (20–30 minutes each: about 3.3–5 hours of observation plus preparation and follow-up). 150 is an outreach capacity goal, not a measured reachable audience; 50 enrollments assumes roughly one in three accept, which we must measure. Founder time is a real acquisition cost.</p>
     <dl class="definitions">
       <dt>Enrolled</dt><dd>50 distinct consenting pilot users who begin onboarding.</dd>
@@ -350,6 +386,19 @@
     </ul>
     <p>The claim is “we have designed a measurable business experiment”, not “we already know people will pay”. The eight-week pilot can test activation, week-four use, introductory payment and cost; we follow the cohort through the first $15 charge and the next $15 renewal, and neither is a result before it happens.</p>
     <p><strong>Scale arithmetic, a scenario only.</strong> 1,000 retained subscribers paying $15 would produce $15,000 of monthly subscription revenue before costs. Not a forecast, a market size or an achieved target.</p>
+    <h4 id="appendix-market">The market model (slide 8)</h4>
+    <ul class="appendix-model">
+      <li><strong>TAM:</strong> 269,763,509 U.S. residents age 18+ (2025) [M1] × 91% smartphone ownership [M2] = 245,484,793 × $180/year ≈ <strong>$44.19B/year</strong>.</li>
+      <li><strong>SAM:</strong> 78,500,906 U.S. residents ages 18–34 [M1] × 97% smartphone ownership [M2] = 76,145,879 × 25% qualified (an unvalidated assumption) = 19,036,470 × $180 ≈ <strong>$3.43B/year</strong> (at 10%: $1.37B; at 40%: $5.48B).</li>
+      <li><strong>SOM, a 24-month scenario at UIUC and in Chicago:</strong> 20,000 qualified prospects → 25% trial → 50% activate → 50% full price → 80% still paying = 1,000 × $15 × 12 = <strong>$180,000</strong> annualized at the endpoint, before costs (lower case 252 subscribers, $45,360; higher case 2,160, $388,800). Illustrative and unvalidated. UIUC’s 61,060 students [M3] and Chicago’s 728,505 residents age 20–34 [M4] are local context, not SOM.</li>
+    </ul>
+    <p class="appendix-note">A population-and-price model with a labeled qualification assumption, not a published market estimate. $180/year is Ori’s proposed $15/month.</p>
+    <h4 id="appendix-prices">Price references (slide 7)</h4>
+    <ul class="appendix-model">
+      <li><strong>Consumer reference:</strong> Athletica $19.90/month, $99 per six months ($16.50/month) or $189/year ($15.75/month) [P1].</li>
+      <li><strong>Software for coaching businesses:</strong> CoachRx $79/month for 6–50 clients [P2]; Everfit Pro from $19/month for 5 clients, plus a free Starter plan [P3].</li>
+      <li><strong>Ori, proposed:</strong> $15/month = $180/year. Not a savings claim against coaching software.</li>
+    </ul>
   </section>
 
   <section class="appendix-section" id="appendix-velocity" aria-labelledby="appendix-velocity-title">
@@ -401,13 +450,17 @@
       </tbody>
     </table></div>
     <p>Revised against actual costs. Context infrastructure has no separate line yet; its share is set in that revision. Research compensation, if used, will be disclosed and kept separate from evidence of organic payment.</p>
-    <p><strong>After the ask.</strong> The closing slide stays up for Q&amp;A: “Ori. Your phone, your story.”, the QR code (it opens the live product, where each person creates their own account) and the founder’s contact details. No shared demo credentials are shown.</p>
+    <p><strong>After the ask.</strong> The closing slide stays up for Q&amp;A: “Ori. Your phone, your story.”, the QR code (it opens the live product, where each person creates their own account), the founder’s contact details and a small link to this appendix. No shared demo credentials are shown.</p>
     <p><strong>Questions to prepare for in Q&amp;A.</strong> Who maintains the product; who owns recruitment; what weekly capacity is available; and which commitments would change if YC admission or full-time company work becomes real. These are answered honestly on the day: this deck names no team members, hires or commitments.</p>
   </section>
 
   <section class="appendix-section" id="appendix-companion" aria-labelledby="appendix-companion-title">
-    <h3 id="appendix-companion-title">12. About Ori’s expressions</h3>
-    <p>The companion uses the four expressions of Ori’s identity board, drawn from the product’s canonical art: <strong>Listening</strong> (scenes 2, 4 and 10), <strong>Thinking</strong> (scenes 12 and 13), <strong>Found something</strong> (scenes 5, 7, 8, 9 and 11) and <strong>Ready</strong> (scenes 1, 3, 6 and 14). It sits in the same upper corner of most scenes, larger at the opening, and becomes part of the composition where the story centers on it (scenes 3, 4, 7, 8, 9 and 14; on scene 7 it marks the “Ori connects the dots” step). The closing scene (15) has no companion. It crossfades gently between expressions and stays still under reduced motion.</p>
+    <h3 id="appendix-companion-title">12. Meet Ori — a little companion</h3>
+    <figure class="appendix-board">
+      <img src="assets/ori/identity-board.png" alt="Ori’s identity board: the little companion listening, thinking, finding possibilities and ready to help." width="1536" height="1024" loading="lazy" decoding="async">
+      <figcaption>Listening. Thinking. Finding possibilities. Ready to help.</figcaption>
+    </figure>
+    <p>The companion uses the four expressions of Ori’s identity board, drawn from the product’s canonical art: <strong>Listening</strong>, <strong>Thinking</strong>, <strong>Found something</strong> and <strong>Ready</strong>. It sits in the same upper corner of most scenes, larger at the opening, and becomes part of the composition where the story centers on it. The closing scene (15) shows Ori’s happy face beside the QR code, not a corner companion. It crossfades gently between expressions and stays still under reduced motion.</p>
     <p>These expressions are storytelling cues. They do not imply that Ori detects or senses anyone’s emotions. In the product, the companion’s mood follows what the app is doing, such as thinking while a request is pending, never a reading of the person.</p>
   </section>
 </dialog>
