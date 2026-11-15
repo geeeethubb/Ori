@@ -37,7 +37,8 @@ contextRoutes.post('/sources', async (c) => {
   const text = cleanText(body.data.text);
   if (text.length < 20) return c.json({ error: 'That is too short to learn anything from. Add a few sentences about your projects and interests.', code: 'invalid' }, 400);
   if (text.length > MAX_SOURCE_CHARS) return c.json({ error: `That text is too long (max ${MAX_SOURCE_CHARS.toLocaleString()} characters). Split it into two imports.`, code: 'too_large' }, 413);
-  if (ctx.countSources(ownerId) >= MAX_SOURCES_PER_USER) return c.json({ error: `You can keep up to ${MAX_SOURCES_PER_USER} sources. Remove one in Your Context first.`, code: 'invalid' }, 409);
+  // The sources made for shares with the agent are left out of this count: a share is not an import.
+  if (ctx.countSources(ownerId) >= MAX_SOURCES_PER_USER) return c.json({ error: `You can keep up to ${MAX_SOURCES_PER_USER} sources, not counting what you shared with the agent. Remove one in What you've shared first.`, code: 'invalid' }, 409);
   const label = body.data.label || (body.data.kind === 'manual' ? 'Short profile' : body.data.kind === 'upload' ? 'Uploaded file' : 'Pasted summary');
   const outcome = await importSource(ownerId, { label, kind: body.data.kind, text });
   return c.json(outcome, 201);
@@ -82,7 +83,9 @@ contextRoutes.patch('/facts/:id', async (c) => {
     status: z.enum(['confirmed', 'removed']).optional(),
   }).safeParse(await c.req.json().catch(() => null));
   if (!body.success) return c.json({ error: 'Invalid change.', code: 'invalid' }, 400);
-  const patch = { ...body.data, ...(body.data.value ? { confidence: 1, status: body.data.status ?? ('confirmed' as const) } : {}) };
+  // A new value or category is the person correcting the fact, so it is confirmed (unless they remove it).
+  const corrected = body.data.value !== undefined || body.data.category !== undefined;
+  const patch = { ...body.data, ...(corrected ? { confidence: 1, status: body.data.status ?? ('confirmed' as const) } : {}) };
   const fact = ctx.updateFact(c.get('user').id, id.data, patch);
   if (!fact) return c.json({ error: 'Fact not found.', code: 'not_found' }, 404);
   return c.json({ fact });

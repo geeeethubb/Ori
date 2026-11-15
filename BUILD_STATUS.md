@@ -1,8 +1,28 @@
-# BUILD_STATUS — personal AI playground redesign (session 2)
+# BUILD_STATUS — Ori (session 3: Velocity integration, then the Ori companion pass)
+
+Last updated: 2026-11-14 18:00. **Velocity integration committed (`a88d8e0`); the fixes from its adversarial review are being applied and checked (not yet committed). A bounded live run passed 15/15 (`docs/velocity/evidence/live-smoke-2026-11-14.txt`). The Ori pass has started with the brand foundation (O1).** The product name is decided: **Ori**. `docs/ori/ORI_DESIGN_SPEC.md` supersedes the "name undecided" notes in the session 2 record below, and the AI-native-phone audit's headline and navigation wording. The audit's functional findings are folded into the Ori screens and tracked in the Ori checklist.
+
+## Resume here (session 3)
+
+1. Read `docs/ori/ORI_CLAUDE_BUILD_PROMPT.md`, `docs/ori/ORI_DESIGN_SPEC.md` and the ten images in `docs/ori/references/`, then `docs/velocity/INTEGRATION_REPORT.md`.
+2. Never reset or reseed `data/app.db`. It holds the founder's apps (Riff, Light, People, Fingerpicking Riff Lab, older journal/board/tracker apps) and the audit's "Ten-Minute Sketch Sprint" with its "AUDIT TEST — spoon" record, which must stay. Use throwaway databases for checks (the browser suite uses `data/test-e2e-8799.db`).
+3. Checks: `npm run typecheck` · `npm test` · `npm run test:e2e` · bounded live check `npx tsx server/scripts/velocity-live-smoke.ts` (five model calls; prints the model id, never the key).
+
+## Ori pass — phased plan
+
+- **O1 Brand foundation** (in progress): faithful companion SVG (one body path, eight moods, reduced motion), custom `ori` wordmark, `OriCompanion` / `OriWordmark` components, operation-bound mood state (`useOriMood`, tested), brand config with the Ori messaging, canonical icons (Light camera on charcoal, Riff waveform on ink, People people on white; the three legacy reference defaults are mapped at display time, stored icons are never rewritten), parent icon/manifest/favicon and Android label, isolated gallery at `/ori`.
+- **O2 Light journey end to end**: share a photo thought and an image → honest reply with a Light card (Preview Light / Keep inspiration / Why this?) → preview with labelled example photos and one useful choice → Make mine (one truthful pending state) → Ready (Open Light / Add to home screen / Copy app link) → Light at its own URL without the parent navigation → add a photo, reload → platform install guide → Edit with Ori: "Add camera settings to my photo notes" → review → Apply change / Keep current version → the fields appear in the photo form → undo keeps every entry.
+- **O3 Surfaces**: landing with the home-screen promise, Agent first use and compact conversation, Playground ("A little more you.", real filters only), My apps launcher (Open / Edit with Ori / Add to home screen), Riff and People identities, memory and settings with provenance kept. Folded-in audit fixes: domain-aware previews, a compact mobile action bar, defaults from the request, revision copy that matches the change, concise replies, manual versus measured time, one refresh control, named controls.
+- **O4 Delivery**: per-app install identity checked, Android shell label and icon rebuilt and checked on the emulator, platform-specific install guide.
+- **O5 Visual review and handoff**: real screenshots at 390/1440 then 320/768 compared with each reference and fixed, `docs/ori/VISUAL_REVIEW.md`, demo script, `docs/TEST_RESULTS.md`, final report.
+
+---
+
+# Session 2 record — personal AI playground redesign (history)
 
 Last updated: 2026-11-14 14:10. **R1–R5 done on this machine: redesign integrated and committed; the 36 confirmed review findings fixed; 387 unit/API tests; browser suite 14 passed / 4 skipped (by design) after the fixes; live-model journey passed at 13:12 (not re-run after the fixes); Android verified on the emulator. Founder-only items remain: physical devices, Velocity outputs, three real inspirations.** Product name undecided: the UI uses the temporary label from `shared/brand.ts` ("Your Playground").
 
-## Resume here
+## Resume here (session 2)
 
 1. Read this file, then `redesign/START_HERE.md` → `PRODUCT_SPEC.md` → `DESIGN_SPEC.md` → `BUILD_PLAN.md` (the redesign requirements) and `docs/redesign-contract.md` (what the code agrees on; written in Phase 1).
 2. Baseline before any redesign change (verified 10:47): `npm run typecheck` 0 errors; `npm test` 223 passed (10 files). The pre-redesign database copy is `data/backups/app-20261114-104708-pre-redesign.db` (git-ignored). Never reset or reseed `data/app.db`; migrations are additive only.

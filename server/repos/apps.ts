@@ -205,9 +205,14 @@ export function touchOpened(ownerId: string, appId: string): void {
   getDb().prepare('UPDATE apps SET last_opened_at = ? WHERE id = ? AND owner_id = ?').run(nowIso(), appId, ownerId);
 }
 
+/** Delete an app. A proposal counts as made only while its app exists, so the one it was made from can be made again. */
 export function deleteApp(ownerId: string, appId: string): boolean {
-  const res = getDb().prepare('DELETE FROM apps WHERE id = ? AND owner_id = ?').run(appId, ownerId);
-  return Number(res.changes) > 0;
+  return transaction(() => {
+    const res = getDb().prepare('DELETE FROM apps WHERE id = ? AND owner_id = ?').run(appId, ownerId);
+    if (Number(res.changes) === 0) return false;
+    getDb().prepare("UPDATE recommendations SET status = 'fresh', built_app_id = NULL WHERE owner_id = ? AND status = 'built' AND built_app_id = ?").run(ownerId, appId);
+    return true;
+  });
 }
 
 // ---------- records ----------
@@ -258,20 +263,32 @@ export class RecordConflict extends Error {
   }
 }
 
+/** Whether someone edited this record by hand since it was saved (null when never, or not found). */
+export function recordEditedAt(ownerId: string, appId: string, recordId: string): string | null {
+  if (!getApp(ownerId, appId)) return null;
+  const r = getDb().prepare('SELECT edited_at FROM app_records WHERE id = ? AND app_id = ? AND deleted_at IS NULL').get(recordId, appId) as R | undefined;
+  return r && r.edited_at !== null && r.edited_at !== undefined ? String(r.edited_at) : null;
+}
+
 /** Where a record id lives, whatever the owner (client-minted ids must never collide or leak). */
 export function recordIdOwner(recordId: string): { appId: string; deleted: boolean } | null {
   const r = getDb().prepare('SELECT app_id, deleted_at FROM app_records WHERE id = ?').get(recordId) as R | undefined;
   return r ? { appId: String(r.app_id), deleted: r.deleted_at !== null } : null;
 }
 
-export function updateRecord(ownerId: string, appId: string, recordId: string, values: RecordValues, opts: { expectedUpdatedAt?: string } = {}): AppRecord | null {
+/**
+ * Merge values into a record. `edit` marks a change made by hand (PATCH); a retried save of the same new
+ * entry updates it without that mark, so a later retry can still tell nobody edited it.
+ */
+export function updateRecord(ownerId: string, appId: string, recordId: string, values: RecordValues, opts: { expectedUpdatedAt?: string; edit?: boolean } = {}): AppRecord | null {
   return transaction(() => {
     const existing = getRecord(ownerId, appId, recordId);
     if (!existing) return null;
     if (opts.expectedUpdatedAt && opts.expectedUpdatedAt !== existing.updatedAt) throw new RecordConflict(existing);
     const merged = { ...existing.values, ...values };
     const now = nowIso();
-    getDb().prepare('UPDATE app_records SET values_json = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(merged), now, recordId);
+    if (opts.edit) getDb().prepare('UPDATE app_records SET values_json = ?, updated_at = ?, edited_at = ? WHERE id = ?').run(JSON.stringify(merged), now, now, recordId);
+    else getDb().prepare('UPDATE app_records SET values_json = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(merged), now, recordId);
     getDb().prepare('UPDATE apps SET updated_at = ? WHERE id = ?').run(now, appId);
     return getRecord(ownerId, appId, recordId);
   });

@@ -62,7 +62,7 @@ export async function lookupLink(url: URL): Promise<LinkLookup> {
       meta: null,
       readStatus: 'not_read',
       note: known
-        ? `${known} does not let us read posts without signing in, so this link is saved as a link. Add a note, an excerpt or a screenshot and the agent will work from that.`
+        ? `${known} posts are never read here, so this link is saved as a link. Add a note, an excerpt or a screenshot and the agent will work from that.`
         : 'We save links without reading the page. Add a note or a screenshot so the agent knows what matters in it.',
     };
   }

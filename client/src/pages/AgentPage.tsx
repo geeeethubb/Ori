@@ -30,6 +30,11 @@ interface AgentData {
   context: ContextOverviewDto;
 }
 
+/** A share is stored as an example only when sent exactly as offered: the same text and link, and no photo of the person's own. */
+export function isUnchangedExample(example: { text: string; url: string } | null, share: { text: string; url: string; file: unknown }): boolean {
+  return Boolean(example && !share.file && example.text === share.text.trim() && (example.url || '') === share.url.trim());
+}
+
 async function uploadImage(file: File): Promise<MediaUploadDto> {
   const form = new FormData();
   form.append('file', file);
@@ -98,9 +103,8 @@ export function AgentPage() {
         }
       }
       setBusy('send');
-      // An unchanged example is stored as an example, never as something personal.
-      const ex = exampleKey ? EXAMPLES[exampleKey] : null;
-      const example = Boolean(ex && ex.text === text.trim() && (ex.url || '') === url.trim());
+      // An unchanged example is stored as an example, never as something personal (an attached photo is the person's own).
+      const example = isUnchangedExample(exampleKey ? EXAMPLES[exampleKey] : null, { text, url, file });
       const res = await api<CaptureResultDto>('/api/agent/captures', {
         method: 'POST',
         body: { id: shareId, text: text.trim(), url: url.trim() || undefined, mediaId, ...(example ? { example: true } : {}) },

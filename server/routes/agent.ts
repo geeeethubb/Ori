@@ -4,12 +4,12 @@
  * Links are never fetched by this server; only allowlisted oEmbed titles are looked up.
  */
 import fs from 'node:fs';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { z } from 'zod';
 import { requireAuth, type AuthEnv } from '../auth.ts';
 import { SHORT_ID_PATTERN } from '../../shared/ids.ts';
 import type { AgentThreadDto, AgentThreadItemDto, CaptureResultDto } from '../../shared/api.ts';
-import type { Capture, RecordDraft, RecommendationDraft } from '../../shared/context.ts';
+import type { Capture, ProfileFact, RecordDraft, RecommendationDraft } from '../../shared/context.ts';
 import { config } from '../config.ts';
 import { groundExplorations } from '../services/grounding.ts';
 import * as captures from '../repos/captures.ts';
@@ -34,6 +34,20 @@ function threadItem(ownerId: string, capture: Capture): AgentThreadItemDto {
     media: capture.mediaId ? media.getMedia(ownerId, capture.mediaId) : null,
     reply: captures.getReply(ownerId, capture.id),
   };
+}
+
+const invalidShare = { error: 'Share a thought, a link or a screenshot.', code: 'invalid' } as const;
+
+/**
+ * A share id that is already taken: the person's own share comes back as the duplicate it is (never a
+ * second capture), one they forgot is not saved again, and anyone else's is refused. Null when it is free.
+ */
+function takenShare(c: Context<AuthEnv>, ownerId: string, id: string | undefined): Response | null {
+  if (!id || !captures.captureIdTaken(id)) return null;
+  const mine = captures.getCapture(ownerId, id);
+  if (mine) return c.json({ ...threadItem(ownerId, mine), duplicate: true }, 200);
+  if (captures.captureForgotten(ownerId, id)) return c.json({ error: 'You asked to forget this share, so it was not saved again.', code: 'invalid' }, 409);
+  return c.json(invalidShare, 400);
 }
 
 const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
@@ -110,18 +124,25 @@ async function respond(ownerId: string, capture: Capture): Promise<CaptureResult
     .slice(0, 4);
   // Memory comes only from the person's own words: a live fact must quote its evidence from the note,
   // nothing is learned from a bare link or photo, and the memory source points back at this capture so
-  // "Just keep it" and "Forget" can take it away again.
+  // "Just keep it" and "Forget" can take it away again. A fact already in memory (the same words in any
+  // script, compared as ctx.normalizeFact does) gains this capture as another source, as an import does,
+  // so forgetting one share never drops what another still says. A blank value is never learned.
   const note = norm(capture.text);
   const learned = note
-    ? draft.learned.filter((f) => result.generatedBy === 'sample' || (f.evidence !== undefined && norm(f.evidence).length > 2 && note.includes(norm(f.evidence))))
+    ? draft.learned.filter((f) => f.value.trim() && (result.generatedBy === 'sample' || (f.evidence !== undefined && norm(f.evidence).length > 2 && note.includes(norm(f.evidence))))).slice(0, 6)
     : [];
-  const existing = new Set(ctx.listFacts(ownerId).map((f) => ctx.normalizeFact(f.value)));
-  const fresh = learned.filter((f) => !existing.has(ctx.normalizeFact(f.value))).slice(0, 6);
-  if (fresh.length) {
-    const source = ctx.createSource(ownerId, { label: capture.sourceLabel, kind: 'capture', text: capture.text, captureId: capture.id });
-    for (const f of fresh) {
+  if (learned.length) {
+    const known = new Map<string, ProfileFact>(ctx.listFacts(ownerId).map((f) => [ctx.normalizeFact(f.value), f]));
+    const source = ctx.captureSource(ownerId, capture.id) ?? ctx.createSource(ownerId, { label: capture.sourceLabel, kind: 'capture', text: capture.text, captureId: capture.id });
+    for (const f of learned) {
+      const key = ctx.normalizeFact(f.value);
+      const same = known.get(key);
+      if (same) {
+        if (!same.sourceIds.includes(source.id)) known.set(key, ctx.updateFact(ownerId, same.id, { sourceIds: [...same.sourceIds, source.id] }) ?? same);
+        continue;
+      }
       const status = result.generatedBy === 'anthropic' && f.status === 'confirmed' ? 'inferred' : f.status;
-      ctx.insertFact(ownerId, { category: f.category, value: f.value, status, confidence: f.confidence, sourceIds: [source.id], evidence: f.evidence ?? null });
+      known.set(key, ctx.insertFact(ownerId, { category: f.category, value: f.value, status, confidence: f.confidence, sourceIds: [source.id], evidence: f.evidence ?? null }));
     }
   }
   const stored = ctx.insertCaptureProposals(ownerId, capture.id, proposals, result.generatedBy);
@@ -150,12 +171,9 @@ const CaptureBody = z.object({
 agentRoutes.post('/captures', async (c) => {
   const user = c.get('user');
   const body = CaptureBody.safeParse(await c.req.json().catch(() => null));
-  if (!body.success) return c.json({ error: 'Share a thought, a link or a screenshot.', code: 'invalid' }, 400);
-  if (body.data.id && captures.captureIdTaken(body.data.id)) {
-    const mine = captures.getCapture(user.id, body.data.id);
-    if (!mine) return c.json({ error: 'Share a thought, a link or a screenshot.', code: 'invalid' }, 400);
-    return c.json({ ...threadItem(user.id, mine), duplicate: true }, 200);
-  }
+  if (!body.success) return c.json(invalidShare, 400);
+  const taken = takenShare(c, user.id, body.data.id);
+  if (taken) return taken;
   const text = body.data.text.replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim();
   const rawUrl = body.data.url?.trim();
   if (!text && !rawUrl && !body.data.mediaId) return c.json({ error: 'Share a thought, a link or a screenshot.', code: 'invalid' }, 400);
@@ -184,7 +202,18 @@ agentRoutes.post('/captures', async (c) => {
   if (mediaItem) readStatus = 'not_read'; // until a model actually reads it
   const kind: Capture['kind'] = mediaItem ? 'image' : url ? 'link' : 'note';
   const sourceLabel = body.data.sourceLabel || (mediaItem ? 'Screenshot' : url ? describeLinkSource(url) : 'Typed note');
-  const capture = captures.createCapture(user.id, { id: body.data.id, kind, text, url: url?.toString() ?? null, linkMeta, mediaId: mediaItem?.id ?? null, readStatus, sourceLabel, isExample: body.data.example === true });
+  // A retry of this same share can overlap the link lookup above, and the share can be forgotten meanwhile:
+  // look again, and answer a save that still loses the race as that retry, never with a server error.
+  const takenSince = takenShare(c, user.id, body.data.id);
+  if (takenSince) return takenSince;
+  let capture: Capture;
+  try {
+    capture = captures.createCapture(user.id, { id: body.data.id, kind, text, url: url?.toString() ?? null, linkMeta, mediaId: mediaItem?.id ?? null, readStatus, sourceLabel, isExample: body.data.example === true });
+  } catch (err) {
+    const raced = takenShare(c, user.id, body.data.id);
+    if (raced) return raced;
+    throw err;
+  }
 
   const gate = premiumGate(c);
   if (gate) {

@@ -279,6 +279,19 @@ export interface RecordLike {
 
 const hasValue = (v: unknown) => v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && v.length === 0);
 
+/**
+ * A value the person entered, as opposed to the form's untouched default (an unticked box, the first
+ * choice, a preset number). Undo only carries a newer field along when someone entered something in it.
+ */
+function enteredValue(f: FieldSpec, v: unknown): boolean {
+  if (!hasValue(v)) return false;
+  if (f.type === 'checkbox') return v !== (f.default ?? false);
+  if (f.type === 'select') return v !== (f.default ?? f.options[0]?.value);
+  if (f.type === 'date') return f.default === undefined || f.default === 'today' || v !== f.default;
+  if ('default' in f && f.default !== undefined) return JSON.stringify(v) !== JSON.stringify(f.default);
+  return true;
+}
+
 /** Entries that some list view of `before` shows but no list view of `after` would show. */
 export function strandedRecords(before: AppSpec, after: AppSpec, records: RecordLike[]): { count: number; views: string[] } {
   const shownIn = (spec: AppSpec, r: RecordLike) => spec.views.filter((v) => v.type !== 'summary' && recordMatchesView(v, r.values));
@@ -324,9 +337,12 @@ export function planUndo(current: AppSpec, previous: AppSpec, records: RecordLik
     const n = records.filter((r) => hasValue(r.values[f.id])).length;
     const pf = spec.fields.find((x) => x.id === f.id);
     if (!pf) {
-      if (!n) continue;
+      // Values stay stored either way; the field definition only comes along when someone entered
+      // something in it, so undoing "add a checkbox" really removes it when every box is unticked.
+      const entered = records.filter((r) => enteredValue(f, r.values[f.id])).length;
+      if (!entered) continue;
       spec.fields.push({ ...structuredClone(f), hidden: true, required: false } as FieldSpec);
-      kept.push(`“${f.label}” stays saved in ${n} ${noun(n)}. It is hidden for now; you can show it again any time.`);
+      kept.push(`“${f.label}” stays saved in ${entered} ${noun(entered)}. It is hidden for now; you can show it again any time.`);
       continue;
     }
     if (pf.type !== f.type) {

@@ -34,6 +34,20 @@ interface Props {
   action?: ReactNode;
 }
 
+/**
+ * The values that undo a completion: each key it changed goes back to what the item had, so a staged
+ * item returns to its own stage (not the first open one). A key the item had no value for takes
+ * `fallback`'s (the plain toggle back), or null.
+ */
+export function undoPatch(record: AppRecord, patch: RecordValues, fallback?: RecordValues | null): RecordValues {
+  const out: RecordValues = {};
+  for (const k of Object.keys(patch)) {
+    const before = record.values[k];
+    out[k] = before !== undefined && before !== null ? before : (fallback?.[k] ?? null);
+  }
+  return out;
+}
+
 export function QueueView({ spec, view, records, onEdit, onPatch, onCompleted, action }: Props) {
   const [grouping, setGrouping] = useState<'due' | 'person'>(view.groupBy);
   const rule = useMemo(() => queueRule(spec, view), [spec, view]);
@@ -153,10 +167,11 @@ function QueueItem({ spec, view, rule, draftField, channelField, record, onEdit,
       await onPatch(record, patch);
       if (!done) {
         // Undo is a status change on this one item (never a design undo), checked against its latest
-        // saved copy, so it cannot overwrite an edit made meanwhile on another device.
+        // saved copy, so it cannot overwrite an edit made meanwhile on another device. It puts back the
+        // values the item had before.
         const now = { ...record, values: { ...record.values, ...patch } };
-        const back = completionPatch(spec, view, now);
-        toast('Marked done', back ? { action: { label: 'Undo', onClick: () => void onPatch(now, back).catch(() => undefined) }, durationMs: 6000 } : undefined);
+        const back = undoPatch(record, patch, completionPatch(spec, view, now));
+        toast('Marked done', { action: { label: 'Undo', onClick: () => void onPatch(now, back).catch(() => undefined) }, durationMs: 6000 });
         onCompleted?.(record);
       } else {
         toast('Back in the queue');

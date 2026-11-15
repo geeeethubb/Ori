@@ -1,17 +1,18 @@
 /**
  * Riff-style practice room: a big countdown with minute presets, start/pause/reset, an optional
  * metronome (WebAudio, started only by a tap, silenced on unmount) and "Save session", which opens
- * the record form prefilled with the elapsed minutes, tempo and date. Recent sessions sit beneath.
+ * the record form prefilled with the elapsed minutes, tempo and date. Recent sessions sit beneath,
+ * and "Show all sessions" lists every one, so older sessions stay reachable and editable.
  */
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { fieldById, type AppSpec } from '@shared/appSpec.ts';
 import type { AppRecord, RecordValues } from '@shared/records.ts';
 import { friendlyDate, todayIso } from '@shared/time.ts';
 import { Icons } from '../components/ui.tsx';
-import { readTempo, usePracticeTimer, writeTempo } from './practiceTimer.ts';
+import { practiceTimerKey, readTempo, sessionDate, usePracticeTimer, writeTempo } from './practiceTimer.ts';
 import { pressable } from './runtimeUtils.ts';
 import { ValueDisplay } from './ValueDisplay.tsx';
-import { clampTempo, clockTime, elapsedMinutes, formatClock, recentSessions, recordDate, TEMPO_MAX, TEMPO_MIN, type PracticeViewSpec } from './viewLogic.ts';
+import { atTime, clampTempo, elapsedMinutes, formatClock, listedSessions, recordDate, TEMPO_MAX, TEMPO_MIN, type PracticeViewSpec } from './viewLogic.ts';
 
 /** What the timer measured for a save: the plan and the clock stay separate, and an untimed save says so. */
 export interface PracticeSaveMeta {
@@ -42,7 +43,7 @@ interface Props {
 
 export function PracticeView({ appId, spec, view, records, onEdit, onSave, readOnlyNote }: Props) {
   const firstPreset = view.presets[0] ?? 10;
-  const timerKey = `${appId}:${view.id}`;
+  const timerKey = practiceTimerKey(appId, view.id);
   const timer = usePracticeTimer(timerKey, firstPreset);
   const { state } = timer;
   const running = state.status === 'running';
@@ -59,6 +60,8 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
   const [beat, setBeat] = useState<number | null>(null);
   const metro = useRef<Metronome | null>(null);
   const announcedDone = useRef(false);
+  const [showAll, setShowAll] = useState(false);
+  const listId = useId();
 
   /** The audio context is created lazily, always inside a tap handler, so sound never starts on its own. */
   const ensureAudio = useCallback((): AudioContext | null => {
@@ -103,8 +106,14 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
     }
   }, [done]);
 
-  /** Measured time is only thrown away when the person says so. */
-  const discardOk = () => timer.elapsed < 1000 || window.confirm(`Discard ${formatClock(timer.elapsed)} of practice? It has not been saved.`);
+  /** Measured time is only thrown away when the person says so. Once a save was sent, it may be saved already. */
+  const discardOk = () =>
+    timer.elapsed < 1000 ||
+    window.confirm(
+      state.saveAttempted
+        ? `Discard ${formatClock(timer.elapsed)} on the timer? If you already saved this session, it stays saved.`
+        : `Discard ${formatClock(timer.elapsed)} of practice? It has not been saved.`,
+    );
 
   const start = () => {
     if (done && !discardOk()) return;
@@ -138,15 +147,20 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
 
   const save = () => {
     if (!onSave) return;
+    // Another tab changed this session since it was shown here: show that first, then save what is shown.
+    if (timer.refresh()) return;
     const timedMs = timer.elapsed;
     const minutes = elapsedMinutes(timedMs);
     // Never the plan as time played: an untimed session is typed in by hand (the field starts empty).
     const preset: RecordValues = { [view.minutesFieldId]: minutes };
-    if (view.targetMinutesFieldId) preset[view.targetMinutesFieldId] = state.presetMinutes;
+    // A plan belongs to a timed session only: a session typed in by hand had none.
+    if (view.targetMinutesFieldId) preset[view.targetMinutesFieldId] = minutes === null ? null : state.presetMinutes;
     if (view.timedSecondsFieldId) preset[view.timedSecondsFieldId] = minutes === null ? null : Math.round(timedMs / 1000);
     if (view.tempoFieldId && view.tempoHelper) preset[view.tempoFieldId] = tempo;
-    if (view.dateFieldId) preset[view.dateFieldId] = todayIso();
+    // The day it was played: the day it ended, else the day of its last Start or Resume (not the save day).
+    if (view.dateFieldId) preset[view.dateFieldId] = minutes === null ? todayIso() : sessionDate(state);
     if (ticking) toggleMetronome();
+    // Only a pause: the session counts as possibly saved once the form actually sends it (noteSaveSent).
     if (running) timer.pause();
     const meta: PracticeSaveMeta = {
       timed: minutes !== null,
@@ -157,10 +171,11 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
       completedAt: state.completedAt,
       sessionId: minutes !== null ? state.sessionId : null,
     };
-    onSave(preset, meta, () => timer.reset());
+    // After the save, reset only this session: another tab may have started a new one meanwhile.
+    onSave(preset, meta, () => timer.resetSession(meta.sessionId ?? null));
   };
 
-  const recent = recentSessions(view, records, 5);
+  const { rows: recent, total, hasMore } = listedSessions(view, records, showAll);
   const minutesField = fieldById(spec, view.minutesFieldId);
   const focusField = fieldById(spec, view.focusFieldId);
   const feelField = fieldById(spec, view.feelFieldId);
@@ -176,7 +191,7 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
         <p className="rt-timer-note" role="status">
           {done
             ? state.endedAway && state.completedAt
-              ? `Time's up. It finished at ${clockTime(state.completedAt)} while this page was closed.`
+              ? `Time's up. It finished ${atTime(state.completedAt)} while this page was closed.`
               : "Time's up. Nice work."
             : running
               ? 'Keep going.'
@@ -274,12 +289,13 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
 
       {recent.length > 0 && (
         <section className="rt-recent" data-testid="rt-practice-recent">
-          <h3 className="rt-subhead">Recent sessions</h3>
-          <ul className="rt-session-list">
+          <h3 className="rt-subhead">{showAll ? 'All sessions' : 'Recent sessions'}</h3>
+          <ul className="rt-session-list" id={listId}>
             {recent.map((r) => {
               const minutes = r.values[view.minutesFieldId];
               const focus = focusField ? r.values[focusField.id] : undefined;
               const planned = view.targetMinutesFieldId ? r.values[view.targetMinutesFieldId] : undefined;
+              // An empty timed value means typed in by hand; no value at all (seeded or older sessions) says nothing.
               const timedSec = view.timedSecondsFieldId ? r.values[view.timedSecondsFieldId] : undefined;
               return (
                 <li key={r.id} className={`rt-session${onEdit ? ' rt-pressable' : ''}`} data-testid="rt-session" {...pressable(onEdit ? () => onEdit(r) : undefined)}>
@@ -294,7 +310,7 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
                       {typeof planned === 'number' && <span data-testid="rt-session-planned">of {planned} planned</span>}
                       {typeof timedSec === 'number'
                         ? <span title="Measured by the timer" data-testid="rt-session-timed">timed {formatClock(timedSec * 1000)}</span>
-                        : view.timedSecondsFieldId ? <span>typed in</span> : null}
+                        : timedSec === null ? <span>typed in</span> : null}
                       {feelField && <ValueDisplay field={feelField} value={r.values[feelField.id]} />}
                     </span>
                   </span>
@@ -302,6 +318,11 @@ export function PracticeView({ appId, spec, view, records, onEdit, onSave, readO
               );
             })}
           </ul>
+          {hasMore && (
+            <button type="button" className="btn btn-ghost btn-sm" aria-expanded={showAll} aria-controls={listId} onClick={() => setShowAll((v) => !v)} data-testid="rt-practice-show-all">
+              {showAll ? 'Show fewer' : `Show all ${total} sessions`}
+            </button>
+          )}
         </section>
       )}
     </div>

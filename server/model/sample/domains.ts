@@ -152,7 +152,7 @@ export const DOMAINS: Domain[] = [
         ];
       },
     },
-    updateRequest: (_app, ctx, full) => (full && !/\b(?:tags?|group(?:ed|ing)? by|sort(?:ed)? by|label)\b/i.test(ctx.note ?? '')
+    updateRequest: (_app, ctx, full) => (full && !/\b(?:add|with|use|want|need)\s+(?:some\s+)?tags\b|\btags? (?:for|to group)\b|\bgroup(?:ed|ing)? (?:them |my photos )?by\b|\bsort(?:ed)? (?:them |my photos )?by\b|\btag(?:ging)? (?:my |the |these |each )?(?:photos?|pictures?|shots?|images?)\b|\blabel (?:my |the |each )?(?:photos?|pictures?|shots?)\b/i.test(ctx.note ?? '')
       ? null
       : {
         request: 'Add tags so I can group photos by the kind of light I was chasing',
@@ -185,7 +185,7 @@ export const DOMAINS: Domain[] = [
       const caps = new Set(app.capabilities);
       if (caps.has('next_actions') || app.pattern === 'queue') {
         // Adding a follow-up is an entry, not a design change; priority only when it is asked for.
-        if (full && !/\b(?:priorit(?:y|ies|ise|ize)|urgent|most important)\b/i.test(ctx.note ?? '')) return null;
+        if (full && !/\bpriorit(?:y|ies|ise|ize)\b/i.test(ctx.note ?? '')) return null;
         return {
           request: 'Add a priority choice so the most important follow-ups float up',
           change: 'a priority choice',

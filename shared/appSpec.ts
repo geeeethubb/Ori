@@ -510,13 +510,22 @@ export function roleField(view: ViewSpec, role: string): string | undefined {
   return viewRoles(view).find((r) => r.role === role)?.fieldId;
 }
 
+/** One binding problem: `key` is built from ids only, so renaming a field or view never changes it. */
+export interface BindingProblem {
+  key: string;
+  message: string;
+}
+
+/** Roles that only order entries; sorting by a field another role shows (a list sorted by its title) is fine. */
+const ORDER_ROLES = new Set(['sort']);
+
 /**
  * Acceptance-time binding checks for a NEW or CHANGED definition (generation, Make mine, revisions).
  * Deliberately not part of AppSpecSchema: stored specs are parsed with it, and a stricter load-time
- * schema would make existing apps unreadable. Returns plain-language problems; empty means fine.
+ * schema would make existing apps unreadable. Empty means fine.
  */
-export function checkBindings(spec: AppSpec): string[] {
-  const problems: string[] = [];
+export function bindingProblems(spec: AppSpec): BindingProblem[] {
+  const problems: BindingProblem[] = [];
   const fields = new Map(spec.fields.map((f) => [f.id, f]));
   for (const v of spec.views) {
     const name = v.title ? `“${v.title}”` : `the ${viewTypeLabel(v.type)} view`;
@@ -524,26 +533,32 @@ export function checkBindings(spec: AppSpec): string[] {
     for (const r of viewRoles(v)) {
       const f = fields.get(r.fieldId);
       if (!f) continue; // unknown ids are already rejected by the schema
-      if (r.structural && f.hidden) problems.push(`${name} needs “${f.label}” (${r.role}) but it is hidden.`);
+      if (r.structural && f.hidden) problems.push({ key: `${v.id}:hidden:${r.role}:${f.id}`, message: `${name} needs “${f.label}” (${r.role}) but it is hidden.` });
+      if (ORDER_ROLES.has(r.role)) continue;
       const other = seen.get(r.fieldId);
-      if (other && other !== r.role) problems.push(`${name} uses “${f.label}” both as ${other} and as ${r.role}; each role needs its own field.`);
+      if (other && other !== r.role) problems.push({ key: `${v.id}:shared:${other}+${r.role}:${f.id}`, message: `${name} uses “${f.label}” both as ${other} and as ${r.role}; each role needs its own field.` });
       else seen.set(r.fieldId, r.role);
     }
     if (v.filter) {
       const f = fields.get(v.filter.fieldId);
-      if (f?.hidden) problems.push(`${name} sorts entries by “${f.label}”, which is hidden.`);
+      if (f?.hidden) problems.push({ key: `${v.id}:filter-hidden:${f.id}`, message: `${name} picks its entries by “${f.label}”, which is hidden.` });
     }
     if (v.type === 'summary') {
+      // A count metric buckets by its date field and falls back to when the entry was saved, so any
+      // existing field works; only a field that does not exist is a problem.
       for (const m of v.metrics) {
-        if (m.kind === 'count' && m.fieldId) {
-          const f = fields.get(m.fieldId);
-          if (!f) problems.push(`The metric “${m.label}” counts by a field that does not exist (“${m.fieldId}”).`);
-          else if (f.type !== 'date') problems.push(`The metric “${m.label}” counts by “${f.label}”, which is not a date.`);
+        if (m.kind === 'count' && m.fieldId && !fields.has(m.fieldId)) {
+          problems.push({ key: `${v.id}:metric-missing:${m.fieldId}`, message: `The metric “${m.label}” counts by a field that does not exist (“${m.fieldId}”).` });
         }
       }
     }
   }
   return problems;
+}
+
+/** The same checks as plain-language messages. */
+export function checkBindings(spec: AppSpec): string[] {
+  return bindingProblems(spec).map((p) => p.message);
 }
 
 /**

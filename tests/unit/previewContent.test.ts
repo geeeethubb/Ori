@@ -106,4 +106,71 @@ describe('previewRecords', () => {
     const records = previewRecords(people, 3, NOW);
     expect(records.some((r) => r.values[done] !== true)).toBe(true);
   });
+
+  // Regression: the timed field (seconds, 0–86400) took a value from its min/max, so the Riff preview
+  // listed 15-minute sessions as "timed 360:00".
+  it('example sessions read like the timer: a preset plan, seconds that match the minutes, one typed in', () => {
+    const view = riff.views.find((v) => v.type === 'practice');
+    if (view?.type !== 'practice') throw new Error('fixture changed');
+    const all = previewRecords(riff, 3, NOW);
+    const sessions = all.filter((r) => recordMatchesView(view, r.values));
+    expect(sessions).toHaveLength(3);
+    const timed = sessions.filter((s) => typeof s.values.timed_seconds === 'number');
+    expect(timed).toHaveLength(2);
+    for (const s of timed) {
+      expect(view.presets).toContain(s.values.target_minutes);
+      expect(s.values.timed_seconds).toBe(Number(s.values.minutes) * 60);
+      expect(Number(s.values.minutes)).toBeLessThanOrEqual(Number(s.values.target_minutes));
+    }
+    const typedIn = sessions.filter((s) => s.values.timed_seconds === null);
+    expect(typedIn).toHaveLength(1);
+    expect(typedIn[0]?.values.target_minutes).toBeNull(); // typed in by hand: no plan
+    for (const r of all) if (typeof r.values.timed_seconds === 'number') expect(r.values.timed_seconds).toBeLessThanOrEqual(25 * 60);
+  });
+
+  it('a practice view that shares its examples with another view still gets timer-shaped sessions', () => {
+    const shared = AppSpecSchema.parse({
+      ...RIFF_PRACTICE,
+      views: [{ id: 'all', type: 'list', titleFieldId: 'focus' }, ...RIFF_PRACTICE.views.map((v) => (v.type === 'practice' ? { ...v, filter: undefined } : v))],
+    });
+    const records = previewRecords(shared, 3, NOW);
+    expect(records.length).toBeGreaterThan(0);
+    for (const r of records) {
+      if (r.values.timed_seconds === null) expect(r.values.target_minutes).toBeNull();
+      else expect(r.values.timed_seconds).toBe(Number(r.values.minutes) * 60);
+    }
+  });
+
+  // Regression: the seconds rule ignored the field's own range and matched the ordinal "Second", so a
+  // 10-120 s plank hold showed 1200 s and a field for second-set reps showed 900.
+  it('seconds examples stay inside the field range, and an ordinal Second is not seconds', () => {
+    const spec = AppSpecSchema.parse({
+      ...PHOTO_WALK_JOURNAL,
+      fields: [
+        ...PHOTO_WALK_JOURNAL.fields,
+        { id: 'hold', label: 'Plank hold', type: 'number', min: 10, max: 120, unit: 's' },
+        { id: 'rest', label: 'Rest between sets (seconds)', type: 'number', min: 0, max: 90 },
+        { id: 'second_set', label: 'Second set reps', type: 'number' },
+        { id: 'warmup', label: 'Warm-up (secs)', type: 'number', min: 0 },
+      ],
+    });
+    const records = previewRecords(spec, 3, NOW);
+    expect(records).toHaveLength(3);
+    for (const r of records) expect(validateValues(spec, r.values).errors, r.id).toEqual({});
+    const col = (id: string) => records.map((r) => r.values[id]);
+    expect(col('hold')).toEqual([38, 93, 65]); // spread over 10-120, not pinned to its end
+    expect(col('rest')).toEqual([23, 68, 45]);
+    expect(col('second_set')).toEqual([6, 16, 11]); // reps, not 900 seconds
+    expect(col('warmup')).toEqual([900, 1200, 720]); // a seconds field with room reads as minutes-sized
+  });
+
+  it('a practice spec whose own fields do not fit the timer still gets examples that validate', () => {
+    const odd = AppSpecSchema.parse({
+      ...RIFF_PRACTICE,
+      fields: RIFF_PRACTICE.fields.map((f) => (f.id === 'target_minutes' ? { ...f, required: true } : f.id === 'timed_seconds' ? { ...f, max: 600 } : f)),
+    });
+    const records = previewRecords(odd, 3, NOW);
+    expect(records.filter((r) => r.values.kind === 'session')).toHaveLength(3);
+    for (const r of records) expect(validateValues(odd, r.values).errors, r.id).toEqual({});
+  });
 });

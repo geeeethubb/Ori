@@ -56,7 +56,7 @@ export function existingApps(ownerId: string): ExistingAppSummary[] {
  * Why a proposal can no longer be made or changed, or null. Checked when it is opened and again at every
  * write: a card set aside, or one whose cited memory or shared items are gone, is never applied from a cache.
  */
-function staleReason(ownerId: string, rec: Recommendation): string | null {
+export function staleReason(ownerId: string, rec: Recommendation): string | null {
   if (rec.status === 'stale' || rec.status === 'dismissed') return 'What this was based on changed since it was suggested. Refresh your app ideas or ask your AI again.';
   if (rec.evidenceFactIds.length) {
     const live = new Set(ctx.approvedFacts(ownerId).map((f) => f.id));
@@ -79,20 +79,33 @@ function formDefaults(spec: AppSpec, view: ViewSpec): Record<string, unknown> {
   return out;
 }
 
+/** One key per link, whatever share it came in with (a trailing slash does not make another link). */
+function linkKey(url: string): string {
+  try {
+    return new URL(url).href.replace(/\/$/, '');
+  } catch {
+    return url;
+  }
+}
+
 /**
  * Make mine carries what the proposal promised into the new app, once and in the same transaction: a
  * shared link becomes a saved source, a shared photo the first gallery entry. Each goes through the same
  * validation and ownership checks as any entry, and is marked as carried (never counted as an action).
+ * Two shares of the same link or photo are carried once.
  */
 function carryOver(ownerId: string, appId: string, spec: AppSpec, rec: Recommendation): string[] {
   const done: string[] = [];
   const cites = [...new Set([...(rec.captureId ? [rec.captureId] : []), ...rec.sourceCaptureIds])];
   const links = spec.views.find((v): v is LinksViewT => v.type === 'links');
   const gallery = spec.views.find((v): v is GalleryViewT => v.type === 'gallery');
+  const carried = new Set<string>();
   for (const cid of cites.slice(0, 3)) {
     const cap = captures.getCapture(ownerId, cid);
     if (!cap) continue;
     if (cap.url && links) {
+      const key = `link:${linkKey(cap.url)}`;
+      if (carried.has(key)) continue;
       const values = formDefaults(spec, links);
       values[links.urlFieldId] = cap.url;
       if (links.titleFieldId) values[links.titleFieldId] = (cap.linkMeta?.title || cap.sourceLabel).slice(0, 120);
@@ -100,13 +113,17 @@ function carryOver(ownerId: string, appId: string, spec: AppSpec, rec: Recommend
       const v = validateValues(spec, values);
       if (!v.ok) continue;
       apps.createRecord(ownerId, appId, v.values, { origin: 'carried' });
+      carried.add(key);
       done.push(`Your link is saved in “${links.title ?? 'Saved sources'}”${cap.readStatus === 'read' ? '' : '; the page itself was not read'}.`);
     } else if (cap.mediaId && gallery && ownedMediaIds(ownerId, [cap.mediaId]).has(cap.mediaId)) {
+      const key = `photo:${cap.mediaId}`;
+      if (carried.has(key)) continue;
       const values = formDefaults(spec, gallery);
       values[gallery.imageFieldId] = cap.mediaId;
       const v = validateValues(spec, values);
       if (!v.ok) continue;
       apps.createRecord(ownerId, appId, v.values, { origin: 'carried' });
+      carried.add(key);
       done.push(`Your photo is the first entry in “${gallery.title ?? 'the gallery'}”; add what you noticed when you open it.`);
     }
   }
@@ -182,7 +199,8 @@ recommendationRoutes.post('/:id/dismiss', (c) => {
 
 /**
  * "Just keep it": the shared item stays saved as a source; no app, and no memory. Anything the agent
- * noted from this item alone is removed again, so a save never turns into a permanent interest.
+ * noted from this item alone is removed again, so a save never turns into a permanent interest (what
+ * the person confirmed or edited in Memory, or another share also says, stays).
  */
 recommendationRoutes.post('/:id/keep', (c) => {
   const ownerId = c.get('user').id;
@@ -290,11 +308,12 @@ recommendationRoutes.post('/:id/update-preview', async (c) => {
   const gate = premiumGate(c);
   if (gate) return gate;
   const rec = ctx.getRecommendation(user.id, id.data);
-  if (!rec || rec.kind !== 'update_app' || !rec.targetAppId) return c.json(notFound, 404);
+  if (!rec || rec.kind !== 'update_app') return c.json(notFound, 404);
   const stale = staleReason(user.id, rec);
   if (stale) return c.json(staleBody(stale), 409);
-  const current = apps.getSpec(user.id, rec.targetAppId);
-  if (!current) return c.json({ error: 'That app is no longer in your collection.', code: 'not_found' }, 404);
+  // A proposal never points at an app that was deleted (the repo leaves the target out): that app is gone.
+  const current = rec.targetAppId ? apps.getSpec(user.id, rec.targetAppId) : null;
+  if (!current || !rec.targetAppId) return c.json({ error: 'That app is no longer in your collection.', code: 'not_found' }, 404);
   const body = z.object({ extra: z.string().max(1000).optional() }).safeParse(await c.req.json().catch(() => ({})));
   const request = [rec.updateRequest ?? rec.description, body.success ? body.data.extra : ''].filter(Boolean).join('. ').slice(0, 2000);
   const records = (apps.listRecords(user.id, rec.targetAppId) ?? []).slice(0, 5).map((r) => ({ values: r.values, createdAt: r.createdAt }));

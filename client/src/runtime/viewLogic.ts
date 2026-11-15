@@ -5,7 +5,7 @@
 import { fieldById, visibleFields, type AppSpec, type DueSoonRule, type FieldSpec, type SelectOption, type ViewSpec } from '@shared/appSpec.ts';
 import type { AppRecord, RecordValues } from '@shared/records.ts';
 import { dueStatus, type DueStatus } from '@shared/rules.ts';
-import { parseIsoDate, toIsoDate } from '@shared/time.ts';
+import { friendlyDate, parseIsoDate, toIsoDate } from '@shared/time.ts';
 
 export type JournalViewSpec = Extract<ViewSpec, { type: 'journal' }>;
 export type BoardViewSpec = Extract<ViewSpec, { type: 'board' }>;
@@ -411,6 +411,15 @@ export function clockTime(ms: number): string {
   return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
+/** When something happened, for a sentence: "at 8:42 PM" today, "yesterday at 8:42 PM", or "on Nov 12 at 8:42 PM". */
+export function atTime(ms: number, now: Date = new Date()): string {
+  const day = friendlyDate(toIsoDate(new Date(ms)), now);
+  const time = `at ${clockTime(ms)}`;
+  if (day === 'Today') return time;
+  if (day === 'Yesterday' || day === 'Tomorrow') return `${day.toLowerCase()} ${time}`;
+  return `on ${day} ${time}`;
+}
+
 export const TEMPO_MIN = 30;
 export const TEMPO_MAX = 240;
 
@@ -419,7 +428,20 @@ export function clampTempo(n: number): number {
   return Math.min(TEMPO_MAX, Math.max(TEMPO_MIN, Math.round(n)));
 }
 
+/** How many sessions the list under the timer shows until the person asks for all of them. */
+export const RECENT_SESSION_COUNT = 5;
+
 /** Recent sessions for the compact list under the timer: newest by date, then creation. */
-export function recentSessions(view: PracticeViewSpec, records: AppRecord[], n = 5): AppRecord[] {
+export function recentSessions(view: PracticeViewSpec, records: AppRecord[], n = RECENT_SESSION_COUNT): AppRecord[] {
   return [...records].sort((a, b) => -(cmpStr(recordDate(a, view.dateFieldId), recordDate(b, view.dateFieldId)) || cmpStr(a.createdAt, b.createdAt))).slice(0, n);
+}
+
+/**
+ * The sessions listed under the timer, newest first: the latest few, or every one once the person asks,
+ * so older sessions stay reachable (and editable) without another view. `hasMore` says the short list
+ * leaves some out, so the control that shows them all is offered.
+ */
+export function listedSessions(view: PracticeViewSpec, records: AppRecord[], showAll: boolean, n = RECENT_SESSION_COUNT): { rows: AppRecord[]; total: number; hasMore: boolean } {
+  const all = recentSessions(view, records, records.length);
+  return { rows: showAll ? all : all.slice(0, n), total: all.length, hasMore: all.length > n };
 }

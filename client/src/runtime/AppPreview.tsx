@@ -1,13 +1,15 @@
 /**
  * Read-only preview of an app that does not exist yet, rendered with the REAL runtime renderers and
  * clearly labelled example records, wearing the app's own theme. Used by the Make-mine page before
- * "Make mine". Nothing can be saved or uploaded; the practice timer may run but cannot save.
+ * "Make mine". Nothing can be saved or uploaded; the practice timer may run but cannot save, and is
+ * never kept on the device.
  */
-import { useMemo, type CSSProperties } from 'react';
+import { useEffect, useMemo, type CSSProperties } from 'react';
 import { designFor, capabilitiesOf, type AppSpec } from '@shared/appSpec.ts';
 import type { AppDetailDto } from '@shared/api.ts';
 import type { AppRecord } from '@shared/records.ts';
 import { AppHome } from './AppHome.tsx';
+import { forgetPreviewTimers } from './practiceTimer.ts';
 import { resolveTheme } from './theme.ts';
 import './runtime.css';
 
@@ -49,6 +51,8 @@ export function previewDetail(spec: AppSpec): AppDetailDto {
 export function AppPreview({ spec, records, label = 'Example content, not saved' }: AppPreviewProps) {
   const theme = useMemo(() => resolveTheme(spec), [spec]);
   const detail = useMemo(() => previewDetail(spec), [spec]);
+  // A timer tried here is forgotten when the preview closes or shows another design.
+  useEffect(() => () => forgetPreviewTimers(), [spec]);
   return (
     <div className="rt-root rt-root-preview" {...theme.attrs} style={theme.style as CSSProperties} data-testid="make-preview">
       <div className="rt-preview-banner" data-testid="make-preview-example-banner" role="note">

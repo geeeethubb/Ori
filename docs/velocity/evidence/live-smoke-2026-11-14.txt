@@ -1,0 +1,43 @@
+model: claude-opus-5-5 · date: 2026-11-14T23:04:07.288Z
+
+[case 3: guitar note + unread reel, Riff owned] 105247 ms
+  message: Got your Instagram reel link and your note: a fingerpicked acoustic riff you keep coming back to, and 15 minutes to practise. I couldn't open or watch the reel, so I'm working only from your note. You can run a 15-minute session in your Riff app with the reel saved as a source, or follow a short guided way to work the riff out by ear today.
+  - use_app | Practise the riff for 15 minutes -> appRiffLive0001 | draft={"kind":"source","title":"Fingerpicked acoustic riff (Instagram reel)","note":"A sound I keep coming back to; practise in 15-minute sessions.","url":"https://www.instagram.com/reel/abc123/"}
+  - explore | Work out the riff by ear in 15 minutes
+  learned: ["Has about 15 minutes to practise [have 15 minutes to practice]","Drawn to fingerpicked acoustic guitar [It is a fingerpicked acoustic riff I keep coming back to.]"]
+  PASS  case 3: proposes using Riff (use_app,explore)
+  PASS  case 3: no duplicate app
+  PASS  case 3: no design change for a need Riff already meets
+  PASS  case 3: does not claim to have watched the reel
+
+[cases 6-7: follow-up with a relative day, People owned] 5800 ms
+  message: Got your typed note: follow up with Maya on Thursday about the proposal. No link or image came with it. Your People app already handles follow-ups like this, so the simplest move is to add it there as one entry, or just keep it as a note.
+  - use_app | Follow up with Maya about the proposal -> appPeopleLive01 | draft={"kind":"follow_up","title":"Follow up with Maya about the proposal","person":"Maya","action":"Follow up about the proposal","dueText":"Thursday"}
+  learned: []
+  PASS  case 6: an entry for People, not a design change
+  PASS  case 6: draft names Maya
+  PASS  case 7: keeps "Thursday" as said and guesses no date
+
+[case 11: Spotify/Instagram auto-sync, Riff owned] 6282 ms
+  message: I got your typed note asking to auto-sync Spotify and Instagram into Riff. No link or image came with it. Riff can't connect to Spotify or Instagram, but you can paste individual track or post links into Riff's saved sources by hand, or keep practising with its timer and metronome.
+  - use_app | Save tracks to practise in Riff -> appRiffLive0001
+  unsupported: ["Auto-sync Spotify into Riff","Auto-sync Instagram into Riff"]
+  learned: []
+  PASS  case 11: names Spotify and Instagram as not possible (auto-sync spotify into riff auto-sync instagram into riff)
+  PASS  case 11: no design change that pretends to sync
+
+[case 1: save-only unread reel, no apps] 5263 ms
+  message: Got it: an Instagram reel link with the note "Save this for later." I didn't open or watch the reel, so I only know it's something you want to come back to. I can simply keep it as a saved source for now, and you can tell me later what it's about if you'd like to do more with it.
+  - keep | Saved for later: Instagram reel
+  learned: []
+  PASS  case 1: keep only (keep)
+  PASS  case 1: nothing learned
+
+[designer: practice app, 20 minutes] "Fingerpicking Practice" in 21215 ms; views=practice,links,summary; fields=kind[select] session_date[date] minutes_played[number] planned_minutes[number] timed_seconds[number] focus[text] tempo[number] feel[rating] notes[long_text] riff_title[text] riff_url[url] riff_tags[tags]
+  PASS  designer: valid definition with sound bindings
+  PASS  designer: the timer starts at the asked 20 minutes
+  PASS  designer: played minutes have no default (never prefilled from the plan)
+  PASS  designer: plan and timed seconds are bound separately (target=planned_minutes timed=timed_seconds)
+
+SUMMARY: 15/15 checks passed (model claude-opus-5-5; 4 replies + 1 design call)
+exit=0

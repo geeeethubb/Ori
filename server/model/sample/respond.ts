@@ -8,14 +8,14 @@
  */
 import { PATTERNS, PURPOSES, type Capability, type Pattern, type Purpose } from '../../../shared/appSpec.ts';
 import { RecommendationDraftSchema, type ExtractedFact, type RecordDraft, type RecommendationDraft, type UnsupportedItem } from '../../../shared/context.ts';
-import { findWhenWords } from '../../../shared/time.ts';
+import { ambiguousWhen, findWhenWords } from '../../../shared/time.ts';
 import type { ExistingAppSummary, RespondInput, RespondResult } from '../types.ts';
 import { conceptById, type Concept } from './catalog.ts';
 import { detectDomain, domainById, exploreDraft, fittingApp, minutesIn, type Domain, type DomainId, type ExploreContext, type UpdatePlan } from './domains.ts';
 import { applyChoices } from './generate.ts';
 import { capabilitiesForPattern, FILL_REASON, previewLinesFor, recommend, SPARSE_REASON } from './recommend.ts';
 import { clip, escapeRegExp, joinNatural, quote, uniq } from './text.ts';
-import { findUnsupported } from './unsupported.ts';
+import { findUnsupported, isSyncItem } from './unsupported.ts';
 
 type Capture = RespondInput['capture'];
 
@@ -23,7 +23,11 @@ const WANT_RX = /\b(?:i(?:'d| would)? (?:really )?(?:want|love|like|hope) to|i w
 const LIKE_RX = /\bi (?:really )?(?:like|love|enjoy)\s+(?!to\b)([^.!?\n]{3,60})/i;
 const LEARNING_RX = /\bi(?:'m| am|'ve been| have been) (?:learning|practi[cs]ing|getting into|picking up|teaching myself)\s+([^.!?\n]{3,60})/i;
 /** Clauses that mention someone else never become facts about the person. */
-const OTHERS_RX = /\b(?:he|she|they|him|her|them|his|hers|their|theirs|my (?:friend|friends|brother|sister|mom|mum|dad|father|mother|parents|partner|wife|husband|boyfriend|girlfriend|roommate|coworker|colleague|boss|mentor|team|kid|kids|son|daughter))\b/i;
+const OTHERS_RX = /\b(?:he|she|they|him|her|them|his|hers|their|theirs|our\s+\w+|(?:my\s+)?(?:friends?|brother|sister|mom|mum|dad|father|mother|parents|partner|wife|husband|boyfriend|girlfriend|roommate|coworker|colleague|boss|mentor|team|kids?|son|daughter|children))\b/i;
+/** Something the person says about themselves (a time budget is only theirs when they say so). */
+const FIRST_PERSON_RX = /\b(?:I|I'm|I’m|I've|I’ve|I'll|I’ll|I'd|I’d)\b|\b(?:me|my|myself)\b/;
+/** Reported speech: "Maya said I want to learn bass" is Maya's want. */
+const REPORTED_RX = /\b(?:said|says|told me|asked me|asks)\b/i;
 const TIME_RX = /\b\d{1,3}\s*(?:-\s*)?(?:min(?:ute)?s?|hours?|hrs?)\b|\bhalf an hour\b/i;
 /** "I like this sound" says nothing durable about the person. */
 const DEMONSTRATIVE_RX = /^(?:this|that|these|those|it|them|him|her|the (?:sound|song|track|clip|video|reel|post|photo|picture|one|look|vibe))\b/i;
@@ -197,8 +201,9 @@ function useDraft(app: ExistingAppSummary, domain: Domain, concept: Concept, cap
   });
 }
 
-/** One line for the reply when an app the person has already does the job. */
-function useLine(app: ExistingAppSummary, domain: Domain, draft: RecordDraft | undefined, minutes: number | null): string {
+/** One line for the reply when an app the person has already does the job (claimed only for a use intent). */
+function useLine(app: ExistingAppSummary, domain: Domain, draft: RecordDraft | undefined, minutes: number | null, useIntent = true): string {
+  if (!useIntent) return `You have ${app.name} for this; open it when you want.`;
   if (draft?.kind === 'follow_up') {
     return `${app.name} already does this. I drafted the entry; you check it and save it there.${draft.dueText ? ` I kept your words ${quote(draft.dueText)}, and you confirm the date.` : ''}`;
   }
@@ -228,14 +233,44 @@ function changeDraft(app: ExistingAppSummary, request: string, captureId: string
   });
 }
 
-const CHANGE_VERB_RX = /\b(?:change|make|switch|turn|redesign|rename|restyle|rearrange|reorder|add|remove|hide|show|set)\b/i;
-const CHANGE_OBJECT_RX = /\b(?:layout|look|theme|colou?rs?|style|design|font|typography|darker|lighter|brighter|calmer|bolder|bigger|smaller|default|presets?|timer|name|icon|fields?|columns?|options?|tags?|views?|tabs?|spacing|density|artwork|shorter|longer|prompts?|metronome|tempo)\b/i;
+const CHANGE_VERB_RX = /\b(?:change|make|switch|turn|redesign|rename|restyle|rearrange|reorder|set|give|add|remove|hide|show)\b/i;
+/** Words about an app's design (not about practising: "set the tempo to 80" is using the metronome). */
+const DESIGN_RX = /\b(?:layout|look|theme|colou?rs?|style|design|font|typography|darker|lighter|brighter|calmer|bolder|default|presets?|icon|fields?|columns?|tabs?|spacing|density|artwork|order|sort(?:ed)?)\b/i;
+/** How people name an app they have without its name: "my guitar app", "my photo gallery", "the metronome default". */
+const APP_NOUN_RX: Record<DomainId, RegExp> = {
+  music: /\bmy (?:practi[cs]e|guitar|music|riff) (?:app|timer|tracker)\b|\bthe (?:metronome|timer)(?:'s|’s)? default\b/i,
+  photo: /\bmy (?:photo|photos|camera|light) (?:app|gallery|journal)\b|\bmy gallery\b/i,
+  people: /\bmy (?:follow[- ]?ups?|people|contacts?) (?:app|list|queue)\b/i,
+};
 
-/** The owned app a typed change request is about ("Change my Riff layout ..."), if any. */
-function changeTarget(note: string, apps: ExistingAppSummary[]): ExistingAppSummary | null {
-  if (!note || !CHANGE_VERB_RX.test(note) || !CHANGE_OBJECT_RX.test(note)) return null;
-  return apps.find((a) => a.name.trim().length >= 2 && new RegExp(`\\b${escapeRegExp(a.name.trim())}\\b`, 'i').test(note)) ?? null;
+/** The app is addressed as an app: its name as written ("Riff", not "the riff") and not just opening a sentence, or "my Riff", "Riff app", "in Riff", "Riff's". */
+function addressesApp(note: string, name: string): boolean {
+  const n = escapeRegExp(name.trim());
+  if (n.length < 2) return false;
+  if (new RegExp(`(?:\\bmy\\s+|\\bin\\s+)${n}\\b|\\b${n}(?:'s|’s|\\s+app)\\b`).test(note)) return true;
+  const rx = new RegExp(`\\b${n}\\b`, 'g');
+  let m: RegExpExecArray | null;
+  while ((m = rx.exec(note))) {
+    const before = note.slice(0, m.index);
+    if (before.trim() && !/[.!?:;]\s*$/.test(before)) return true;
+  }
+  return false;
 }
+
+/** The owned app a typed change request is about ("Change my Riff layout …", "Make my photo gallery darker"), if any. */
+function changeTarget(note: string, apps: ExistingAppSummary[], domain: Domain | null, fit: ExistingAppSummary | null): ExistingAppSummary | null {
+  if (!note || !CHANGE_VERB_RX.test(note) || !(DESIGN_RX.test(note) || /\brename\b/i.test(note))) return null;
+  const named = apps.find((a) => addressesApp(note, a.name));
+  if (named) return named;
+  return domain && fit && APP_NOUN_RX[domain.id].test(note) ? fit : null;
+}
+
+/** The note is about doing the thing (practise, shoot, follow up), not about the app or a question. */
+const USE_INTENT_RX: Record<DomainId, RegExp> = {
+  music: /\b(?:practi[cs]e|practi[cs]ing|play|playing|learn|learning|rehearse|jam|work on|minutes?)\b/i,
+  photo: /\b(?:photos?|shoot|shot|shooting|walk|picture|frame|light)\b/i,
+  people: /\b(?:follow[- ]?up|send|reply|intro|call|email|reach out|get back|promised|owe|catch up)\b/i,
+};
 
 /** "Save this for later", "keep it", "maybe later": a passing save. */
 const SAVE_ONLY_RX = /^(?:(?:please|just|ok|okay|hmm|so)[,\s]+)*(?:(?:save|keep|bookmark|stash|park)(?:\s+(?:this|it|that|these))?(?:\s+for\s+(?:later|now|me|another day))?|(?:for|maybe)\s+later|interesting[,\s\u2013\u2014-]+maybe\s+later|later)[.!\s]*$/i;
@@ -244,29 +279,50 @@ function isSaveOnly(note: string): boolean {
   return note.length > 0 && SAVE_ONLY_RX.test(note);
 }
 
-const NAME_AFTER_RX = /\b(?:with|to|ping|email|text|call|message|thank|remind|meet|see|ask)\s+((?:[A-Z][a-z'’-]+)(?:\s+[A-Z][a-z'’-]+)?)/;
+const NAME_WORD = "\\p{Lu}[\\p{L}'’-]*";
+const NAME_AFTER_RX = new RegExp(`\\b(?:with|to|from|ping|email|text|call|message|thank|remind|meet|see|ask)\\s+(${NAME_WORD}(?:\\s+${NAME_WORD})?)(?![\\p{L}])`, 'u');
+const NAME_ONLY_RX = new RegExp(`^${NAME_WORD}$`, 'u');
+/** Capitalised words that are not people. */
+const NOT_A_PERSON_RX = /^(?:LinkedIn|Instagram|YouTube|WhatsApp|Slack|Zoom|Google|Gmail|Spotify|TikTok|Notion|Figma|Teams|iMessage|Demo|Day|Really|Also|Then|Thanks|Maybe|Today|Tonight|Tomorrow)$|^I(?:['’](?:ll|m|d|ve))?$/;
 const NOT_A_NAME_RX = /^(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow|tonight|january|february|march|april|may|june|july|august|september|october|november|december|the|a|an|i|my|our|their|his|her|about|re)$/i;
 
 /** "Follow up with Maya about the proposal Thursday" → person Maya, action "Follow up about the proposal", words "Thursday". */
 export function parseFollowUp(note: string): RecordDraft | undefined {
-  const m = NAME_AFTER_RX.exec(note);
+  // A question is not an entry ("Can my follow-up list show who I owe first?").
+  if (/\?\s*$/.test(note)) return undefined;
+  let m = NAME_AFTER_RX.exec(note);
+  if (m && (m[1] ?? '').split(/\s+/).every((w) => NOT_A_PERSON_RX.test(w))) {
+    // "Reply to LinkedIn message from Sam": skip the product and look again after it.
+    const rest = note.slice((m.index ?? 0) + m[0].length);
+    const again = NAME_AFTER_RX.exec(rest);
+    m = again ? Object.assign(again, { index: (m.index ?? 0) + m[0].length + (again.index ?? 0) }) : null;
+  }
   const nameWords: string[] = [];
   for (const w of (m?.[1] ?? '').split(/\s+/).filter(Boolean)) {
-    if (NOT_A_NAME_RX.test(w)) break;
+    if (NOT_A_NAME_RX.test(w) || NOT_A_PERSON_RX.test(w)) break;
     nameWords.push(w);
   }
-  // Otherwise the first capitalised word that does not start the note ("Met Maya at the meetup").
-  if (!nameWords.length) {
+  const fromTrigger = nameWords.length > 0;
+  // Otherwise the first capitalised word that is not just starting a sentence, not after "at/in/on"
+  // (places and events), and not a product or "I'll" ("Met Maya at the meetup").
+  if (!fromTrigger) {
     const words = note.split(/\s+/);
-    const name = words.slice(1).find((w) => /^[A-Z][a-z'’-]+[,.]?$/.test(w) && !NOT_A_NAME_RX.test(w.replace(/[,.]$/, '')));
-    if (name) nameWords.push(name.replace(/[,.]$/, ''));
+    for (let i = 1; i < words.length; i++) {
+      const prev = words[i - 1] ?? '';
+      const w = (words[i] ?? '').replace(/[,.;:!]+$/, '');
+      if (/[.!?;:]$/.test(prev) || /^(?:at|in|on|of|the|a|an)$/i.test(prev)) continue;
+      if (!NAME_ONLY_RX.test(w) || NOT_A_NAME_RX.test(w) || NOT_A_PERSON_RX.test(w)) continue;
+      nameWords.push(w);
+      break;
+    }
   }
   const person = nameWords.join(' ') || undefined;
-  const when = findWhenWords(note);
+  // Keep the words for when only when they are unambiguous (a single deadline); otherwise no date is suggested.
+  const when = ambiguousWhen(note) ? null : findWhenWords(note);
   // "promised to send her the demo link" is the action itself.
-  const promised = /\bpromised (?:to )?([^,.;]{4,120})/i.exec(note)?.[1];
+  const promised = /\bpromised\s+to\s+([^,.;]{4,120})/i.exec(note)?.[1];
   let action = promised ? promised.charAt(0).toUpperCase() + promised.slice(1) : note;
-  if (person && !promised) action = action.replace(new RegExp(`\\s+(?:with|to)\\s+${escapeRegExp(person)}\\b`), '');
+  if (person && fromTrigger && !promised) action = action.replace(new RegExp(`\\s+(?:with|to|from)\\s+${escapeRegExp(person)}(?![\\p{L}])`, 'u'), '');
   if (when) action = action.replace(when, '');
   action = action.replace(/\s{2,}/g, ' ').replace(/^[\s,.;:\u2013\u2014-]+|[\s,.;:\u2013\u2014-]+$/g, '').trim();
   if (!person && !action) return undefined;
@@ -285,7 +341,7 @@ function recordDraftFor(domain: Domain, c: Capture, note: string): RecordDraft |
     };
   }
   if (domain.id === 'photo') return c.mediaId ? { kind: 'photo', mediaId: c.mediaId } : undefined;
-  const followUp = note ? parseFollowUp(note) : undefined;
+  const followUp = note && USE_INTENT_RX.people.test(note) ? parseFollowUp(note) : undefined;
   return followUp ? { ...followUp, note: clip(note, 300) } : undefined;
 }
 
@@ -316,7 +372,7 @@ function fallbackAppDraft(input: RespondInput, said: string): RecommendationDraf
     existingApps: input.existingApps,
     chosenInterests: [],
     recentCaptures: [{ id: c.id, kind: c.kind, text: c.text, url: c.url, linkMeta: c.linkMeta, readStatus: c.readStatus }],
-    count: 3,
+    count: 6,
   });
   // Only an app that actually matched the capture: a "popular starting point" is not grounded in it.
   const pick = recs.find((r) => r.kind === 'new_app' && r.sourceCaptureIds.includes(c.id) && r.reason !== SPARSE_REASON && r.reason !== FILL_REASON);
@@ -368,13 +424,13 @@ export function learnFromNote(note: string, domain: Domain | null, minutes: numb
   const aboutSelf = (clause: string) => clause.length >= 3 && !OTHERS_RX.test(clause) && !TIME_RX.test(clause) && !(domain?.id === 'people' && PROPER_NOUN_RX.test(clause));
 
   // A time budget is only about the person when the note is (not "my brother has 15 minutes").
-  if (minutes && domain && domain.id !== 'people' && !OTHERS_RX.test(note)) {
+  if (minutes && domain && domain.id !== 'people' && FIRST_PERSON_RX.test(note) && !OTHERS_RX.test(note)) {
     const instrument = INSTRUMENT_RX.exec(note)?.[1]?.toLowerCase();
     const activity = domain.id === 'music' ? `${instrument ?? 'music'} practice` : 'photography';
     push('routine', `Has about ${minutes} minutes at a time for ${activity}`);
   }
   const want = WANT_RX.exec(note);
-  if (want?.[1]) {
+  if (want?.[1] && !REPORTED_RX.test(note.slice(0, want.index))) {
     const clause = firstClause(want[1]);
     if (aboutSelf(clause)) push('goal', `Wants to ${clause}`);
   }
@@ -435,14 +491,20 @@ export function respondToCapture(input: RespondInput): RespondResult {
 
   // 2. A change to an app the person already has is a design revision: previewed, accepted, undoable.
   const unsupported = findUnsupported(note);
-  const target = unsupported.length ? null : changeTarget(note, input.existingApps);
+  const domainFit = domain ? fittingApp(domain, input.existingApps) : null;
+  const target = unsupported.length ? null : changeTarget(note, input.existingApps, domain, domainFit?.full ? domainFit.app : null);
   if (target) {
     message.push(`That is a change to ${target.name} itself, so you will see a preview before anything changes.`);
-    return { message: clip(message.join(' '), 700), proposals: [changeDraft(target, note, c.id, said)], learned: [], unsupported: [], imageRead: false };
+    const change = [changeDraft(target, note, c.id, said)];
+    // "Make Riff darker and play the riff tonight": using the app comes along with the change.
+    if (domain && domainFit?.full && domainFit.app.id === target.id && USE_INTENT_RX[domain.id].test(note.replace(DESIGN_RX, ''))) {
+      change.push(useDraft(target, domain, conceptById(domain.conceptId) as Concept, c.id, said, undefined, minutes));
+    }
+    return { message: clip(message.join(' '), 700), proposals: change, learned: [], unsupported: [], imageRead: false };
   }
   // 3. What does not exist here is named plainly (and never implied by a card).
   if (unsupported.length) {
-    message.push(`${joinNatural(unsupported.map((u) => u.request))} ${unsupported.length === 1 ? 'is' : 'are'} not possible here, so nothing is synced, read or sent for you.`);
+    message.push(`Not possible here: ${joinNatural(unsupported.map((u) => u.request))}. Nothing is synced, read or sent for you.`);
   }
   ctx.note = note;
 
@@ -454,12 +516,21 @@ export function respondToCapture(input: RespondInput): RespondResult {
     if (fit?.full) {
       // 4. An app the person has already does the job: use it (and add one entry they confirm). No duplicate, no revision.
       fullFit = true;
-      const manualOnly = unsupported.length > 0;
+      // Only a sync request has a stand-in (links saved by hand), and only in an app that keeps links.
+      const manualOnly = unsupported.length > 0 && unsupported.every(isSyncItem) && fit.app.capabilities.includes('source_links');
+      // "Already does this" is claimed only for doing the thing, never for a question about the app.
+      const useIntent = !/\?\s*$/.test(note) && (USE_INTENT_RX[domain.id].test(note) || (domain.id === 'photo' && hasImage(c)));
       const draft = !manualOnly && fit.app.capabilities.includes(ENTRY_CAPABILITY[domain.id]) ? recordDraftFor(domain, c, note) : undefined;
       proposals.push(useDraft(fit.app, domain, concept, c.id, said, draft, minutes, manualOnly));
-      const plan = manualOnly ? null : domain.updateRequest(fit.app, ctx, true);
+      // A note about someone else's routine ("Our son practises 20 minutes") never redesigns the person's app.
+      const aboutOthers = OTHERS_RX.test(note) && !FIRST_PERSON_RX.test(note);
+      const plan = unsupported.length || aboutOthers ? null : domain.updateRequest(fit.app, ctx, true);
       if (plan) proposals.push(updateDraft(fit.app, plan, concept, c.id, said));
-      message.push(manualOnly ? `${fit.app.name} keeps the links you save by hand.` : useLine(fit.app, domain, draft, minutes));
+      message.push(manualOnly
+        ? `${fit.app.name} keeps the links you save by hand.`
+        : unsupported.length
+          ? `${fit.app.name} can still help with the rest; open it when you are ready.`
+          : useLine(fit.app, domain, draft, minutes, useIntent));
     } else {
       // 5. Nothing fits yet: the domain's app, starting at the minutes the person asked for.
       proposals.push(newAppDraft(concept, domain, c.id, said, minutes, unsupported));

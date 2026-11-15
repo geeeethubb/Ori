@@ -1,11 +1,12 @@
 /**
- * Small helpers for the personal-app runtime: storage keys, the offline cache, usage events,
- * platform detection, time formatting and two tiny hooks. No components live here.
+ * Small helpers for the personal-app runtime: storage keys, the offline cache, record-form drafts,
+ * usage events, platform detection, time formatting and two tiny hooks. No components live here.
  */
 import { useEffect, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import type { AppDetailDto } from '@shared/api.ts';
 import { AppSpecSchema, type Purpose } from '@shared/appSpec.ts';
-import type { AppRecord } from '@shared/records.ts';
+import { SHORT_ID_PATTERN } from '@shared/ids.ts';
+import type { AppRecord, RecordValues } from '@shared/records.ts';
 import { isIconColor, isIconSymbol, type AppIconSpec } from '@shared/icons.ts';
 import { api } from '../api.ts';
 
@@ -68,6 +69,133 @@ export function writeCache(appId: string, cache: CachedApp): void {
 
 export function clearCache(appId: string): void {
   removeKey(cacheKey(appId));
+}
+
+// ---------- drafts ----------
+
+/**
+ * What a record form keeps on this device until it is saved. A new entry keeps its values and the
+ * form's own id, so a retry after a lost response saves it once (an id a caller gave, such as a timed
+ * session's or a suggestion's, is never kept). An edit keeps only the keys the person changed; they are
+ * laid over the latest copy when the form opens again.
+ */
+export interface FormDraft {
+  values: RecordValues;
+  /** New entries only. */
+  id?: string;
+  /**
+   * A create with this id was sent (its response may have been lost). Only then does a restored draft keep
+   * the id: an unsent draft opened in another tab gets its own, so two tabs never save under one id.
+   */
+  sent?: boolean;
+}
+
+/** Marks the stored format. No field id can take this key (field ids are lowercase snake_case). */
+const DRAFT_FORMAT = '$draft';
+const DRAFT_VERSION = 2;
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return Boolean(v) && typeof v === 'object' && !Array.isArray(v);
+}
+
+/** The keys an edit actually changed: untouched stored values (legacy, hidden or newer fields) are never re-sent. */
+export function changedValues(before: RecordValues, after: RecordValues): RecordValues {
+  const out: RecordValues = {};
+  for (const k of Object.keys(after)) {
+    if (JSON.stringify(after[k] ?? null) !== JSON.stringify(before[k] ?? null)) out[k] = after[k];
+  }
+  return out;
+}
+
+/** The draft for a form's current values: an edit's changed keys (null when nothing changed), or a new entry's values and id. */
+export function draftFor(values: RecordValues, opts: { editing?: RecordValues; id?: string }): FormDraft | null {
+  if (opts.editing) {
+    const changed = changedValues(opts.editing, values);
+    return Object.keys(changed).length ? { values: changed } : null;
+  }
+  return opts.id ? { values, id: opts.id } : { values };
+}
+
+export function serializeDraft(draft: FormDraft): Record<string, unknown> {
+  return { [DRAFT_FORMAT]: DRAFT_VERSION, values: draft.values, ...(draft.id ? { id: draft.id } : {}), ...(draft.id && draft.sent ? { sent: true } : {}) };
+}
+
+/**
+ * Reads a stored draft. Older builds stored the whole values map: a new entry's is restored as before,
+ * but an edit's cannot tell which keys the person changed, so it is ignored rather than risk putting
+ * back values that were changed since.
+ */
+export function parseDraft(raw: unknown, editing: boolean): FormDraft | null {
+  if (!isPlainObject(raw)) return null;
+  if (!(DRAFT_FORMAT in raw)) return editing ? null : { values: raw };
+  if (raw[DRAFT_FORMAT] !== DRAFT_VERSION || !isPlainObject(raw.values)) return null;
+  const id = !editing && typeof raw.id === 'string' && SHORT_ID_PATTERN.test(raw.id) ? raw.id : undefined;
+  return id ? { values: raw.values, id, ...(raw.sent === true ? { sent: true } : {}) } : { values: raw.values };
+}
+
+/** How a record form opens on this device. */
+export interface OpenedForm {
+  values: RecordValues;
+  /** A stored draft was laid over the values ("Draft restored."). */
+  restored: boolean;
+  /** A stored draft changes nothing (already saved, or an edit's from an older build) and can go. */
+  spent: boolean;
+  /** A new entry's own id, kept with its draft: a restored draft's while its entry is not known to be saved, else a new one. */
+  id?: string;
+  /** `id` is a restored draft's, and a create with it was already sent. */
+  sent?: boolean;
+}
+
+/**
+ * Opens a record form over `base` (the latest copy, or a new entry's defaults) with the stored draft, if
+ * any: an edit's changed keys go over the latest copy, a new entry's values under the preset's fresh
+ * results. A restored new entry keeps its draft's id, so a retry after a lost response saves it once.
+ * When that id is already among the loaded records (`saved`), the draft was saved: with the same values
+ * it is spent, and with other values it comes back under a new id, so it never replaces the saved entry.
+ * `normalize` gives values as they would be stored (empty text is null, numbers are numbers).
+ */
+export function openForm(
+  base: RecordValues,
+  stored: unknown,
+  opts: { editing: boolean; preset?: RecordValues; mint: () => string; saved?: (id: string) => RecordValues | undefined; normalize?: (values: RecordValues) => RecordValues },
+): OpenedForm {
+  const found = stored !== null && stored !== undefined;
+  const draft = found ? parseDraft(stored, opts.editing) : null;
+  const savedCopy = draft?.id ? opts.saved?.(draft.id) : undefined;
+  if (draft && savedCopy && (sameRecordValues(draft.values, savedCopy) || (opts.normalize !== undefined && sameRecordValues(opts.normalize(draft.values), savedCopy)))) {
+    return { values: base, restored: false, spent: true, id: opts.mint() };
+  }
+  const values = draft ? { ...base, ...draft.values, ...(opts.preset ?? {}) } : base;
+  const restored = !sameValues(values, base);
+  // Only a draft whose create was sent keeps its id (a retry must stay one entry); an unsent draft, which
+  // another tab may also have restored, gets a new id so two forms never save under one.
+  const keep = restored && !savedCopy && draft?.sent === true ? draft.id : undefined;
+  return {
+    values: restored ? values : base,
+    restored,
+    spent: found && !restored,
+    id: opts.editing ? undefined : (keep ?? opts.mint()),
+    ...(keep ? { sent: true } : {}),
+  };
+}
+
+/**
+ * After an edit was refused because the entry changed since it opened (409): the person's changes are
+ * kept for the keys the newer copy left as the edit found them, and dropped where it changed them, so
+ * nothing typed comes back over a newer value. Null when nothing is left to keep.
+ */
+export function keepUntouched(changed: RecordValues, startedFrom: RecordValues, latest: RecordValues): RecordValues | null {
+  const kept: RecordValues = {};
+  for (const [k, v] of Object.entries(changed)) {
+    if (stableStringify(latest[k] ?? null) === stableStringify(startedFrom[k] ?? null)) kept[k] = v;
+  }
+  return Object.keys(kept).length ? kept : null;
+}
+
+/** Stores a draft, or removes the key when there is nothing to keep. */
+export function writeDraft(key: string, draft: FormDraft | null): void {
+  if (draft) writeJson(key, serializeDraft(draft));
+  else removeKey(key);
 }
 
 // ---------- events & paths ----------
@@ -270,4 +398,12 @@ export function stableStringify(value: unknown): string {
 
 export function sameValues(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
   return stableStringify(a) === stableStringify(b);
+}
+
+/** Same values the way the server compares a repeated save: key by key, a missing key counting as null. */
+export function sameRecordValues(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    if (stableStringify(a[k] ?? null) !== stableStringify(b[k] ?? null)) return false;
+  }
+  return true;
 }

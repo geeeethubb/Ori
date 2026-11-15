@@ -6,7 +6,7 @@ import { APP_ID_PATTERN, SHORT_ID_PATTERN } from '../../shared/ids.ts';
 import { AppSpecSchema, type AppSpec } from '../../shared/appSpec.ts';
 import { BLANK_GALLERY_ENTRY, blankGalleryEntry, imageMediaIds, validateValues } from '../../shared/records.ts';
 import { ownedMediaIds } from '../repos/media.ts';
-import { RevisionOpSchema, planUndo } from '../../shared/revision.ts';
+import { RevisionOpSchema, planUndo, reservedFieldTypes } from '../../shared/revision.ts';
 import { EVENT_TYPES } from '../../shared/context.ts';
 import type { AppDetailDto, AppExportDto, UndoPreviewDto } from '../../shared/api.ts';
 import * as repo from '../repos/apps.ts';
@@ -15,6 +15,7 @@ import { getProposal, setProposalStatus } from '../repos/proposals.ts';
 import { fixtureSpec, FIXTURES } from '../fixtures/specs.ts';
 import { transaction } from '../db/index.ts';
 import { guardRevision } from '../services/revisionGuards.ts';
+import { staleReason } from './recommendations.ts';
 
 export const appRoutes = new Hono<AuthEnv>();
 appRoutes.use('*', requireAuth);
@@ -110,15 +111,33 @@ appRoutes.post('/:appId/records', async (c) => {
   // From here on everything is synchronous, so two submits of the same entry cannot interleave.
   const current = repo.getSpec(ownerId, id.data);
   if (!current) return c.json(notFound, 404);
+  const v = validateValues(current.spec, body.data.values);
   if (body.data.id) {
     const taken = repo.recordIdOwner(body.data.id);
     if (taken) {
-      const mine = taken.appId === id.data && !taken.deleted ? repo.getRecord(ownerId, id.data, body.data.id) : null;
-      if (mine) return c.json({ record: mine, duplicate: true }, 200);
-      return c.json({ error: 'Invalid record.', code: 'invalid' }, 400);
+      // This person deleted that entry in this app (the app is theirs: getSpec checked the owner). Say so,
+      // so the client can save it again as a new entry; any other app's or person's id stays a generic 400.
+      if (taken.appId === id.data && taken.deleted) return c.json({ error: 'That entry was deleted.', code: 'record_deleted' }, 409);
+      const mine = taken.appId === id.data ? repo.getRecord(ownerId, id.data, body.data.id) : null;
+      if (!mine) return c.json({ error: 'Invalid record.', code: 'invalid' }, 400);
+      // A plain retry (lost response, second tap) returns the first save.
+      if (sameValues(mine.values, body.data.values) || (v.ok && sameValues(mine.values, v.values))) return c.json({ record: mine, duplicate: true }, 200);
+      // The same entry with newer values: a timed session resumed after a save whose response was lost,
+      // or a typo fixed before retrying. It updates that entry, unless someone edited it since it was
+      // saved; then nothing is overwritten and the latest copy comes back.
+      if (!v.ok) return c.json({ error: 'Some fields need attention.', code: 'validation', details: v.errors }, 422);
+      const photos = foreignPhotos(ownerId, current.spec, v.values);
+      if (photos) return c.json({ error: 'Some fields need attention.', code: 'validation', details: photos }, 422);
+      if (repo.recordEditedAt(ownerId, id.data, mine.id)) return c.json(conflictBody(mine), 409);
+      try {
+        const updated = repo.updateRecord(ownerId, id.data, mine.id, v.values, { expectedUpdatedAt: mine.updatedAt });
+        return c.json({ record: updated ?? mine, duplicate: true, updated: true }, 200);
+      } catch (err) {
+        if (err instanceof repo.RecordConflict) return c.json(conflictBody(err.current), 409);
+        throw err;
+      }
     }
   }
-  const v = validateValues(current.spec, body.data.values);
   if (!v.ok) return c.json({ error: 'Some fields need attention.', code: 'validation', details: v.errors }, 422);
   const photoProblem = foreignPhotos(ownerId, current.spec, v.values);
   if (photoProblem) return c.json({ error: 'Some fields need attention.', code: 'validation', details: photoProblem }, 422);
@@ -158,11 +177,9 @@ appRoutes.patch('/:appId/records/:recordId', async (c) => {
   }
   let record;
   try {
-    record = repo.updateRecord(ownerId, id.data, rid.data, v.values, { expectedUpdatedAt: body.data.baseUpdatedAt });
+    record = repo.updateRecord(ownerId, id.data, rid.data, v.values, { expectedUpdatedAt: body.data.baseUpdatedAt, edit: true });
   } catch (err) {
-    if (err instanceof repo.RecordConflict) {
-      return c.json({ error: 'This changed on another device, so nothing was overwritten. Here is the latest version.', code: 'record_conflict', details: { record: err.current } }, 409);
-    }
+    if (err instanceof repo.RecordConflict) return c.json(conflictBody(err.current), 409);
     throw err;
   }
   if (!record) return c.json({ error: 'That item no longer exists.', code: 'not_found' }, 404);
@@ -177,6 +194,20 @@ appRoutes.patch('/:appId/records/:recordId', async (c) => {
 });
 
 /** Image values must be photos in the owner's own library; returns per-field errors otherwise. */
+/** Same values, key by key (a missing key and null are the same). */
+function sameValues(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    if (JSON.stringify(a[k] ?? null) !== JSON.stringify(b[k] ?? null)) return false;
+  }
+  return true;
+}
+
+const conflictBody = (record: unknown) => ({
+  error: 'This changed on another device, so nothing was overwritten. Here is the latest version.',
+  code: 'record_conflict' as const,
+  details: { record },
+});
+
 function foreignPhotos(ownerId: string, spec: AppSpec, values: Record<string, unknown>): Record<string, string> | null {
   const ids = imageMediaIds(spec, values);
   if (!ids.length) return null;
@@ -237,6 +268,15 @@ appRoutes.post('/:appId/revisions/apply', async (c) => {
   const ownProposal = proposal && proposal.appId === id.data ? proposal : null;
   // A retried Accept (lost response, second tap) returns what the first one did instead of an error.
   if (ownProposal?.status === 'accepted') return c.json({ ...detail(ownerId, id.data), changes: [], alreadyApplied: true });
+  // A change that comes from an Agent or Playground suggestion is checked again at Accept: a suggestion that
+  // was dismissed, kept, already made, or whose memory or share was removed since is never applied.
+  const fromRec = body.data.recommendationId && SHORT_ID_PATTERN.test(body.data.recommendationId) ? ctx.getRecommendation(ownerId, body.data.recommendationId) : null;
+  if (fromRec && fromRec.kind === 'update_app' && fromRec.targetAppId === id.data) {
+    if (fromRec.status === 'applied') return c.json({ error: 'This change was already made.', code: 'stale_proposal' }, 409);
+    if (fromRec.status === 'kept') return c.json({ error: 'You kept this as a save, so nothing was changed.', code: 'stale_proposal' }, 409);
+    const stale = staleReason(ownerId, fromRec);
+    if (stale) return c.json({ error: stale, code: 'stale_proposal' }, 409);
+  }
   const expected = body.data.baseVersion ?? ownProposal?.baseVersion;
   if (expected !== undefined && expected !== current.version) {
     return c.json({ error: 'The app changed since this preview was made. Reload and try again.', code: 'stale_preview' }, 409);
@@ -271,7 +311,13 @@ function undoPlanFor(ownerId: string, appId: string) {
   const previous = versions.find((v) => v.version === app.currentVersion - 1);
   if (!previous || !current) return null;
   const plan = planUndo(current.spec, previous.spec, repo.listRecords(ownerId, appId) ?? []);
-  const label: UndoPreviewDto['label'] = current.origin === 'undo' ? 'Redo' : 'Undo';
+  // Undo and redo alternate: after an odd run of undo versions the next one brings the change back.
+  let run = 0;
+  for (let n = app.currentVersion; n >= 1; n--) {
+    if (versions.find((v) => v.version === n)?.origin !== 'undo') break;
+    run++;
+  }
+  const label: UndoPreviewDto['label'] = run % 2 === 1 ? 'Redo' : 'Undo';
   return { app, nothing: false as const, previous, plan, label };
 }
 
@@ -289,12 +335,14 @@ appRoutes.post('/:appId/revisions/undo', async (c) => {
   const ownerId = c.get('user').id;
   const id = appIdParam.safeParse(c.req.param('appId'));
   if (!id.success) return c.json(notFound, 404);
-  const body = z.object({ expectedVersion: z.number().int().optional() }).safeParse(await c.req.json().catch(() => ({})));
+  const body = z.object({ expectedVersion: z.number().int().optional() }).safeParse((await c.req.json().catch(() => null)) ?? {});
+  // A malformed version must never switch the retry guard off.
+  if (!body.success) return c.json({ error: 'Invalid request.', code: 'invalid' }, 400);
   const p = undoPlanFor(ownerId, id.data);
   if (!p) return c.json(notFound, 404);
   if (p.nothing) return c.json({ error: 'This is the first version; nothing to undo.', code: 'nothing_to_undo' }, 409);
   // A retried undo (lost response) must not turn into a redo.
-  const expected = body.success ? body.data.expectedVersion : undefined;
+  const expected = body.data.expectedVersion;
   if (expected !== undefined && expected !== p.app.currentVersion) {
     return c.json({ error: 'The app changed since you looked at it. Reload and try again.', code: 'stale_preview' }, 409);
   }
@@ -348,8 +396,9 @@ appRoutes.post('/import', async (c) => {
     const v = validateValues(latestSpec, r.values, { partial: true });
     if (v.errors._) return c.json({ error: `One entry in this file cannot be imported as it is (${v.errors._}). Nothing was imported.`, code: 'invalid_import' }, 400);
   }
-  // Photo fields from every version count: an older version's photo could resurface after an undo.
-  const imageFields = [...new Set(versions.flatMap((v) => v.spec.fields.filter((f) => f.type === 'image').map((f) => f.id)))];
+  // Photo fields by each id's most recent definition across versions: a photo field dropped from the
+  // latest design still counts (an undo could show it again), but an id that later became text does not.
+  const imageFields = [...reservedFieldTypes(versions.map((v) => v.spec))].filter(([, type]) => type === 'image').map(([fieldId]) => fieldId);
   const appId = transaction(() => {
     const app = repo.createApp({ ownerId, spec: first.spec, changeSummary: `Imported: ${first.changeSummary}`, origin: 'import' });
     for (const v of versions.slice(1)) repo.appendVersion(ownerId, app.id, v.spec, v.changeSummary, 'import');

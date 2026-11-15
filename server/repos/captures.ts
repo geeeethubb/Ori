@@ -35,9 +35,17 @@ export interface NewCapture {
   id?: string;
 }
 
-/** Whether a capture id exists at all (any owner); used to keep client-minted ids from colliding. */
+/**
+ * Whether a capture id exists at all (any owner) or belonged to a share that was forgotten; used to keep
+ * client-minted ids from colliding and a forgotten share from coming back.
+ */
 export function captureIdTaken(id: string): boolean {
-  return Boolean(getDb().prepare('SELECT 1 FROM captures WHERE id = ?').get(id));
+  return Boolean(getDb().prepare('SELECT 1 FROM captures WHERE id = ? UNION ALL SELECT 1 FROM forgotten_captures WHERE id = ?').get(id, id));
+}
+
+/** Whether this person forgot a share with this id. */
+export function captureForgotten(ownerId: string, id: string): boolean {
+  return Boolean(getDb().prepare('SELECT 1 FROM forgotten_captures WHERE id = ? AND owner_id = ?').get(id, ownerId));
 }
 
 export function createCapture(ownerId: string, input: NewCapture): Capture {
@@ -66,12 +74,14 @@ export function updateCaptureReadStatus(ownerId: string, id: string, readStatus:
  * Forget a capture: its reply and proposals go with it (cascade), and so does what was learned from it
  * alone. Playground cards that cited it lose that grounding: removed when nothing else grounds them,
  * otherwise marked stale. Media stays until deleted explicitly; apps built from it keep their data.
+ * Its id is kept as forgotten, so a retried send of the same share is refused instead of saved again.
  */
 export function deleteCapture(ownerId: string, id: string): boolean {
   return transaction(() => {
     if (!getCapture(ownerId, id)) return false;
     getDb().prepare('DELETE FROM recommendations WHERE owner_id = ? AND capture_id = ?').run(ownerId, id);
     getDb().prepare('DELETE FROM captures WHERE id = ? AND owner_id = ?').run(id, ownerId);
+    getDb().prepare('INSERT OR IGNORE INTO forgotten_captures (id, owner_id, forgotten_at) VALUES (?, ?, ?)').run(id, ownerId, nowIso());
     forgetLearnedFrom(ownerId, id);
     const facts = new Set(approvedFacts(ownerId).map((f) => f.id));
     for (const rec of listRecommendations(ownerId, ['fresh', 'stale'])) {

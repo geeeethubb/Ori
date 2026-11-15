@@ -4,7 +4,7 @@
  * sheet. Each view type brings its own primary interaction: generic forms, "Add photo" uploads,
  * the practice timer's "Save session", saved sources, and one-tap completion in the queue.
  */
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { AppDetailDto, ProposalDetailDto } from '@shared/api.ts';
 import { primaryView, recordMatchesView, type AppSpec, type PromptRotationRule, type ViewSpec } from '@shared/appSpec.ts';
@@ -21,14 +21,15 @@ import { AddPhotoButton, GalleryView } from './GalleryView.tsx';
 import { JournalView } from './JournalView.tsx';
 import { LinksView } from './LinksView.tsx';
 import { ListView } from './ListView.tsx';
+import { noteSaveSent, practiceTimerKey, readTimer, renewSessionId } from './practiceTimer.ts';
 import { PracticeView, type PracticeSaveMeta } from './PracticeView.tsx';
 import { QueueView } from './QueueView.tsx';
-import { RecordSheet, type SheetState } from './RecordSheet.tsx';
+import { RecordSheet, type NewEntrySheet, type SheetState } from './RecordSheet.tsx';
 import { SummaryView } from './SummaryView.tsx';
 import { resolveTheme } from './theme.ts';
 import type { RecordActions } from './useAppData.ts';
 import { appSettingsPath, capitalize, COLLECTION_LABEL, markFirstAction, markUseful, readJson, useStandalone, viewKey, writeJson } from './runtimeUtils.ts';
-import { clockTime, formatClock } from './viewLogic.ts';
+import { atTime, formatClock } from './viewLogic.ts';
 
 /** What the save form says about a practice session: measured or typed in, and anything to check. */
 function practiceNote(meta: PracticeSaveMeta): string {
@@ -36,7 +37,7 @@ function practiceNote(meta: PracticeSaveMeta): string {
   const minutes = Math.max(1, Math.round(meta.elapsedMs / 60_000));
   const rounded = Math.round(meta.elapsedMs / 1000) % 60 !== 0;
   const parts = [`Your timer measured ${formatClock(meta.elapsedMs)} of your ${meta.plannedMinutes}-minute plan, saved as ${minutes} min${rounded ? ' (rounded)' : ''}.`];
-  if (meta.endedAway && meta.completedAt) parts.push(`It finished at ${clockTime(meta.completedAt)} while this page was closed; change the minutes if you stopped earlier.`);
+  if (meta.endedAway && meta.completedAt) parts.push(`It finished ${atTime(meta.completedAt)} while this page was closed; change the minutes if you stopped earlier.`);
   else if (meta.needsReview) parts.push('The clock changed while it ran, so check the minutes.');
   else parts.push('Change it if you stopped earlier.');
   return parts.join(' ');
@@ -93,10 +94,14 @@ export function AppHome({ appId, detail, records, actions, preview = false }: Pr
         markUseful(appId, { kind: rec.recordDraft?.kind ?? 'entry', via: 'agent' });
       },
     });
+  // The offline copy cannot save, so a link opened offline waits until the app is live. Handled once.
+  const live = Boolean(actions);
+  const fromHandled = useRef(false);
   useEffect(() => {
-    if (!fromId || !actions) return;
+    if (!fromId || !live || fromHandled.current) return;
     let alive = true;
     const drop = () => {
+      fromHandled.current = true;
       const url = new URL(window.location.href);
       url.searchParams.delete('from');
       window.history.replaceState(window.history.state, '', url.toString());
@@ -125,9 +130,9 @@ export function AppHome({ appId, detail, records, actions, preview = false }: Pr
     return () => {
       alive = false;
     };
-    // Runs once per suggestion link; the param is removed so a reload never re-opens it.
+    // Runs once per suggestion link, when the app can save; the param is removed so a reload never re-opens it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromId]);
+  }, [fromId, live]);
 
   /** Edit uses the form of the view the record belongs to (an app may hold several kinds of record). */
   const viewForRecord = useCallback(
@@ -136,8 +141,29 @@ export function AppHome({ appId, detail, records, actions, preview = false }: Pr
   );
   const onEdit = actions ? (record: AppRecord) => setSheet({ mode: 'edit', record, view: viewForRecord(record) }) : undefined;
 
-  const openNew = (target: ViewSpec, extra?: { preset?: RecordValues; title?: string; fresh?: boolean; recordId?: string; note?: string; onSaved?: (r: AppRecord) => void }) =>
-    setSheet({ mode: 'new', view: target, ...extra });
+  const openNew = (target: ViewSpec, extra?: Omit<NewEntrySheet, 'mode' | 'view'>) => setSheet({ mode: 'new', view: target, ...extra });
+
+  /**
+   * A timed session's save: the timer notes a save once it is really sent. An id that cannot be used again
+   * (that session was deleted, or changed elsewhere since it was saved) is replaced on the timer, keeping
+   * the time, and the new id is what the next save uses.
+   */
+  const timedSave = (practice: ViewSpec, sessionId: string): Pick<NewEntrySheet, 'onSending' | 'onConflict' | 'conflictMessage'> => {
+    // Every call names the session it is about, so another tab's newer session is never marked or renewed.
+    let current = sessionId;
+    return {
+    onSending: () => noteSaveSent(appId, practice.id, current),
+    onConflict: () => {
+      renewSessionId(appId, practice.id, current);
+      // Read with the default PracticeView reads it with, so nothing about the timer changes.
+      const renewed = practice.type === 'practice' ? readTimer(practiceTimerKey(appId, practice.id), practice.presets[0] ?? 10).sessionId : null;
+      if (!renewed || renewed === current) return undefined;
+      current = renewed;
+      return renewed;
+    },
+    conflictMessage: 'That session was changed on another device, so it was not overwritten. Save again to keep this time as a new session.',
+    };
+  };
 
   const onMove =
     actions && view.type === 'board'
@@ -323,6 +349,7 @@ export function AppHome({ appId, detail, records, actions, preview = false }: Pr
                     // A timed session is saved under its own id: retrying the save cannot double it.
                     recordId: meta.sessionId ?? undefined,
                     note: practiceNote(meta),
+                    ...(meta.sessionId ? timedSave(view, meta.sessionId) : {}),
                     onSaved: () => {
                       // Only time the clock measured counts as practice done; a typed-in log is kept, not counted.
                       if (meta.timed) first('session');
@@ -339,7 +366,7 @@ export function AppHome({ appId, detail, records, actions, preview = false }: Pr
         />
       </div>
 
-      {actions && <RecordSheet appId={appId} spec={spec} sheet={sheet} onClose={() => setSheet(null)} actions={actions} />}
+      {actions && <RecordSheet appId={appId} spec={spec} sheet={sheet} onClose={() => setSheet(null)} actions={actions} records={records} />}
     </div>
   );
 }

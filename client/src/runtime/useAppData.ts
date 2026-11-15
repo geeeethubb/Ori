@@ -25,7 +25,8 @@ export interface CreateOptions {
 }
 
 export interface RecordActions {
-  createRecord: (values: RecordValues, opts?: CreateOptions) => Promise<{ record: AppRecord; duplicate: boolean }>;
+  /** `duplicate`: this id was saved before; `updated`: this save brought newer values to that entry. */
+  createRecord: (values: RecordValues, opts?: CreateOptions) => Promise<{ record: AppRecord; duplicate: boolean; updated: boolean }>;
   updateRecord: (recordId: string, values: RecordValues) => Promise<AppRecord>;
   deleteRecord: (recordId: string) => Promise<void>;
 }
@@ -39,6 +40,30 @@ export interface AppData extends RecordActions {
   setDetail: (detail: AppDetailDto) => void;
 }
 
+/** Puts a saved copy in the list: in place of the entry with its id, or at the top when it is new here. */
+export function upsertRecord(records: AppRecord[], record: AppRecord): AppRecord[] {
+  return records.some((r) => r.id === record.id) ? records.map((r) => (r.id === record.id ? record : r)) : [record, ...records];
+}
+
+/**
+ * Undoes a failed edit on the shown copy: only the keys it changed go back, to the copy the server last
+ * confirmed. What other edits changed stays as shown.
+ */
+export function revertKeys(shown: AppRecord, confirmed: AppRecord, keys: string[]): AppRecord {
+  const values = { ...shown.values };
+  for (const k of keys) {
+    if (k in confirmed.values) values[k] = confirmed.values[k];
+    else delete values[k];
+  }
+  return { ...shown, values };
+}
+
+/** The latest copy a 409 record_conflict carries (it was changed since this page saw it). */
+export function conflictCopy(err: unknown): AppRecord | undefined {
+  if (!(err instanceof ApiError) || err.code !== 'record_conflict') return undefined;
+  return (err.details as { record?: AppRecord } | null)?.record ?? undefined;
+}
+
 export function useAppData(appId: string, enabled: boolean, userId?: string): AppData {
   const [state, setState] = useState<AppDataState>({ kind: 'idle' });
   const [reloading, setReloading] = useState(false);
@@ -47,6 +72,8 @@ export function useAppData(appId: string, enabled: boolean, userId?: string): Ap
   const seq = useRef(0);
   /** The server's updatedAt for each record this page last saw; every edit is checked against it. */
   const stamps = useRef(new Map<string, string>());
+  /** The last copy of each record the server confirmed; a failed edit puts its keys back to it. */
+  const confirmed = useRef(new Map<string, AppRecord>());
   /** Edits to one record run one after another, so a quick "done" then "undo" never races itself. */
   const queues = useRef(new Map<string, Promise<unknown>>());
 
@@ -64,6 +91,7 @@ export function useAppData(appId: string, enabled: boolean, userId?: string): Ap
       ]);
       if (mine !== seq.current) return;
       stamps.current = new Map(page.records.map((r) => [r.id, r.updatedAt]));
+      confirmed.current = new Map(page.records.map((r) => [r.id, r]));
       setState({ kind: 'ready', detail, records: page.records });
     } catch (err) {
       if (mine !== seq.current) return;
@@ -115,17 +143,34 @@ export function useAppData(appId: string, enabled: boolean, userId?: string): Ap
     setState((s) => (s.kind === 'ready' ? { ...s, records: s.records.map((r) => (r.id === recordId ? (typeof next === 'function' ? next(r) : next) : r)) } : s));
   }, []);
 
+  /** Notes a copy the server confirmed: later edits are checked against it and fall back to it. */
+  const remember = useCallback((record: AppRecord) => {
+    stamps.current.set(record.id, record.updatedAt);
+    confirmed.current.set(record.id, record);
+  }, []);
+
   const createRecord = useCallback<RecordActions['createRecord']>(
     async (values, opts = {}) => {
-      const res = await api<{ record: AppRecord; duplicate?: boolean }>(`/api/apps/${appId}/records`, {
-        method: 'POST',
-        body: { values, ...(opts.id ? { id: opts.id } : {}), ...(opts.recommendationId ? { recommendationId: opts.recommendationId } : {}) },
-      });
-      stamps.current.set(res.record.id, res.record.updatedAt);
-      setState((s) => (s.kind === 'ready' ? { ...s, records: [res.record, ...s.records.filter((r) => r.id !== res.record.id)] } : s));
-      return { record: res.record, duplicate: Boolean(res.duplicate) };
+      const show = (record: AppRecord) => {
+        remember(record);
+        setState((s) => (s.kind === 'ready' ? { ...s, records: upsertRecord(s.records, record) } : s));
+      };
+      let res: { record: AppRecord; duplicate?: boolean; updated?: boolean };
+      try {
+        res = await api<{ record: AppRecord; duplicate?: boolean; updated?: boolean }>(`/api/apps/${appId}/records`, {
+          method: 'POST',
+          body: { values, ...(opts.id ? { id: opts.id } : {}), ...(opts.recommendationId ? { recommendationId: opts.recommendationId } : {}) },
+        });
+      } catch (err) {
+        // Saved before and edited since: the latest copy is shown, nothing was overwritten.
+        const latest = conflictCopy(err);
+        if (latest) show(latest);
+        throw err;
+      }
+      show(res.record);
+      return { record: res.record, duplicate: Boolean(res.duplicate), updated: Boolean(res.updated) };
     },
-    [appId],
+    [appId, remember],
   );
 
   const updateRecord = useCallback<RecordActions['updateRecord']>(
@@ -141,17 +186,20 @@ export function useAppData(appId: string, enabled: boolean, userId?: string): Ap
             method: 'PATCH',
             body: { values, ...(baseUpdatedAt ? { baseUpdatedAt } : {}) },
           });
-          stamps.current.set(recordId, res.record.updatedAt);
+          remember(res.record);
           replaceRecord(recordId, res.record);
           return res.record;
         } catch (err) {
           // Changed on another device: show the newer copy instead of overwriting it.
-          const current = err instanceof ApiError && err.code === 'record_conflict' ? (err.details as { record?: AppRecord } | null)?.record : undefined;
+          const current = conflictCopy(err);
           if (current) {
-            stamps.current.set(recordId, current.updatedAt);
+            remember(current);
             replaceRecord(recordId, current);
-          } else if (previous) {
-            replaceRecord(recordId, previous);
+          } else {
+            // Put back only what this edit changed, as the server last confirmed it: an earlier edit that
+            // also failed must not come back, and edits still waiting stay shown.
+            const base = confirmed.current.get(recordId) ?? previous;
+            if (base) replaceRecord(recordId, (r) => revertKeys(r, base, Object.keys(values)));
           }
           throw err;
         }
@@ -161,7 +209,7 @@ export function useAppData(appId: string, enabled: boolean, userId?: string): Ap
       queues.current.set(recordId, next);
       return next;
     },
-    [appId, replaceRecord],
+    [appId, replaceRecord, remember],
   );
 
   const deleteRecord = useCallback<RecordActions['deleteRecord']>(

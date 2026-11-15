@@ -51,12 +51,44 @@ export function startOfMonthIso(now: Date = new Date()): string {
 }
 
 const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-const WHEN_RX = /\b(?:(?:on|by|this|next|before)\s+)?(?:today|tonight|tomorrow|this weekend|next week|(?:sun|mon|tues?|wed(?:nes)?|thu(?:rs?)?|fri|sat(?:ur)?)(?:day)?)\b/i;
+const DAY_FULL = 'sunday|monday|tuesday|wednesday|thursday|friday|saturday';
+const DAY_ABBR = 'sun|mon|tue|tues|wed|thu|thur|thurs|fri|sat';
+// Whole words only: "month" is not Monday, "wedding" is not Wednesday.
+const WHEN_FULL_RX = new RegExp(`\\b(?:(?:on|by|this|next|before)\\s+)?(?:today|tonight|tomorrow|this weekend|next week|${DAY_FULL})\\b`, 'gi');
+// Short forms count only after on/by/this/next/before: "he sat the exam" is not Saturday.
+const WHEN_ABBR_RX = new RegExp(`\\b(?:on|by|this|next|before)\\s+(?:${DAY_ABBR})\\b\\.?`, 'gi');
 
-/** The person's own words for when (e.g. "Thursday", "by Friday", "tomorrow"), if a note has any. */
+interface WhenPhrase {
+  text: string;
+  index: number;
+  /** Introduced by by / on / before: a deadline rather than a passing mention. */
+  deadline: boolean;
+}
+
+function whenPhrases(text: string): WhenPhrase[] {
+  const out: WhenPhrase[] = [];
+  for (const rx of [WHEN_FULL_RX, WHEN_ABBR_RX]) {
+    rx.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = rx.exec(text))) out.push({ text: m[0].trim(), index: m.index, deadline: /^(?:by|on|before)\b/i.test(m[0]) });
+  }
+  out.sort((a, b) => a.index - b.index || b.text.length - a.text.length);
+  return out.filter((p, i) => !out.some((q, j) => j < i && q.index <= p.index && q.index + q.text.length >= p.index + p.text.length));
+}
+
+/** The person's own words for when (e.g. "Thursday", "by Friday", "tomorrow"), if a note has any; a deadline wins. */
 export function findWhenWords(text: string): string | null {
-  const m = WHEN_RX.exec(text);
-  return m ? m[0].trim() : null;
+  const all = whenPhrases(text);
+  if (!all.length) return null;
+  return (all.find((p) => p.deadline) ?? all[0]!).text;
+}
+
+/** More than one time that could be meant, with no single deadline among them: then no date is suggested. */
+export function ambiguousWhen(text: string): boolean {
+  const all = whenPhrases(text);
+  const deadlines = all.filter((p) => p.deadline);
+  if (deadlines.length) return new Set(deadlines.map((p) => p.text.toLowerCase())).size > 1;
+  return new Set(all.map((p) => p.text.toLowerCase())).size > 1;
 }
 
 /**
@@ -65,11 +97,16 @@ export function findWhenWords(text: string): string | null {
  * A bare weekday means the next one after today (said on a Thursday, "Thursday" means next week).
  */
 export function suggestDateFor(words: string, now: Date = new Date()): string | null {
-  const w = words.toLowerCase();
+  // The same rules as finding the words: "he sat the exam" or "sat" alone never become Saturday.
+  const phrase = findWhenWords(words);
+  if (!phrase) return null;
+  const w = phrase.toLowerCase();
   const today = todayIso(now);
   if (/\b(today|tonight)\b/.test(w)) return today;
   if (/\btomorrow\b/.test(w)) return addDays(today, 1);
-  const idx = WEEKDAYS.findIndex((d) => new RegExp(`\\b${d.slice(0, 3)}`).test(w));
+  const day = new RegExp(`\\b(${DAY_FULL}|${DAY_ABBR})\\b`).exec(w)?.[1];
+  if (!day) return null;
+  const idx = WEEKDAYS.findIndex((d) => d.startsWith(day.slice(0, 3)));
   if (idx < 0) return null;
   const ahead = ((idx - now.getDay() + 7) % 7) || 7;
   return addDays(today, ahead);

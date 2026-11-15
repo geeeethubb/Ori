@@ -6,13 +6,15 @@ import { describe, expect, it } from 'vitest';
 import { APP_THEMES, AppSpecSchema, type AppSpec } from '@shared/appSpec.ts';
 import { ICON_COLORS } from '@shared/icons.ts';
 import type { AppRecord } from '@shared/records.ts';
-import { addDays, todayIso } from '@shared/time.ts';
+import { addDays, friendlyDate, todayIso } from '@shared/time.ts';
 import { LIGHT_GALLERY, PEOPLE_QUEUE, RIFF_PRACTICE } from '../../../server/fixtures/specs.ts';
 import { elapsedMs, pauseTimer, readTimer, remainingMs, resetTimer, selectPreset, settleTimer, startTimer } from './practiceTimer.ts';
 import { draftKey } from './runtimeUtils.ts';
 import { ACCENTS, contrastRatio, resolveAccent, resolveTheme, THEME_SURFACES, THEMES } from './theme.ts';
 import {
+  atTime,
   clampTempo,
+  clockTime,
   completionPatch,
   draftFieldFor,
   elapsedMinutes,
@@ -20,6 +22,7 @@ import {
   galleryCaption,
   galleryTiles,
   linkHost,
+  listedSessions,
   personInitials,
   personShortName,
   queueByPerson,
@@ -170,6 +173,24 @@ describe('practice helpers', () => {
     const b = rec({ kind: 'session', date: '2026-11-05', minutes: 20 });
     expect(recentSessions(practiceView, [a, b]).map((r) => r.values.minutes)).toEqual([20, 10]);
     expect(recentSessions(practiceView, [a, b], 1)).toHaveLength(1);
+  });
+  it('lists the newest five sessions, or every one once the person asks', () => {
+    const sessions = [3, 1, 7, 5, 2, 6, 4].map((d) => rec({ kind: 'session', date: `2026-11-0${d}`, minutes: d }));
+    const short = listedSessions(practiceView, sessions, false);
+    expect(short.rows.map((r) => r.values.minutes)).toEqual([7, 6, 5, 4, 3]);
+    expect(short).toMatchObject({ total: 7, hasMore: true });
+    const all = listedSessions(practiceView, sessions, true);
+    expect(all.rows.map((r) => r.values.minutes)).toEqual([7, 6, 5, 4, 3, 2, 1]);
+    expect(all).toMatchObject({ total: 7, hasMore: true });
+    expect(listedSessions(practiceView, sessions.slice(0, 5), false)).toMatchObject({ total: 5, hasMore: false });
+    expect(listedSessions(practiceView, [], true)).toEqual({ rows: [], total: 0, hasMore: false });
+  });
+  it('says when something happened, naming the day unless it was today', () => {
+    const now = new Date(2026, 10, 14, 8, 0);
+    const at = (day: number, h: number, m = 0) => new Date(2026, 10, day, h, m).getTime();
+    expect(atTime(at(14, 7, 30), now)).toBe(`at ${clockTime(at(14, 7, 30))}`);
+    expect(atTime(at(13, 22, 25), now)).toBe(`yesterday at ${clockTime(at(13, 22, 25))}`);
+    expect(atTime(at(10, 22, 25), now)).toBe(`on ${friendlyDate('2026-11-10', now)} at ${clockTime(at(10, 22, 25))}`);
   });
   it('timer state is derived from timestamps so it survives remounts', () => {
     const t0 = 1_000_000;
