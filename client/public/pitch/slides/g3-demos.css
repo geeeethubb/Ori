@@ -45,6 +45,17 @@
 .layout-create .g3-shot.crop-2 img { object-position: center 62%; }
 .layout-create .g3-story { gap: 10px; }
 .layout-create .g3-story .g3-note { padding-left: calc(72px + 28px); }
+/* The founder's callout under "Open your app": add it to your home screen (an action the person takes). Small and
+   subordinate to the steps: the step's title and detail sit above it, beside the same screenshot. */
+.layout-create .cr-steps .g3-step.has-home { grid-template-areas: 'mark shot text' 'mark shot home'; grid-template-rows: auto auto; align-content: center; row-gap: 14px; }
+.layout-create .cr-steps .has-home .g3-mark { grid-area: mark; }
+.layout-create .cr-steps .has-home .g3-shot { grid-area: shot; }
+.layout-create .cr-steps .has-home .g3-step-text { grid-area: text; align-self: end; }
+.layout-create .cr-home { grid-area: home; justify-self: start; align-self: start; display: flex; align-items: center; gap: 12px; padding: 8px 20px 8px 8px; border-radius: 18px; background: var(--card); box-shadow: 0 0 0 1.5px var(--line), 0 12px 24px -18px rgba(14, 20, 40, 0.6); transition: opacity 0.3s ease; }
+.layout-create .cr-home-icon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 13px; background: var(--lime); color: var(--ink); flex: none; }
+.layout-create .cr-home .cr-home-text p { margin: 0; font-size: 18px; line-height: 1.25; color: var(--fg-muted); }
+.layout-create .cr-home .cr-home-text p.cr-home-title { font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: -0.01em; line-height: 1.15; color: var(--fg); }
+.layout-create .cr-steps.has-active .g3-step:not(.is-active) .cr-home { opacity: 0.72; }
 
 /* Slide 7 · grow */
 .layout-grow .gr-story { gap: 26px; }
@@ -128,6 +139,12 @@
 .is-flow .layout-create .cr-steps .g3-step-text { grid-area: text; align-self: center; }
 .is-flow .layout-create .g3-shot { grid-area: shot; width: 100%; max-width: 304px; height: auto; aspect-ratio: 304 / 172; }
 .is-flow .layout-create .g3-story .g3-note { padding-left: 0; }
+.is-flow .layout-create .cr-steps .g3-step.has-home { grid-template-areas: 'mark text' 'mark shot' 'mark home'; grid-template-rows: none; }
+.is-flow .layout-create .cr-home { padding: 6px 14px 6px 6px; gap: 10px; border-radius: 14px; }
+.is-flow .layout-create .cr-home-icon { width: 34px; height: 34px; border-radius: 10px; }
+.is-flow .layout-create .cr-home-icon .kit-icon { width: 20px; height: 20px; }
+.is-flow .layout-create .cr-home .cr-home-text p { font-size: 14px; margin: 0; }
+.is-flow .layout-create .cr-home .cr-home-text p.cr-home-title { font-size: 16px; }
 .is-flow .layout-features .ft-steps .g3-mark.is-ori .kit-ori { --ori-size: 40px !important; }
 .is-flow .layout-features .g3-story { height: auto; }
 .is-flow .layout-grow .gr-story { gap: 18px; }

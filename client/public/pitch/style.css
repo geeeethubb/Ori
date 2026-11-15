@@ -280,11 +280,11 @@ h2.headline { font-size: var(--fs-h1); }
 .layout-signature .scene-body.signature-body { padding-top: 0; justify-content: center; }
 .signature { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 112px; padding: 0 24px; }
 /* The canonical wordmark in its light variant on ink: white letters; the i's dot stays lime in its cobalt ring. */
-.signature-logo { display: block; width: 136px; height: 88px; margin: 0 0 44px; }
+.signature-logo { display: block; width: 136px; height: 88px; margin: 0 0 48px; }
 .signature-logo img, .signature-logo svg { display: block; width: 100%; height: 100%; }
 .signature-logo .ori-letters { fill: var(--on-ink); }
 .signature-logo .ori-letters g { stroke: var(--on-ink); }
-.signature-line { font-family: var(--font-display); font-weight: 800; font-size: 112px; letter-spacing: -0.055em; line-height: 0.98; margin: 0 0 56px; color: var(--fg); }
+.signature-line { font-family: var(--font-display); font-weight: 800; font-size: 128px; letter-spacing: -0.055em; line-height: 0.98; margin: 0 0 60px; color: var(--fg); }
 .sig-row { display: block; }
 .signature-line .accent { color: var(--lime); }
 .signature-contact { font-style: normal; display: grid; gap: 10px; justify-items: start; }

@@ -37,7 +37,7 @@ const OUT = resolve(opt('out', join(tmpdir(), `ori-pitch-check-${process.pid}`))
 const EXPECTED_SCENES = Number(opt('scenes', '15'));
 const EXPECTED_SECONDS = Number(opt('seconds', '238'));
 const PRODUCT = 'https://ori-fjrx.onrender.com/';
-const SIGNATURE = { line: 'Ori. Your phone, your story.', name: 'Zuyu Liu', email: 'zliu2017@illinois.edu', phone: '847-962-2868', links: ['mailto:zliu2017@illinois.edu', 'tel:+18479622868', PRODUCT] };
+const SIGNATURE = { line: 'Your phone, your story.', name: 'Zuyu Liu', email: 'zliu2017@illinois.edu', phone: '847-962-2868', links: ['mailto:zliu2017@illinois.edu', 'tel:+18479622868', PRODUCT] };
 let BASE = opt('base', '');
 mkdirSync(OUT, { recursive: true });
 

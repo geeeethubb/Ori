@@ -66,12 +66,20 @@
     const o = scene.onScreen || {};
     const key = o.media || 'create';
     const slot = kit.media(key, { height: 664, label: o.mediaLabel || SAMPLE_RECORDING });
-    const items = (o.steps || []).map((s, i) => h('li', { class: 'g3-step' },
+    // The founder's callout under the last step: the person can add the app to their home screen (the Ready
+    // screen's Add to home screen; PRODUCT_FACTS.md). An action they take, never shown as done for them.
+    const home = o.homeScreen;
+    const homeCard = home ? h('div', { class: 'cr-home' },
+      h('span', { class: 'cr-home-icon', 'aria-hidden': 'true' }, kit.icon(home.icon || 'squarePlus', { size: 26 })),
+      h('div', { class: 'cr-home-text' }, h('p', { class: 'cr-home-title' }, home.title), home.detail ? h('p', null, home.detail) : null)) : null;
+    const steps = o.steps || [];
+    const items = steps.map((s, i) => h('li', { class: kit.cls('g3-step', homeCard && i === steps.length - 1 ? 'has-home' : '') },
       h('span', { class: 'g3-mark', 'aria-hidden': 'true' }, s.app ? kit.appIcon(s.app, { size: 44 }) : kit.icon(s.icon || 'sparkle', { size: 30 })),
       s.still ? shot(kit, s.still, s.alt || '', `crop-${i + 1}`) : null,
       h('div', { class: 'g3-step-text' },
         h('h3', null, kit.sr(`Step ${i + 1}: `), s.title),
-        s.detail ? h('p', null, s.detail) : null)));
+        s.detail ? h('p', null, s.detail) : null),
+      i === steps.length - 1 ? homeCard : null));
     const list = h('ol', { class: 'g3-steps cr-steps' }, items);
     followCues(kit, key, slot, list, items);
     return {

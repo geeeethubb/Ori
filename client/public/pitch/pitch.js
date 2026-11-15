@@ -679,11 +679,11 @@
     const line = String(o.line || scene.headline);
     const qr = o.qr || {};
     const c = o.contact || {};
-    // "Ori." / "Your phone," / "your story." on three lines, as a callback to the opening; the text stays
-    // exactly the one line (the spaces between the blocks are part of it).
-    const m = /^(Ori\.)\s+(Your phone,)\s+(your )(story)(\.)$/.exec(line);
+    // "Your phone," / "your story." on two lines under the wordmark (which already says ori), as a callback
+    // to the opening; the text stays exactly the one line (the space between the blocks is part of it).
+    const m = /^(Your phone,)\s+(your )(story)(\.)$/.exec(line);
     const lineEl = m
-      ? h('h2', { class: 'signature-line' }, h('span', { class: 'sig-row' }, m[1]), ' ', h('span', { class: 'sig-row' }, m[2]), ' ', h('span', { class: 'sig-row' }, m[3], h('span', { class: 'accent' }, m[4]), m[5]))
+      ? h('h2', { class: 'signature-line' }, h('span', { class: 'sig-row' }, m[1]), ' ', h('span', { class: 'sig-row' }, m[2], h('span', { class: 'accent' }, m[3]), m[4]))
       : h('h2', { class: 'signature-line' }, line);
     const qrHref = /^https:\/\//.test(String(qr.href || '')) ? qr.href : '';
     const qrImage = h('img', { src: qr.src, alt: qr.alt || 'QR code', width: '384', height: '384', decoding: 'async' });

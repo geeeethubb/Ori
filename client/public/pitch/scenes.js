@@ -146,6 +146,8 @@ window.ORI_SCENES = [
         { title: 'Shape the idea', detail: 'Ori proposes Light', icon: 'sparkle', still: 'media/stills/agent-reply-light-card-crop.webp', alt: 'Product screenshot, Sample mode: Ori replies “Sample mode cannot read images, so I’m using your words. Want a place for the shots you notice?” above the Light card, “A photo journal shaped around you.”, with Preview Light and Keep inspiration.' },
         { title: 'Open your app', detail: 'Your photo inside', app: 'light', still: 'media/stills/light-ready-card-crop.webp', alt: 'Product screenshot, Sample mode: Light’s card on its Ready screen, with its camera icon, “Notice the light.” and the person’s photo as its first entry.' }
       ],
+      // The founder's callout beside step 3: an action the person takes (the Ready screen's Add to home screen).
+      homeScreen: { title: 'Add it to your home screen', detail: 'Its own icon.', icon: 'squarePlus' },
       stillsLabel: 'Product screenshots · Sample mode'
     },
     spoken: 'Here’s the real product, recorded in Sample mode with scripted responses. I want to get better at noticing light on my walks. I share a photo and that thought. Ori suggests a place for it. I shape one detail: shadows and reflections. I tap Make mine, and Light opens, with my photo already in it.',
@@ -334,10 +336,10 @@ window.ORI_SCENES = [
         ]
       },
       channels: ['UIUC', 'Other campuses', 'Young professionals'],
-      yc: { logo: 'assets/yc-logo.png', title: 'YC Summer 2027', label: 'Application goal' }
+      yc: { logo: 'assets/yc-logo.png', title: 'YC Fall 2027', label: 'Application goal' }
     },
-    spoken: 'We start at UIUC, then other campuses and young professionals. Our 2027 goals: 100,000 registered users by September, and a YC application for Summer.',
-    cue: 'Goals, not traction, a forecast or a budget: cumulative distinct registered users, month-end, on an honest linear scale. The 50 people targeted for enrollment by December 15 are the initial cohort; January is the pilot and observation checkpoint, not a new start. Burden of proof if asked: 50 in January to 100,000 in September is a 2,000-fold increase in eight months, about 159% compounded monthly growth; the last two months need 75,000 more registrations, about 1,230 a day. YC Summer 2027 is an application goal: no acceptance, backing or endorsement, and no deadline is stated.',
+    spoken: 'We start at UIUC, then other campuses and young professionals. Our 2027 goals: 100,000 registered users by September, and a YC application for Fall.',
+    cue: 'Goals, not traction, a forecast or a budget: cumulative distinct registered users, month-end, on an honest linear scale. The 50 people targeted for enrollment by December 15 are the initial cohort; January is the pilot and observation checkpoint, not a new start. Burden of proof if asked: 50 in January to 100,000 in September is a 2,000-fold increase in eight months, about 159% compounded monthly growth; the last two months need 75,000 more registrations, about 1,230 a day. YC Fall 2027 is an application goal: no acceptance, backing or endorsement, and no deadline is stated.',
     appendix: ['roadmap', 'sources']
   },
   {
@@ -430,11 +432,11 @@ window.ORI_SCENES = [
     layout: 'signature',
     group: 'core',
     onScreen: {
-      line: 'Ori. Your phone, your story.',
+      line: 'Your phone, your story.',
       qr: { src: 'assets/qr-ori.png', href: 'https://ori-fjrx.onrender.com/', alt: 'QR code that opens Ori', caption: 'Try Ori now' },
       contact: { name: 'Zuyu Liu', email: 'zliu2017@illinois.edu', phone: '847-962-2868', tel: '+18479622868' }
     },
-    spoken: 'Ori. Your phone, your story. Scan the code, create your own account, and try Ori. Thank you.',
+    spoken: 'Your phone, your story. Scan the code, create your own account, and try Ori. Thank you.',
     cue: 'Scan the code, create your own account, and try Ori. The slide shows only “Try Ori now” under the code; say the full invitation. Leave this slide up for the two minutes of Q&A: the code opens https://ori-fjrx.onrender.com/, where people sign up for their own account. Never show shared demo credentials. The appendix (A) holds sources and definitions for questions.',
     appendix: ['ask', 'sources']
   }

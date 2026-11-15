@@ -253,7 +253,8 @@ describe('the pitch deck data (client/public/pitch)', () => {
     if (!close) throw new Error('scenes.js has no scenes');
     const o = close.onScreen as { line: string; qr: { src: string; href: string; caption: string }; contact: { name: string; email: string; phone: string; tel: string } };
     expect(close.layout).toBe('signature');
-    expect(o.line).toBe('Ori. Your phone, your story.');
+    // The wordmark above it already names Ori, so the line has no “Ori.” of its own.
+    expect(o.line).toBe('Your phone, your story.');
     expect(o.qr.href).toBe('https://ori-fjrx.onrender.com/');
     expect(o.qr.caption).toBe('Try Ori now');
     expect(Object.keys(o).sort()).toEqual(['contact', 'line', 'qr']);

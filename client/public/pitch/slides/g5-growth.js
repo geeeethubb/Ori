@@ -190,7 +190,7 @@
 
     // YC: a large, deliberate milestone card; an application goal, not acceptance or backing.
     const title = String(o.yc.title);
-    const split = title.indexOf(' Summer');
+    const split = title.indexOf(' '); // "YC" on one line, the batch ("Fall 2027") on the next
     const yc = h('section', { class: 'gw-yc', 'aria-label': `${o.yc.title}, ${o.yc.label}` },
       h('div', { class: 'gw-yc-top' },
         h('img', { class: 'gw-yc-logo', src: o.yc.logo, alt: 'Y Combinator logo', width: '56', height: '56', decoding: 'async' }),

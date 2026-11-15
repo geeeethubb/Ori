@@ -8,7 +8,7 @@
 // For each slide (arrived at by its hash, so step reveals show their complete state) it measures, inside the slide
 // only (not the deck's header, footer or navigation, not hidden or screen-reader-only text):
 //   words        visible words; budget 35, or a per-slide budget for slides the brief makes denser
-//                (promise 50, kept from the original deck; discovery 50; grow 45, the brief requires its takeaway; growth 50, founder 70, positioning map 70, Velocity 60); --budget overrides
+//                (promise 50, kept from the original deck; discovery 50; create 40, the founder's home-screen callout; grow 45, the brief requires its takeaway; growth 50, founder 70, positioning map 70, Velocity 60); --budget overrides
 //   headline     words in the headline; at most 12
 //   longest      the longest single text block other than the headline; at most 16 words (no paragraphs in cards)
 //   visual       share of the slide covered by visuals (images, SVG, video, canvas, background images and text-free
@@ -37,7 +37,7 @@ let BASE = opt('base', '');
 const budgets = [];
 args.forEach((a, i) => { if (a === '--budget' && args[i + 1]) { const [k, v] = args[i + 1].split('='); budgets.push([k, Number(v)]); } });
 const DEFAULT_BUDGET = 35;
-const DENSE = [[/promise/, 50], [/discover/, 50], [/^grow$/, 45], [/growth|roadmap|goal/, 50], [/founder|gtm|community/, 70], [/position|map|compet/, 70], [/velocity/, 60]];
+const DENSE = [[/promise/, 50], [/discover/, 50], [/^create$/, 40], [/^grow$/, 45], [/growth|roadmap|goal/, 50], [/founder|gtm|community/, 70], [/position|map|compet/, 70], [/velocity/, 60]];
 const budgetFor = (id) => {
   for (const [k, v] of budgets) if (id === k || id.includes(k)) return v;
   for (const [rx, v] of DENSE) if (rx.test(id)) return v;
