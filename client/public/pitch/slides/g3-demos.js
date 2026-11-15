@@ -106,9 +106,11 @@
 
     const panel = (side, className) => h('figure', { class: kit.cls('gr-panel', className) },
       h('figcaption', { class: 'gr-panel-tag' }, side.label),
-      h('span', { class: 'gr-frame' },
-        shot(kit, side.still, side.alt || '', 'crop-entry'),
-        className === 'is-after' ? h('span', { class: 'gr-new', 'aria-hidden': 'true' }) : null));
+      h('span', { class: 'gr-shot-wrap' },
+        h('span', { class: 'gr-frame' },
+          shot(kit, side.still, side.alt || '', 'crop-entry'),
+          className === 'is-after' ? h('span', { class: 'gr-new', 'aria-hidden': 'true' }) : null),
+        className === 'is-after' && o.afterChip ? h('span', { class: 'gr-chip' }, o.afterChip) : null));
 
     const mechanism = h('ol', { class: 'gr-mech' }, (o.mechanism || []).map((text, i) => h('li', { class: 'gr-mech-step' },
       h('span', { class: 'gr-mech-icon', 'aria-hidden': 'true' }, kit.icon(['agent', 'sliders', 'check2'][i] || 'check2', { size: 22 })),
@@ -121,7 +123,7 @@
 
     const pair = h('div', { class: 'gr-pair' },
       panel(o.before || {}, 'is-before'),
-      h('div', { class: 'gr-mech-col' }, mechanism, h('span', { class: 'gr-mech-arrow', 'aria-hidden': 'true' }, kit.icon('arrowRight', { size: 34 }))),
+      h('div', { class: 'gr-mech-col' }, o.ask ? h('p', { class: 'gr-ask' }, `“${o.ask}”`) : null, mechanism, h('span', { class: 'gr-mech-arrow', 'aria-hidden': 'true' }, kit.icon('arrowRight', { size: 34 }))),
       panel(o.after || {}, 'is-after'));
 
     return {
@@ -133,7 +135,7 @@
         h('div', { class: 'g3-story gr-story' },
           loop,
           h('div', { class: 'gr-evidence' }, pair, o.stillsLabel ? h('p', { class: 'g3-note' }, o.stillsLabel) : null, ret),
-          h('p', { class: 'gr-takeaway' }, o.takeaway || ''))),
+          o.takeaway ? h('p', { class: 'gr-takeaway' }, o.takeaway) : null)),
     };
   };
 

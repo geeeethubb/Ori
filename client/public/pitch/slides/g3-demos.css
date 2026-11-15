@@ -76,6 +76,11 @@
    Under reduced motion the highlight is simply there (the deck removes every animation). */
 .layout-grow.active .gr-new { animation: gr-new-in 0.7s 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 @keyframes gr-new-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
+/* The change, readable from the room: the request typed in the clip, and a chip on the After highlight. */
+.layout-grow .gr-shot-wrap { position: relative; display: block; }
+.layout-grow .gr-chip { position: absolute; left: 50%; top: 72.7%; transform: translate(-50%, -50%); z-index: 2; width: max-content; max-width: 250px; padding: 6px 16px; border-radius: 18px; background: var(--blue); color: #fff; font-family: var(--font-display); font-weight: 800; font-size: 25px; line-height: 1.12; letter-spacing: -0.01em; text-align: center; box-shadow: 0 10px 22px -12px rgba(14, 20, 40, 0.7); }
+.layout-grow .gr-ask { position: relative; margin: 0 0 6px; max-width: 220px; padding: 10px 14px; border-radius: 16px; background: var(--card, #fff); box-shadow: 0 0 0 1.5px var(--line), 0 12px 24px -18px rgba(14, 20, 40, 0.6); font-family: var(--font-display); font-weight: 700; font-size: 21px; line-height: 1.2; letter-spacing: -0.01em; color: var(--fg); text-align: left; }
+.layout-grow .gr-ask::after { content: ''; position: absolute; left: 34px; bottom: -8px; width: 16px; height: 16px; background: inherit; transform: rotate(45deg); box-shadow: 1.5px 1.5px 0 0 var(--line); }
 .layout-grow .gr-mech-col { display: grid; justify-items: center; gap: 12px; align-self: center; padding-top: 30px; }
 .layout-grow .gr-mech { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; justify-items: stretch; }
 .layout-grow .gr-mech-step { display: flex; align-items: center; gap: 10px; padding: 7px 16px 7px 7px; border-radius: 999px; background: var(--card, #fff); box-shadow: 0 0 0 1.5px var(--line); font-family: var(--font-display); font-weight: 800; font-size: 21px; letter-spacing: -0.01em; color: var(--fg); white-space: nowrap; }
@@ -135,6 +140,9 @@
 .is-flow .layout-grow .gr-pair { flex-wrap: wrap; gap: 14px; align-items: flex-start; }
 .is-flow .layout-grow .gr-panel { width: calc(50% - 7px); }
 .is-flow .layout-grow .gr-panel-tag { font-size: 15px; }
+.is-flow .layout-grow .gr-shot-wrap { width: 100%; }
+.is-flow .layout-grow .gr-chip { font-size: 13px; max-width: 92%; padding: 3px 8px; border-radius: 10px; }
+.is-flow .layout-grow .gr-ask { font-size: 14px; max-width: none; padding: 6px 10px; }
 .is-flow .layout-grow .gr-frame { width: 100%; box-shadow: 0 0 0 3px var(--bezel); border-radius: 14px; }
 .is-flow .layout-grow .gr-mech-col { order: 3; width: 100%; padding-top: 0; justify-items: start; }
 .is-flow .layout-grow .gr-mech { display: flex; flex-wrap: wrap; gap: 8px; }

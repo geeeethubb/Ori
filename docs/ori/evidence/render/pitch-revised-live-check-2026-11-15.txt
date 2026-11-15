@@ -1,0 +1,126 @@
+Revised pitch (15 presented scenes), commit 17a7ac2, live on https://ori-fjrx.onrender.com/pitch/ from 05:34:16 CST, 2026-11-15.
+Browser sizes are emulated viewports, not physical phones. Local paths are redacted to <local scratch folder>.
+
+1) node scripts/verify-deploy.mjs --base https://ori-fjrx.onrender.com --phase after --state <local file> --demo-password-file <local file, never printed>  (05:34:27)
+deploy check · after · https://ori-fjrx.onrender.com
+  PASS  health after restart (model mode anthropic)
+  PASS  /pitch redirects to /pitch/ (301 → /pitch/)
+  PASS  /pitch/ serves the presentation (200)
+  PASS  pitch config names the recordings (media/01-create.mp4, media/01-create.webm, media/02-use-and-revise.mp4, media/02-use-and-revise.webm, media/03-reopen.mp4, media/03-reopen.webm, media/ori-context-demo.mp4, media/ori-context-demo.webm)
+  PASS  recording served: media/01-create.mp4 (206 video/mp4 516468 bytes)
+  PASS  recording served: media/01-create.webm (206 video/webm 404724 bytes)
+  PASS  recording served: media/02-use-and-revise.mp4 (206 video/mp4 1289057 bytes)
+  PASS  recording served: media/02-use-and-revise.webm (206 video/webm 1035026 bytes)
+  PASS  recording served: media/03-reopen.mp4 (206 video/mp4 279366 bytes)
+  PASS  recording served: media/03-reopen.webm (206 video/webm 285735 bytes)
+  PASS  recording served: media/ori-context-demo.mp4 (206 video/mp4 3809898 bytes)
+  PASS  recording served: media/ori-context-demo.webm (206 video/webm 2615245 bytes)
+  PASS  the demo account signs in (200)
+  PASS  the demo account has Riff, Light and People (Light, People, Riff)
+  PASS  the session from before the restart still works (200)
+  PASS  log in after restart (200)
+  PASS  the app is still there (200 Street Light Contact Sheet)
+  PASS  the revision is still applied (11 fields)
+  PASS  the observation is still there, unchanged (1 entries)
+  PASS  the photo file is still there (200)
+  PASS  the app reopens at its own link (200)
+SUMMARY: 21/21 passed
+
+2) node scripts/check-pitch.mjs --base https://ori-fjrx.onrender.com/pitch/ --scenes 15  (Chromium and Microsoft Edge)
+Checking https://ori-fjrx.onrender.com/pitch/; screenshots → <local scratch folder>
+PASS  [chromium] opens at scene 1 with no hash — Scene 01 / 15, "Your phone, your story."
+PASS  [chromium] has 15 scenes — found 15
+PASS  [chromium] ArrowRight goes to scene 2 and sets #2 — Scene 02 / 15 #2
+PASS  [chromium] ArrowLeft returns to scene 1 — Scene 01 / 15
+PASS  [chromium] Next and Previous buttons — next → 2, previous → 1
+PASS  [chromium] End and Home keys — End → 15, Home → 1
+PASS  [chromium] #1..#15 each open their scene
+PASS  [chromium] Next on 14 reaches 15; 15 stays for Q&A — → 15 #15; Next disabled true; → again 15
+PASS  [chromium] refresh on #7 keeps scene 7 — Scene 07 / 15 #7
+PASS  [chromium] refresh on #12 keeps scene 12 — Scene 12 / 15 #12
+PASS  [chromium] scene 3 builds in 5 steps with Next — arrive step 1; after 4 Next step 5; then scene 4; by hash step 5
+PASS  [chromium] notes open and follow the scene — open=true; scene 1 notes "Your phone, your story."; after Next scene 2 notes "Do you struggle to turn your ideas into something consistent?"
+PASS  [chromium] spoken tracks fit their budgets; budgets total 238 s — 238 s budgeted; 516 words
+PASS  [chromium] timer starts, pauses and resets — after 2.3 s 0:02; paused 0:02 → 0:02; reset 0:00
+PASS  [chromium] scene 5 "create" recording plays with an honest label — label "Recording · Sample mode"; 01-create.mp4 at 1.8 s, 390px wide
+PASS  [chromium] scene 6 "grow" recording plays with an honest label — label "Recording · Sample mode"; 02-use-and-revise.mp4 at 1.6 s, 390px wide
+PASS  [chromium] scene 7 "context" recording plays with an honest label — label "Recorded product demo · Live AI"; ori-context-demo.mp4 at 1.7 s, 464px wide
+PASS  [chromium] media slots: the three demo recordings (create, grow, context), each labelled — 3 recordings, 0 screenshots, scenes 5, 6, 7
+PASS  [chromium] a playing clip pauses when the scene changes — playing before=true, paused after=true
+PASS  [chromium] closing scene shows only the signature line, the QR code and the contact details — line "Ori. Your phone, your story."; text "Ori. Your phone, your story . Zuyu Liu zliu2017@illinois.edu 847-962-2868"; links https://ori-fjrx.onrender.com/, mailto:zliu2017@illinois.edu, tel:+18479622868; QR 331px → https://ori-fjrx.onrender.com/; companion false
+PASS  [chromium] no link to a developer machine
+PASS  [chromium] same-origin links open (the QR link reaches the product when served from it) — 1 checked
+PASS  [chromium] every scene fits at 1366x768 (normal)
+PASS  [chromium] every scene fits at 1366x768 (presentation)
+PASS  [chromium] every scene fits at 1600x900 (normal)
+PASS  [chromium] every scene fits at 1600x900 (presentation)
+PASS  [chromium] every scene fits at 1920x1080 (normal)
+PASS  [chromium] every scene fits at 1920x1080 (presentation)
+PASS  [chromium] no horizontal overflow at 768x1024
+PASS  [chromium] no horizontal overflow at 390x844
+PASS  [chromium] no horizontal overflow at 320x568
+PASS  [chromium] no failed requests
+PASS  [chromium] no requests to other hosts
+PASS  [chromium] no console errors
+PASS  [msedge] opens at scene 1 with no hash — Scene 01 / 15, "Your phone, your story."
+PASS  [msedge] has 15 scenes — found 15
+PASS  [msedge] ArrowRight goes to scene 2 and sets #2 — Scene 02 / 15 #2
+PASS  [msedge] ArrowLeft returns to scene 1 — Scene 01 / 15
+PASS  [msedge] Next and Previous buttons — next → 2, previous → 1
+PASS  [msedge] End and Home keys — End → 15, Home → 1
+PASS  [msedge] #1..#15 each open their scene
+PASS  [msedge] Next on 14 reaches 15; 15 stays for Q&A — → 15 #15; Next disabled true; → again 15
+PASS  [msedge] refresh on #7 keeps scene 7 — Scene 07 / 15 #7
+PASS  [msedge] refresh on #12 keeps scene 12 — Scene 12 / 15 #12
+PASS  [msedge] scene 3 builds in 5 steps with Next — arrive step 1; after 4 Next step 5; then scene 4; by hash step 5
+PASS  [msedge] notes open and follow the scene — open=true; scene 1 notes "Your phone, your story."; after Next scene 2 notes "Do you struggle to turn your ideas into something consistent?"
+PASS  [msedge] spoken tracks fit their budgets; budgets total 238 s — 238 s budgeted; 516 words
+PASS  [msedge] timer starts, pauses and resets — after 2.3 s 0:02; paused 0:02 → 0:02; reset 0:00
+PASS  [msedge] scene 5 "create" recording plays with an honest label — label "Recording · Sample mode"; 01-create.mp4 at 1.8 s, 390px wide
+PASS  [msedge] scene 6 "grow" recording plays with an honest label — label "Recording · Sample mode"; 02-use-and-revise.mp4 at 1.6 s, 390px wide
+PASS  [msedge] scene 7 "context" recording plays with an honest label — label "Recorded product demo · Live AI"; ori-context-demo.mp4 at 1.6 s, 464px wide
+PASS  [msedge] media slots: the three demo recordings (create, grow, context), each labelled — 3 recordings, 0 screenshots, scenes 5, 6, 7
+PASS  [msedge] a playing clip pauses when the scene changes — playing before=true, paused after=true
+PASS  [msedge] closing scene shows only the signature line, the QR code and the contact details — line "Ori. Your phone, your story."; text "Ori. Your phone, your story . Zuyu Liu zliu2017@illinois.edu 847-962-2868"; links https://ori-fjrx.onrender.com/, mailto:zliu2017@illinois.edu, tel:+18479622868; QR 331px → https://ori-fjrx.onrender.com/; companion false
+PASS  [msedge] no link to a developer machine
+PASS  [msedge] same-origin links open (the QR link reaches the product when served from it) — 1 checked
+PASS  [msedge] every scene fits at 1366x768 (normal)
+PASS  [msedge] every scene fits at 1366x768 (presentation)
+PASS  [msedge] every scene fits at 1600x900 (normal)
+PASS  [msedge] every scene fits at 1600x900 (presentation)
+PASS  [msedge] every scene fits at 1920x1080 (normal)
+PASS  [msedge] every scene fits at 1920x1080 (presentation)
+PASS  [msedge] no horizontal overflow at 768x1024
+PASS  [msedge] no horizontal overflow at 390x844
+PASS  [msedge] no horizontal overflow at 320x568
+PASS  [msedge] no failed requests
+PASS  [msedge] no requests to other hosts
+PASS  [msedge] no console errors
+
+68 passed, 0 failed, 0 notes. Results: <local scratch folder>
+
+3) node scripts/check-pitch-density.mjs --base https://ori-fjrx.onrender.com/pitch/ --scenes 15  (1600x900)
+Pitch density at 1600x900: https://ori-fjrx.onrender.com/pitch/
+  #  slide                words/budget  headline  longest  visual  text   result
+  1  promise                 45/50            4        7     29%    16%  PASS
+  2  discovery               43/50           10       11     26%    27%  PASS
+  3  journey                 31/35            9        6     61%    10%  PASS
+  4  feeling                 34/35            6        6     73%    14%  PASS
+  5  create                  31/35            5        4     37%    14%  PASS
+  6  grow                    32/35            5        7     39%    11%  PASS
+  7  features                34/35            8        5     32%    18%  PASS
+  8  zones                   34/35            9        8     28%    19%  PASS
+  9  position                66/70            6       10     38%    14%  PASS
+ 10  founder                 62/70            8        8     21%    22%  PASS (warn: visual only 21%)
+ 11  growth                  35/50            6        3     33%    13%  PASS
+ 12  pricing                 27/35            7        3     27%    15%  PASS
+ 13  velocity                49/60            6        5     26%    14%  PASS
+ 14  ask                     28/35            2        9     20%    24%  PASS (warn: visual only 20%)
+ 15  signature                9/35            2        2     11%    18%  PASS
+Screenshots and storyboard.png: <local scratch folder>
+15/15 slides pass
+
+4) The QR on the final slide, screenshotted as rendered and decoded with jsQR
+1600x900: QR 331px · decoded https://ori-fjrx.onrender.com/ · link https://ori-fjrx.onrender.com/ · links mailto:zliu2017@illinois.edu tel:+18479622868 https://ori-fjrx.onrender.com/ · visible text "Ori. Your phone, your story. Zuyu Liu zliu2017@illinois.edu 847-962-2868"
+1920x1080: QR 408px · decoded https://ori-fjrx.onrender.com/ · link https://ori-fjrx.onrender.com/ · links mailto:zliu2017@illinois.edu tel:+18479622868 https://ori-fjrx.onrender.com/ · visible text "Ori. Your phone, your story. Zuyu Liu zliu2017@illinois.edu 847-962-2868"
+1366x768: QR 282px · decoded https://ori-fjrx.onrender.com/ · link https://ori-fjrx.onrender.com/ · links mailto:zliu2017@illinois.edu tel:+18479622868 https://ori-fjrx.onrender.com/ · visible text "Ori. Your phone, your story. Zuyu Liu zliu2017@illinois.edu 847-962-2868"

@@ -71,7 +71,7 @@ window.ORI_PITCH = {
       poster: 'media/ori-context-demo-poster.jpg',
       still: 'media/stills/playground-phone-ideas.webp',
       alt: 'Product screenshot: the Playground with three different directions, Riff, Light and Course Assignments, each labeled Example.',
-      label: 'Recorded product demo · Live AI',
+      label: 'Recording · Live AI',
       stillLabel: 'Product screenshot · Sample mode',
       aspect: '464 / 832',
       cues: [0, 9.0, 15.9],

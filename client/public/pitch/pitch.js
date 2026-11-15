@@ -552,7 +552,7 @@
     if (options.width) style['--slot-w'] = `${options.width}px`;
     const frame = h('div', { class: cls('media-frame', sizeClass), id: `${id}-frame`, 'data-state': 'idle', style }, viewport, h('div', { class: 'media-bar' }, label, h('div', { class: 'media-controls' }, playButton, replayButton, expandButton)));
     const el = h('figure', { class: cls('media-slot', sizeClass, options.className), id, 'data-slot': key, 'data-state': 'idle', 'aria-labelledby': `${id}-label` }, frame);
-    const record = { key, spec, el, frame, viewport, video, still: stillImage, empty, labelMain, labelRest, playButton, replayButton, expandButton, state: 'idle', prepared: false, generation: 0, cueIndex: -1, slideIndex: -1, local: null };
+    const record = { key, spec, el, frame, viewport, video, still: stillImage, empty, labelMain, labelRest, playButton, replayButton, expandButton, state: 'idle', prepared: false, generation: 0, cueIndex: -1, slideIndex: -1, local: null, playedThisVisit: false };
 
     // A mouse click on Play or Replay hands the keys back to the deck (as the toolbar does): the next Space then
     // pauses the clip, or moves on once it has ended, instead of pressing Play again and rewinding it.
@@ -568,6 +568,7 @@
     }
     // One clip at a time on a slide: starting one pauses any other that is playing there.
     video.addEventListener('play', () => {
+      record.playedThisVisit = true;
       for (const other of slotRecords) if (other !== record && other.slideIndex === record.slideIndex && !other.video.paused) other.video.pause();
     });
     video.addEventListener('timeupdate', () => updateCue(record));
@@ -954,6 +955,8 @@
     prepareScene(current, true);
     prepareScene(current + 1, false);
     placeCompanion(current);
+    // Each visit starts fresh: the first Next on a scene starts its clip again only if it has not played on this visit.
+    if (previous !== current) for (const r of slotRecords) r.playedThisVisit = false;
     if (previous !== current && previous >= 0) callHook(previous, 'onLeave', via);
     if (previous !== current) callHook(current, 'onEnter', via);
     applyStep(current, via);
@@ -965,6 +968,14 @@
     const state = slideState[current];
     if (state && state.steps > 1 && state.step < state.steps) {
       setStep(state.step + 1, 'next');
+      return;
+    }
+    // A clicker sends → or PageDown, not Space: like a build step, the first Next on a scene starts its clip when
+    // the clip has not played on this visit; the following Next moves on, whether or not the clip is still playing.
+    const rec = currentRecording();
+    if (rec && !rec.playedThisVisit && !rec.video.ended) {
+      rec.playedThisVisit = true;
+      toggleRecord(rec);
       return;
     }
     if (current < slides.length - 1) go(current + 1, { via: 'next' });
@@ -1266,7 +1277,11 @@
   document.addEventListener('pointermove', (e) => {
     if (e.movementX || e.movementY || e.pointerType !== 'mouse') peekChrome();
   }, { passive: true });
-  document.addEventListener('pointerdown', peekChrome, { passive: true });
+  // A press on a stage media control (play, replay, expand) leaves the toolbars hidden: no flash over the slide.
+  document.addEventListener('pointerdown', (e) => {
+    if (e.target instanceof Element && e.target.closest('.media-button')) return;
+    peekChrome();
+  }, { passive: true });
 
   function updatePresentLabel() {
     const on = document.body.classList.contains('in-presentation');

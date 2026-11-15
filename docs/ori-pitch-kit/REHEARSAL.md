@@ -51,15 +51,15 @@ event, do one full run out loud with the timer in the notes panel (N) and adjust
   judge asks for research, the discovery notes link “Research behind this” (A, then the panel at the top of
   Sources), with its scope: physical activity only, and neither study measures Ori.
 - **Scene 7 follows the founder's clip** (23.65 s; cue points 0 s Bring your context, 9.0 s Ori connects the
-  dots, results from about 12.6 s, 15.9 s Explore what fits you). Press Space as the scene opens and start each
+  dots, results from about 12.6 s, 15.9 s Explore what fits you). Press → (or the clicker) to start the clip as the scene opens and start each
   sentence as its step lights up: about 22 words (≈ 8.8 s) for the first step, 17 (≈ 6.8 s) for the second,
   14 (≈ 5.6 s) for the third, so the narration never runs ahead of the footage. Do not claim real-time speed:
-  the waiting may have been trimmed. The clip ends on its last frame with the suggestions on screen.
-- **Scene 5: say the disclaimer and the thought first,** then press Space on “I share a photo”: the 12.8 s clip
+  the waiting may have been trimmed. The clip ends on its last frame with the suggestions on screen; the next → moves on.
+- **Scene 5: say the disclaimer and the thought first,** then press → (or the clicker) to start the clip on “I share a photo”: the 12.8 s clip
   runs under the last four sentences (share 0–2 s, Ori's suggestion 2–5 s, preview and focus 5–8 s, Make mine to
-  Light 8–12.8 s), so the footage never runs ahead of the words. It holds Light's last frame; Space or → moves on.
-- **Scene 6: press Space with the first word.** “review” lands on the review sheet, “apply it” on the Updated
-  toast and “Same photo” as the entry opens; the 12.8 s clip then holds its last frame and Space or → moves on.
+  Light 8–12.8 s), so the footage never runs ahead of the words. It holds Light's last frame; the next → moves on.
+- **Scene 6: press → (or the clicker) to start the clip with the first word.** “review” lands on the review sheet, “apply it” on the Updated
+  toast and “Same photo” as the entry opens; the 12.8 s clip then holds its last frame and the next → moves on.
   The 5.2 s return clip now plays in the appendix (A → 4. The demo) for Q&A, so scene 6 has 12.8 s spare: let
   the Before/After pair sit rather than adding words.
 - **When the founder's replacement clips arrive** (20–25 s each, per the shot list), start each with the first
@@ -70,8 +70,10 @@ event, do one full run out loud with the timer in the notes panel (N) and adjust
   21 s of 19 and 11 at about 13 s of 12. Check 10 and 11 first in the spoken run; scene 15 can run over because
   Q&A follows on the same slide.
 - The Velocity AI scene (13) keeps its full 15 seconds on screen and in speech.
-- **Clicker and keys:** start full screen with F or the Present button; →, PageDown or Space move on, and Space
-  plays a clip, then moves on once it has ended. After clicking any control with the mouse, the keys go back to
+- **Clicker and keys:** start full screen with F or the Present button; →, PageDown or Space move on. On scenes 5, 6
+  and 7 the first → or PageDown (what a clicker sends) starts the clip, like a build step, and the next one moves on
+  whether or not the clip is still playing; Space plays or pauses a clip, then moves on once it has ended. Previous,
+  links and the overview never start a clip. After clicking any control with the mouse, the keys go back to
   the slides, so Space never re-presses that control.
 - **Q&A with an expanded clip in full screen:** close it by clicking outside it, with its collapse button or with
   ×. The browser keeps Esc for leaving full screen; that also closes the clip, then press F to return. The return
@@ -81,6 +83,6 @@ event, do one full run out loud with the timer in the notes panel (N) and adjust
 
 - How long the words take when Zuyu says them. 150 words a minute is a planning rate; nerves speed people up and
   pauses slow them down. Only a spoken run with the timer can confirm 3:58.
-- Clip timing on the day: a recording plays only when started (Space or its play button).
+- Clip timing on the day: a recording plays only when started (→, the clicker, Space or its play button).
 - Live conditions: the room's display, the clicker, a slow network, or an official time limit other than four
   minutes. If the event's limit differs, use that limit.

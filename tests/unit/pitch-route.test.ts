@@ -279,7 +279,7 @@ describe('the pitch deck data (client/public/pitch)', () => {
       if (slot.sources.length) {
         expect(slot.sources[0], `${key}: MP4 first`).toMatch(/\.mp4$/);
         // The founder's own context recording shows Ori's Live AI badge; the other recordings are Sample mode.
-        if (key === 'context') expect(slot.label, `${key}: the founder's recording shows Live AI`).toBe('Recorded product demo · Live AI');
+        if (key === 'context') expect(slot.label, `${key}: the founder's recording shows Live AI`).toBe('Recording · Live AI');
         else expect(slot.label, `${key}: the recordings are Sample mode`).toBe('Recorded product demo · Sample mode');
       }
     }

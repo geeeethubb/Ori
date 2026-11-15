@@ -149,7 +149,7 @@ window.ORI_SCENES = [
       stillsLabel: 'Product screenshots · Sample mode'
     },
     spoken: 'Here’s the real product, recorded in Sample mode with scripted responses. I want to get better at noticing light on my walks. I share a photo and that thought. Ori suggests a place for it. I shape one detail: shadows and reflections. I tap Make mine, and Light opens, with my photo already in it.',
-    cue: 'Say the first two sentences over the poster, then press Space (or the play control) on “I share a photo”: the 12.8-second clip runs under the last four sentences (share 0–2 s, Ori’s suggestion 2–5 s, preview and focus 5–8 s, Make mine to Light 8–12.8 s) and holds Light’s last frame; Space or → then moves on. Say once that this is Sample mode with scripted responses, not live AI. The recording shows a photo and a thought, Ori’s suggestion, a preview with one detail shaped (“Focus on shadows and reflections”), Make mine, and Light opening with the photo. If the clip cannot load, the slot shows a product screenshot: say so. Light is an illustrative user scenario, not another interview. The three pictures beside it are crops of real Sample-mode screenshots of the same flow (a separate capture: its focus words read “golden-hour shadows”), so the steps stay readable while the clip is paused.',
+    cue: 'Say the first two sentences over the poster, then press → (or the clicker) to start the clip on “I share a photo”: the 12.8-second clip runs under the last four sentences (share 0–2 s, Ori’s suggestion 2–5 s, preview and focus 5–8 s, Make mine to Light 8–12.8 s) and holds Light’s last frame; the next → then moves on (Space or the play control also plays and pauses). Say once that this is Sample mode with scripted responses, not live AI. The recording shows a photo and a thought, Ori’s suggestion, a preview with one detail shaped (“Focus on shadows and reflections”), Make mine, and Light opening with the photo. If the clip cannot load, the slot shows a product screenshot: say so. Light is an illustrative user scenario, not another interview. The three pictures beside it are crops of real Sample-mode screenshots of the same flow (a separate capture: its focus words read “golden-hour shadows”), so the steps stay readable while the clip is paused.',
     appendix: ['demo']
   },
   {
@@ -170,13 +170,17 @@ window.ORI_SCENES = [
       loop: ['Use it', 'More context', 'Better fit'],
       loopReturn: 'again',
       mechanism: ['Tell Ori', 'Review', 'Update'],
+      // The real request typed in clip 02 and the fields it added (PRODUCT_FACTS.md §5), readable from the room.
+      ask: 'Add camera settings to my photo notes',
+      afterChip: '+ Camera, shutter, aperture',
       before: { label: 'Before', still: 'media/stills/light-entry-before.webp', alt: 'Product screenshot, Sample mode: a Light entry before the change: the photo, the observation “Low sun turns the brick wall gold”, and the fields Light, Where and Keeper.' },
       after: { label: 'After', still: 'media/stills/light-entry-after.webp', alt: 'Product screenshot, Sample mode: the same Light entry after the change: the same photo and observation, with the new fields Camera (Fuji X100V), Shutter and Aperture above Light, Where and Keeper.' },
       stillsLabel: 'Product screenshots · Sample mode',
-      takeaway: 'New context. Better fit. Still your app.'
+      // The brief's takeaway for this slide, shown as well as spoken (the founder's brief outranks the density budget).
+      takeaway: 'New context. Better fit. Still your app.',
     },
     spoken: 'Now I use it: I save an observation. I ask Ori for camera settings, review the change, and apply it. Same photo, same note, new fields. New context, better fit, still my app.',
-    cue: 'Press Space as you begin, with the first word (12.8 s): “review” lands on the review sheet, “apply it” on the Updated toast, “Same photo” as the entry opens. The clip holds its last frame, and Space or → then moves on. The change is user-led: tell Ori → review → update. Do not describe passive monitoring or automatic background redesign; the vision is apps that grow with you, and what ships today is a change you ask for, review and keep. The proof is the same photo and note before and after the change. The 5.2-second return clip (a fresh browser session opens Light by its own link) plays in the appendix (A → 4. The demo) for Q&A: a way back, not a home-screen launch and not a formed habit. Before and After are real Sample-mode screenshots of the same change, captured separately from the clip (the camera name was typed in by hand, as a person would).',
+    cue: 'Press → (or the clicker) to start the clip as you begin, with the first word (12.8 s): “review” lands on the review sheet, “apply it” on the Updated toast, “Same photo” as the entry opens. The clip holds its last frame, and the next → then moves on. The change is user-led: tell Ori → review → update. Do not describe passive monitoring or automatic background redesign; the vision is apps that grow with you, and what ships today is a change you ask for, review and keep. The proof is the same photo and note before and after the change. The 5.2-second return clip (a fresh browser session opens Light by its own link) plays in the appendix (A → 4. The demo) for Q&A: a way back, not a home-screen launch and not a formed habit. Before and After are real Sample-mode screenshots of the same change, captured separately from the clip (the camera name was typed in by hand, as a person would).',
     appendix: ['demo', 'foundation']
   },
   {
@@ -194,11 +198,11 @@ window.ORI_SCENES = [
       steps: [
         { title: 'Bring your context', detail: 'Pasted from ChatGPT or Claude', icon: 'copy' },
         { title: 'Ori connects the dots', detail: 'You review what it keeps', ori: true },
-        { title: 'Explore what fits you', icon: 'playground' }
+        { title: 'Explore what fits you', detail: 'Choose a direction', icon: 'playground' }
       ]
     },
     spoken: 'One more way in. I copy Ori’s prompt into my own AI, paste back what it wrote about me, and review it. Ori connects the dots: it reads the whole profile and organizes what it learned into my interests. Then my Playground suggests what could fit me next, shaped around what I shared.',
-    cue: 'Press Space (or the play control) as you begin: the founder’s 23.65-second recording on the live site (the UI shows Live AI) fills the 25 seconds. Start each sentence as its step lights up: Bring your context (0 s) → Ori connects the dots (9 s; results from about 12.6 s) → Explore what fits you (15.9 s); never run ahead of the clip. The clip ends on its last frame with the suggestions on screen. Never claim real-time speed: waiting may have been trimmed. Bring context from your AI: Ori gives you a prompt to copy; you paste it into ChatGPT, Claude, Gemini or any assistant you use, and paste or upload the answer back; you review what Ori keeps and can remove anything. Provider names are examples of where context comes from, never automatic account access. The Playground’s suggestions are based on what you shared; choosing one is the next step toward an app.',
+    cue: 'Press → (or the clicker) to start the clip as you begin: the founder’s 23.65-second recording on the live site (the UI shows Live AI) fills the 25 seconds. Start each sentence as its step lights up: Bring your context (0 s) → Ori connects the dots (9 s; results from about 12.6 s) → Explore what fits you (15.9 s); never run ahead of the clip. The clip ends on its last frame with the suggestions on screen; the next → moves on. Never claim real-time speed: waiting may have been trimmed. Bring context from your AI: Ori gives you a prompt to copy; you paste it into ChatGPT, Claude, Gemini or any assistant you use, and paste or upload the answer back; you review what Ori keeps and can remove anything. Provider names are examples of where context comes from, never automatic account access. The Playground’s suggestions are based on what you shared; choosing one is the next step toward an app.',
     appendix: ['demo']
   },
   {
