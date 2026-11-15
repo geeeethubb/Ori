@@ -1,0 +1,28 @@
+model: claude-opus-5-5 · date: 2026-11-15T05:48:28.323Z
+
+[share: street photography + a photo] 103182 ms
+  message: A home for your weekend street shots, starting with this one. Want to make it yours?
+  - new_app | Weekend street shots | gallery,photo_upload,summary,prompts
+  - explore | A first street photo walk
+  PASS  reply: proposes a photo app to preview (Weekend street shots)
+  PASS  reply: at most three short sentences before the cards (2 sentences)
+  PASS  reply: no daily/weekly/automatic promises
+  FAIL  reply: offers to keep it without making anything
+
+[design: "Weekend Street Shots"] 18339 ms; tagline "A contact sheet for the shadows and reflections you find on weekend walks"; views=gallery,summary
+  PASS  design: a valid definition with sound bindings
+  PASS  design: image-first (a gallery view with a photo field) (gallery,photo_upload,summary,prompts)
+  PASS  design: no daily/weekly/automatic promises in its own words (A contact sheet for the shadows and reflections you find on weekend walks)
+
+[revise: camera settings] 6875 ms; summary: Light will get Camera, Shutter and Aperture on each photo.
+  - add_field camera "Camera" (text)
+  - add_field shutter "Shutter" (text)
+  - add_field aperture "Aperture" (text)
+  - replace_view
+  PASS  revise: applies cleanly
+  PASS  revise: adds camera settings fields (Camera, Shutter, Aperture)
+  PASS  revise: the new fields are in the photo form (photo,caption,camera,shutter,aperture,light,note,location,keeper,date)
+  PASS  revise: keeps every existing field
+
+SUMMARY: 10/11 checks passed (model claude-opus-5-5; 3 calls)
+exit=1

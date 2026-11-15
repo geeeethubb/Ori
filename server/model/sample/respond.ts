@@ -439,8 +439,8 @@ function recordDraftFor(domain: Domain, c: Capture, note: string): RecordDraft |
   return followUp ? { ...followUp, note: clip(note, 300) } : undefined;
 }
 
-/** "Just keep it": a save stays a save. */
-function keepDraft(captureId: string): RecommendationDraft {
+/** "Just keep it": a save stays a save. Also added by the Agent route to any reply that lacks it. */
+export function keepDraft(captureId: string): RecommendationDraft {
   return RecommendationDraftSchema.parse({
     kind: 'keep',
     title: 'Just keep it',

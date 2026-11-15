@@ -18,6 +18,7 @@ import * as apps from '../repos/apps.ts';
 import * as media from '../repos/media.ts';
 import { describeLinkSource, lookupLink, parseHttpUrl } from '../services/linkMeta.ts';
 import { withModel } from '../model/index.ts';
+import { keepDraft } from '../model/sample/respond.ts';
 import type { ExistingAppSummary } from '../model/types.ts';
 import { premiumGate } from './gate.ts';
 import { existingApps } from './recommendations.ts';
@@ -122,6 +123,13 @@ async function respond(ownerId: string, capture: Capture): Promise<CaptureResult
     .map((p) => groundExplorations(p, [capture.url, ...recent.map((r) => r.url)]))
     .filter((p): p is RecommendationDraft => p !== null)
     .slice(0, 4);
+  // A share that opens new possibilities can always just be kept: a reply offering a new app or an
+  // exploration without that option (a live model may leave it out) gets the plain one, within four cards.
+  // Requests about an app the person has (use it, change it) stay as they are.
+  if (!proposals.some((p) => p.kind === 'keep') && proposals.some((p) => p.kind === 'new_app' || p.kind === 'explore')) {
+    if (proposals.length >= 4) proposals.pop();
+    proposals.push(keepDraft(capture.id));
+  }
   // Memory comes only from the person's own words: a live fact must quote its evidence from the note,
   // nothing is learned from a bare link or photo, and the memory source points back at this capture so
   // "Just keep it" and "Forget" can take it away again. A fact already in memory (the same words in any

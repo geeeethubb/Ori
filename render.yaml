@@ -1,0 +1,45 @@
+# Ori as one Node web service with a persistent disk (Render Blueprint).
+# See docs/DEPLOY.md for every setting and the post-deploy checks. Values marked sync: false are set in
+# the dashboard (secrets, and the public URL once the service has one); they are never committed.
+services:
+  - type: web
+    name: ori
+    runtime: node
+    plan: starter            # persistent disks need a paid instance
+    numInstances: 1          # SQLite on one disk: exactly one instance
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    disk:
+      name: ori-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.1
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATABASE_PATH
+        value: /var/data/app.db
+      - key: MEDIA_DIR
+        value: /var/data/media
+      - key: PUBLIC_ORIGIN
+        sync: false          # e.g. https://ori.onrender.com (no trailing slash)
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: MODEL_PROVIDER
+        value: auto          # live model when ANTHROPIC_API_KEY is set; "sample" for scripted responses
+      - key: ANTHROPIC_MODEL
+        value: claude-opus-5-5
+      - key: ANTHROPIC_API_KEY
+        sync: false          # secret; server-only
+      - key: MODEL_TIMEOUT_MS
+        value: "45000"
+      - key: AI_GENERATION_ALLOWANCE
+        value: "300"
+      - key: MAX_IMAGE_BYTES
+        value: "6291456"
+      - key: LINK_METADATA
+        value: "on"
