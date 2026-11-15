@@ -75,7 +75,7 @@ Vite copies `client/public/` into the built client, so the deck ships as `dist/c
 
 - Hashes: `#1`–`#15`, scene ids (`#velocity`) and aliases of the older decks' ids (`#stages`, `#bring`, `#use-revise`, `#reopen`, `#why`, `#foundation`, `#gtm`, `#roadmap`, `#business`); each becomes its canonical `#n`. `#appendix` and `#appendix-<section>` open the appendix; the retired scene's `#evidence` and `#research` open `#appendix-research`.
 - The timer's target is 3:58 (`TARGET_SECONDS = 238`, `EXPECTED_SCENES = 15` in `pitch.js`); the notes show each scene's budget and planned window from the data.
-- The final slide (#15) shows only “Ori. Your phone, your story.”, the QR code (linking to `https://ori-fjrx.onrender.com/`, no visible URL) and Zuyu Liu · `mailto:zliu2017@illinois.edu` · `tel:+18479622868`. No companion; in presentation mode no bars over it (keys still work). The account invitation (“Scan the code, create your own account, and try Ori.”) is in its speaker notes only. Next on #14 reaches #15; #15 stays up for Q&A.
+- The final slide (#15), as the founder revised it on 2026-11-15: the ori wordmark, “Ori. Your phone, your story.”, Zuyu Liu · `mailto:zliu2017@illinois.edu` · `tel:+18479622868`, the QR code (linking to `https://ori-fjrx.onrender.com/`, no visible URL) with Ori's happy face (the Ready art) and “Try Ori now” under it. No corner companion; in presentation mode no bars over it (keys still work). The full invitation (“Scan the code, create your own account, and try Ori.”) is spoken, from the notes. Next on #14 reaches #15; #15 stays up for Q&A.
 
 ## 16-slide revision: the contract for slide authors
 

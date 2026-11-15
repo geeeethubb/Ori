@@ -239,7 +239,7 @@ describe('the pitch deck data (client/public/pitch)', () => {
       expect(scene.spoken, scene.id).toBeTruthy();
       expect(scene.cue, scene.id).toBeTruthy();
       expect(builtIn.has(scene.layout) || typeof deck.ORI_SLIDES[scene.layout] === 'function', `${scene.id}: renderer for "${scene.layout}"`).toBe(true);
-      if (scene.layout === 'signature') expect(scene.companion, 'no companion on the close').toBeNull();
+      if (scene.layout === 'signature') expect(scene.companion, 'Ori’s happy face inside the close, not in the corner').toEqual({ expression: 'Ready', corner: false });
       else expect(['Listening', 'Thinking', 'Found something', 'Ready'], scene.id).toContain(scene.companion?.expression);
       for (const id of scene.appendix ?? []) {
         expect(deck.ORI_APPENDIX_SECTIONS[id], `${scene.id} → appendix ${id}`).toBeTruthy();
@@ -248,18 +248,19 @@ describe('the pitch deck data (client/public/pitch)', () => {
     }
   });
 
-  it('closes with only the signature line, the supplied QR code and the contact details', () => {
+  it('closes with the signature line, the supplied QR code with “Try Ori now” under it, and the contact details', () => {
     const close = scenes[scenes.length - 1];
     if (!close) throw new Error('scenes.js has no scenes');
-    const o = close.onScreen as { line: string; qr: { src: string; href: string }; contact: { name: string; email: string; phone: string; tel: string } };
+    const o = close.onScreen as { line: string; qr: { src: string; href: string; caption: string }; contact: { name: string; email: string; phone: string; tel: string } };
     expect(close.layout).toBe('signature');
     expect(o.line).toBe('Ori. Your phone, your story.');
     expect(o.qr.href).toBe('https://ori-fjrx.onrender.com/');
+    expect(o.qr.caption).toBe('Try Ori now');
     expect(Object.keys(o).sort()).toEqual(['contact', 'line', 'qr']);
     expect(o.contact).toEqual({ name: 'Zuyu Liu', email: 'zliu2017@illinois.edu', phone: '847-962-2868', tel: '+18479622868' });
     // The supplied image, byte for byte (it encodes https://ori-fjrx.onrender.com/).
     expect(fs.readFileSync(path.join(PITCH_DIR, o.qr.src)).equals(fs.readFileSync(KIT_QR))).toBe(true);
-    // The account invitation is spoken, never shown.
+    // The full account invitation is spoken; the slide shows only “Try Ori now”.
     expect(close.spoken).toContain('Scan the code, create your own account, and try Ori.');
     expect(close.cue).toContain('Scan the code, create your own account, and try Ori.');
   });

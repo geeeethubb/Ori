@@ -273,22 +273,31 @@ h2.headline { font-size: var(--fs-h1); }
 .world-tag { letter-spacing: 0.08em; }
 
 /* ------------------------------------------------------------------------------------------ */
-/* Slide 16 · Signature (built in): only the line, the QR code and the contact details           */
+/* Slide 16 · Signature (built in): Ori's wordmark, the line and the contact details; the QR code  */
+/* with Ori's happy face and “Try Ori now” under it                                                */
 /* ------------------------------------------------------------------------------------------ */
 
 .layout-signature .scene-body.signature-body { padding-top: 0; justify-content: center; }
 .signature { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 112px; padding: 0 24px; }
-.signature-line { font-family: var(--font-display); font-weight: 800; font-size: 112px; letter-spacing: -0.055em; line-height: 0.98; margin: 0 0 64px; color: var(--fg); }
+/* The canonical wordmark in its light variant on ink: white letters; the i's dot stays lime in its cobalt ring. */
+.signature-logo { display: block; width: 136px; height: 88px; margin: 0 0 44px; }
+.signature-logo img, .signature-logo svg { display: block; width: 100%; height: 100%; }
+.signature-logo .ori-letters { fill: var(--on-ink); }
+.signature-logo .ori-letters g { stroke: var(--on-ink); }
+.signature-line { font-family: var(--font-display); font-weight: 800; font-size: 112px; letter-spacing: -0.055em; line-height: 0.98; margin: 0 0 56px; color: var(--fg); }
 .sig-row { display: block; }
 .signature-line .accent { color: var(--lime); }
 .signature-contact { font-style: normal; display: grid; gap: 10px; justify-items: start; }
 .contact-name { font-family: var(--font-display); font-weight: 800; font-size: 34px; letter-spacing: -0.02em; color: var(--fg); margin-bottom: 4px; }
 .signature .contact-link { font-size: 28px; font-weight: 600; color: var(--on-ink-muted); text-decoration: none; letter-spacing: 0.005em; border-bottom: 2px solid transparent; }
 .signature .contact-link:hover, .signature .contact-link:focus-visible { color: #fff; border-bottom-color: var(--lime); }
-/* The QR code on a white backing that extends its quiet zone; no overlay, shadow or tint across it. */
+/* The QR code on a white backing that extends its quiet zone; no overlay, shadow or tint across it. Under it, */
+/* outside the backing: Ori's happy face and “Try Ori now”.                                                      */
+.signature-try { display: grid; justify-items: center; gap: 28px; }
 .signature-qr { display: block; background: #fff; padding: 24px; border-radius: 24px; line-height: 0; }
 .signature-qr img { width: 384px; height: 384px; max-width: none; image-rendering: pixelated; }
 .signature-qr:focus-visible { outline: 4px solid var(--lime); outline-offset: 6px; }
+.signature-cta { display: flex; align-items: center; gap: 22px; margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 46px; letter-spacing: -0.03em; line-height: 1; color: var(--lime); }
 
 /* ------------------------------------------------------------------------------------------ */
 /* Presentation mode (full screen, or the fallback layout): the stage fills the screen and the   */
@@ -468,8 +477,12 @@ kbd { font: inherit; padding: 3px 6px; background: #e6e9f2; border-radius: 4px; 
 .is-flow .signature-line { font-size: clamp(40px, 12vw, 56px); margin-bottom: 24px; }
 .is-flow .contact-name { font-size: 22px; }
 .is-flow .signature .contact-link { font-size: 18px; }
+.is-flow .signature-logo { width: 87px; height: 56px; margin-bottom: 20px; }
+.is-flow .signature-try { gap: 18px; }
 .is-flow .signature-qr { padding: 14px; border-radius: 16px; }
 .is-flow .signature-qr img { width: min(240px, 62vw); height: auto; }
+.is-flow .signature-cta { font-size: 28px; gap: 14px; }
+.is-flow .signature-cta .kit-ori { --ori-size: 72px !important; }
 
 @media (max-width: 700px) {
   :root { --bar-top: 56px; --bar-bottom: 58px; }

@@ -45,7 +45,7 @@
 .layout-founder .fd-evidence { display: grid; gap: 16px; justify-items: start; align-content: center; }
 .layout-founder .fd-count { margin: 0; font-family: var(--font-display); font-weight: 800; letter-spacing: -0.05em; line-height: 0.92; color: var(--blue); white-space: nowrap; }
 .layout-founder .fd-count b { font-size: 112px; }
-.layout-founder .fd-of { font-size: 60px; color: var(--blue-ink); white-space: pre; }
+.layout-founder .fd-pct { font-size: 68px; letter-spacing: -0.02em; color: var(--blue-ink); }
 .layout-founder .fd-dots { display: block; width: 382px; height: 52px; }
 .layout-founder .fd-dots .is-yes { fill: var(--blue); }
 .layout-founder .fd-dots .is-no { fill: none; stroke: var(--blue); stroke-width: 2.5; }
@@ -70,9 +70,13 @@
 .layout-founder .fd-goal-label { font-family: var(--font-display); font-weight: 800; font-size: 26px; white-space: pre; color: var(--fg); }
 .layout-founder .fd-goal-date { font-size: 22px; font-weight: 600; color: var(--fg-muted); }
 
-/* Motion: the lines reach the groups; the arrows carry the pipeline forward. */
+/* Motion: the lines reach the groups. The pipeline is a click-through process (slides/g5-growth.js): each stage
+   is ghosted (style.css, .reveal-ghost) until its step, and its arrow draws as it arrives. The arrows are clipped
+   only while the slide builds, so any complete state (a hash arrival, Previous, the overview, print) shows them all. */
 .slide.active.layout-founder .fd-links { animation: g5-reveal-x 0.7s cubic-bezier(0.3, 0.7, 0.2, 1) 0.2s both; }
-.slide.active.layout-founder .fd-arrow { animation: g5-reveal-x 0.45s ease-out both; animation-delay: calc(0.35s + var(--i) * 0.14s); }
+.layout-founder .fd-arrow { clip-path: inset(-40px -40px -40px -40px); }
+.layout-founder.is-building .fd-cell:not(.is-revealed) .fd-arrow { clip-path: inset(-40px 100% -40px -40px); }
+.layout-founder.is-building .fd-cell.is-revealed .fd-arrow { transition: clip-path 0.45s ease-out 0.05s; }
 
 /* ---------------------------------------------------------------------------------------------- */
 /* Slide 12 · growth                                                                               */
@@ -160,7 +164,7 @@
 .is-flow .layout-founder .fd-groups { height: auto; margin-top: 14px; gap: 8px; justify-content: flex-start; }
 .is-flow .layout-founder .fd-group { display: block; height: auto; padding: 7px 12px; border-radius: 14px; font-size: 14px; white-space: normal; max-width: 100%; }
 .is-flow .layout-founder .fd-count b { font-size: 56px; }
-.is-flow .layout-founder .fd-of { font-size: 30px; }
+.is-flow .layout-founder .fd-pct { font-size: 34px; }
 .is-flow .layout-founder .fd-dots { width: 100%; max-width: 300px; height: auto; }
 .is-flow .layout-founder .fd-evidence { gap: 10px; }
 .is-flow .layout-founder .fd-evidence-label { font-size: 16px; max-width: none; }

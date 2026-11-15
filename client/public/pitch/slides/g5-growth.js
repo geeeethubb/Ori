@@ -2,8 +2,10 @@
 // Contract: docs/ori-pitch-kit/PITCH_INTEGRATION.md, "16-slide revision". This file only registers renderers;
 // pitch.js calls each one once, as renderer(scene, kit), when it builds the deck. Styles: slides/g5-growth.css.
 // Every size is in stage px (the 1600 x 900 design stage); the SVGs are drawn 1:1 on it.
-// Motion (CSS, on .slide.active): the community lines and the pipeline arrows draw, the goal line draws left to
-// right, the price steps rise. Each explains a relationship; reduced motion removes all of it (style.css).
+// Motion (CSS, on .slide.active): the community lines draw, the goal line draws left to right, the price steps
+// rise. The founder's pipeline builds one stage per Next (kit.reveal, ghosted until its step, as on the journey
+// slide) and each arrow draws as its stage arrives; the pilot goals are its last step. Each explains a
+// relationship; reduced motion removes all of it (style.css), so every step then switches instantly.
 (() => {
   const slides = (window.ORI_SLIDES = window.ORI_SLIDES || {});
 
@@ -68,7 +70,9 @@
       h('ul', { class: 'fd-groups', 'aria-label': 'Groups Zuyu belongs to or knows' },
         o.groups.map((g) => h('li', { class: `fd-group is-${g.kind}` }, h('b', null, g.name), g.role ? h('span', { class: 'fd-role' }, ` · ${g.role}`) : null))));
 
-    // The discovery callback: the same 26 dots as the discovery slide, 21 filled.
+    // The discovery callback as a share: 81% (21 of 26, rounded), over the same 26 dots as the discovery slide,
+    // 21 filled, and a label that keeps the denominator ("of the 26 students I spoke with").
+    const pct = Math.round((o.evidence.yes / o.evidence.total) * 100);
     const COLS = 13, D = 22, GAP = 8;
     const DW = COLS * (D + GAP) - GAP, DH = 2 * (D + GAP) - GAP;
     const dots = svg('svg', { class: 'fd-dots', viewBox: `0 0 ${DW} ${DH}`, width: String(DW), height: String(DH), 'aria-hidden': 'true' },
@@ -77,21 +81,26 @@
         class: i < o.evidence.yes ? 'is-yes' : 'is-no',
       })));
     const evidence = h('div', { class: 'fd-evidence' },
-      h('p', { class: 'fd-count' }, h('b', null, String(o.evidence.yes)), h('span', { class: 'fd-of' }, ` / ${o.evidence.total}`)),
+      h('p', { class: 'fd-count' }, h('b', null, String(pct)), h('span', { class: 'fd-pct' }, '%')),
       dots,
       h('p', { class: 'fd-evidence-label' }, o.evidence.label));
 
-    // What next: the pipeline, icons and labels only (a proposed mechanism, not a measured funnel).
+    // What next: the pipeline, icons and labels only (a proposed mechanism, not a measured funnel). A process to
+    // click through, like the journey's five stages: stage n (its node, its arrow, its label) is revealed at
+    // step n, ghosted until then; the pilot goals are the last step. pitch.js starts at step 1 only on an arrival
+    // by Next; any other arrival shows every step.
+    const stages = o.pipeline;
+    const steps = stages.length + 1;
     const pipeline = h('div', { class: 'fd-pipeline' },
       h('div', { class: 'fd-lane', 'aria-hidden': 'true' },
-        o.pipeline.map((step, i) => h('span', { class: 'fd-cell' },
+        stages.map((step, i) => kit.reveal(h('span', { class: 'fd-cell' },
           // The arrow into this stage, centred on the boundary with the stage before it.
-          i ? svg('svg', { class: 'fd-arrow', viewBox: '0 0 120 24', width: '120', height: '24', style: { '--i': String(i) } },
+          i ? svg('svg', { class: 'fd-arrow', viewBox: '0 0 120 24', width: '120', height: '24' },
             svg('path', { d: 'M4 12 H112' }), svg('path', { d: 'M100 3 L114 12 L100 21' })) : null,
-          h('span', { class: 'fd-node' }, pickIcon(kit, PIPELINE_ICONS[step] || ['ui:sparkle'], 52))))),
-      h('ol', { class: 'fd-steps', 'aria-label': 'Pipeline' }, o.pipeline.map((step) => h('li', null, step))));
+          h('span', { class: 'fd-node' }, pickIcon(kit, PIPELINE_ICONS[step] || ['ui:sparkle'], 52))), i + 1, { ghost: true }))),
+      h('ol', { class: 'fd-steps', 'aria-label': 'Pipeline' }, stages.map((step, i) => kit.reveal(h('li', null, step), i + 1, { ghost: true }))));
 
-    // Two dated goals, under "Pilot goals".
+    // Two dated goals, under "Pilot goals": the pipeline's last step.
     const goals = h('div', { class: 'fd-goals' },
       kit.tag(o.goalsLabel, { tone: 'strong', className: 'fd-goals-tag' }),
       h('ul', { class: 'fd-goal-list' }, o.goals.map((g) => h('li', { class: 'fd-goal' },
@@ -99,8 +108,11 @@
         h('b', { class: 'fd-goal-figure' }, g.figure),
         h('span', { class: 'fd-goal-label' }, ` ${g.label} `),
         h('span', { class: 'fd-goal-date' }, g.date)))));
+    kit.reveal(goals, steps, { ghost: true });
 
     return {
+      steps,
+      stepLabels: [...stages, `${o.goalsLabel}: ${o.goals.map((g) => `${g.figure} ${g.label} ${g.date}`).join('; ')}`],
       head: twoLineHead(scene, kit),
       bodyClass: 'fd-body',
       body: [h('div', { class: 'fd-top' }, community, evidence), pipeline, goals],

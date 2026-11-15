@@ -297,7 +297,7 @@ window.ORI_SCENES = [
         { name: 'Hoeft T&M', role: 'Student', kind: 'member' },
         { name: 'Friends in OTCR, CUBE, VCA, and business fraternities', kind: 'friends' }
       ],
-      evidence: { yes: 21, total: 26, label: 'students I spoke with share this problem.' },
+      evidence: { yes: 21, total: 26, label: 'of the 26 students I spoke with share this problem.' },
       pipeline: ['Relationships', 'Personal onboarding', 'Observe', 'Product iteration', 'Referrals'],
       goalsLabel: 'Pilot goals',
       goals: [
@@ -305,8 +305,8 @@ window.ORI_SCENES = [
         { figure: '50', label: 'enrolled', date: 'by Dec 15, 2026' }
       ]
     },
-    spoken: 'I’m Zuyu. I lead Founders at UIUC and manage projects at IBC. Twenty-one of twenty-six students I spoke with share this problem. I’ll onboard, observe, iterate, and ask for referrals. Goals: 150 invitations by December 1st, 50 enrolled by the 15th.',
-    cue: 'Who I am, why I can reach these people, what I do next. Personal access, not partnerships: Founders, IBC and T&M are direct roles; OTCR, CUBE, VCA and business fraternities are friends to ask for introductions. No logos, member counts, endorsements or agreements. 21/26 links back to the discovery question, not product adoption. The pipeline is a proposed recruiting and feedback mechanism, not a measured funnel. Only the two dated goals are on the slide; the invitation allocation and the activation and week-four definitions are in the appendix for Q&A.',
+    spoken: 'I’m Zuyu. I lead Founders at UIUC and manage projects at IBC. Eighty-one percent of the twenty-six students I spoke with share this problem. I’ll onboard, observe, iterate, and ask for referrals. Goals: 150 invitations by December 1st, 50 enrolled by the 15th.',
+    cue: 'Who I am, why I can reach these people, what I do next. The pipeline reveals one stage per click: arriving with → (or the clicker) shows Relationships; each → reveals the next stage (Personal onboarding, Observe, Product iteration, Referrals, then the Pilot goals), and the → after the goals moves on. Any other arrival shows the whole slide. Personal access, not partnerships: Founders, IBC and T&M are direct roles; OTCR, CUBE, VCA and business fraternities are friends to ask for introductions. No logos, member counts, endorsements or agreements. 81% is 21 of the 26 students in founder-reported, informal discovery conversations (a convenience sample of UIUC students); it links back to the discovery question, not product adoption, and is never “81% of college students”. The pipeline is a proposed recruiting and feedback mechanism, not a measured funnel. Only the two dated goals are on the slide; the invitation allocation and the activation and week-four definitions are in the appendix for Q&A.',
     appendix: ['gtm', 'discovery']
   },
   {
@@ -409,14 +409,14 @@ window.ORI_SCENES = [
       uses: [
         { label: 'A reliable product', icon: 'check' },
         { label: 'A 50-person pilot', icon: 'people' },
-        { label: 'Evidence to grow', icon: 'chart' }
+        { label: 'Context infrastructure', note: 'ChatGPT, Claude, Instagram, your phone', icon: 'link' }
       ],
       timeline: '8 weeks',
       bottomLine: 'Help us build a phone that grows with you.',
       bottomAccent: 'grows with you.'
     },
-    spoken: 'Ten thousand dollars, zero percent equity: the perks of a hackathon. It funds a reliable product and a fifty-person pilot. Help us build a phone that grows with you.',
-    cue: 'A playful prize ask, not an investment round or an agreed award. The suggested allocation ($4,000 product reliability and device testing, $2,000 AI usage and hosting, $2,000 recruiting and research logistics, $2,000 contingency) and what the money does not fund are in the appendix. Then Next to the closing slide.',
+    spoken: 'Ten thousand dollars, zero percent equity: the perks of a hackathon. It funds a reliable product, a fifty-person pilot, and context infrastructure: the key to making this your AI-native phone.',
+    cue: 'A playful prize ask, not an investment round or an agreed award. Context infrastructure is future work the money would fund: easier ways for Ori to get context from ChatGPT, Claude, Instagram and the phone. Today a person pastes a summary and no account is read; never say Ori reads them now. The suggested allocation ($4,000 product reliability and device testing, $2,000 AI usage and hosting, $2,000 recruiting and research logistics, $2,000 contingency; context infrastructure has no separate line yet) and what the money does not fund are in the appendix. The bottom line stays on screen. Then Next to the closing slide.',
     appendix: ['ask']
   },
   {
@@ -426,16 +426,16 @@ window.ORI_SCENES = [
     headline: 'Ori. Your phone, your story.',
     seconds: 7,
     theme: 'ink',
-    companion: null,
+    companion: { expression: 'Ready', corner: false },
     layout: 'signature',
     group: 'core',
     onScreen: {
       line: 'Ori. Your phone, your story.',
-      qr: { src: 'assets/qr-ori.png', href: 'https://ori-fjrx.onrender.com/', alt: 'QR code that opens Ori' },
+      qr: { src: 'assets/qr-ori.png', href: 'https://ori-fjrx.onrender.com/', alt: 'QR code that opens Ori', caption: 'Try Ori now' },
       contact: { name: 'Zuyu Liu', email: 'zliu2017@illinois.edu', phone: '847-962-2868', tel: '+18479622868' }
     },
     spoken: 'Ori. Your phone, your story. Scan the code, create your own account, and try Ori. Thank you.',
-    cue: 'Scan the code, create your own account, and try Ori. Say the invitation; it is not on the slide. Leave this slide up for the two minutes of Q&A: the code opens https://ori-fjrx.onrender.com/, where people sign up for their own account. Never show shared demo credentials. The appendix (A) holds sources and definitions for questions.',
+    cue: 'Scan the code, create your own account, and try Ori. The slide shows only “Try Ori now” under the code; say the full invitation. Leave this slide up for the two minutes of Q&A: the code opens https://ori-fjrx.onrender.com/, where people sign up for their own account. Never show shared demo credentials. The appendix (A) holds sources and definitions for questions.',
     appendix: ['ask', 'sources']
   }
 ];

@@ -654,7 +654,26 @@
     };
   };
 
-  // The close: only the signature line, the QR code (linking to the product) and the contact details.
+  // The close: Ori's wordmark over the signature line and the contact details; the QR code (linking to the
+  // product) with Ori's happy face and “Try Ori now” under it.
+  // The wordmark is the canonical asset, inlined so that on ink it takes its light variant (white letters, the
+  // i's dot lime in its cobalt ring, as shared/oriArt.ts paints it); the cobalt file shows until it loads.
+  const signatureLogo = () => {
+    const holder = h('span', { class: 'signature-logo', 'aria-hidden': 'true' },
+      h('img', { src: 'assets/ori/wordmark-cobalt.svg', alt: '', width: '136', height: '88', decoding: 'async' }));
+    if (typeof fetch === 'function' && typeof DOMParser === 'function') {
+      fetch('assets/ori/wordmark-ink.svg')
+        .then((res) => (res.ok ? res.text() : Promise.reject(new Error(`HTTP ${res.status}`))))
+        .then((text) => {
+          const svg = new DOMParser().parseFromString(text, 'image/svg+xml').querySelector('svg');
+          if (!svg) return;
+          svg.setAttribute('focusable', 'false');
+          holder.replaceChildren(document.importNode(svg, true));
+        })
+        .catch(() => { /* the cobalt file stays */ });
+    }
+    return holder;
+  };
   R.signature = (scene) => {
     const o = scene.onScreen || {};
     const line = String(o.line || scene.headline);
@@ -668,20 +687,25 @@
       : h('h2', { class: 'signature-line' }, line);
     const qrHref = /^https:\/\//.test(String(qr.href || '')) ? qr.href : '';
     const qrImage = h('img', { src: qr.src, alt: qr.alt || 'QR code', width: '384', height: '384', decoding: 'async' });
+    // Ori inside the slide (the scene's companion has corner: false), in its Ready expression unless the scene names another.
+    const face = ori((scene.companion && scene.companion.expression) || 'Ready', { size: 112, className: 'signature-ori' });
     return {
       head: null,
       bodyClass: 'signature-body',
       companion: false,
       body: [h('div', { class: 'signature' },
         h('div', { class: 'signature-text' },
+          signatureLogo(),
           lineEl,
           h('address', { class: 'signature-contact' },
             h('span', { class: 'contact-name' }, c.name),
             h('a', { class: 'contact-link', href: `mailto:${c.email}` }, c.email),
             h('a', { class: 'contact-link', href: `tel:${c.tel}` }, c.phone))),
-        qrHref
-          ? h('a', { class: 'signature-qr', href: qrHref, target: '_blank', rel: 'noopener noreferrer', 'aria-label': `${qr.alt || 'QR code'} (opens a new tab)` }, qrImage)
-          : h('span', { class: 'signature-qr' }, qrImage))],
+        h('div', { class: 'signature-try' },
+          qrHref
+            ? h('a', { class: 'signature-qr', href: qrHref, target: '_blank', rel: 'noopener noreferrer', 'aria-label': `${qr.alt || 'QR code'} (opens a new tab)` }, qrImage)
+            : h('span', { class: 'signature-qr' }, qrImage),
+          h('p', { class: 'signature-cta' }, face, qr.caption ? h('span', { class: 'signature-cta-text' }, qr.caption) : null)))],
     };
   };
 

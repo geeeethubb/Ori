@@ -96,6 +96,7 @@
   }
 
   const ART = [artBranch, artAction, artCarry, artReturn];
+  // Each story has its own tone from the brand palette (blue, lilac, warm, lime): see g6-close.css, "Four tones".
 
   slides.velocity = (scene, kit) => {
     const { h } = kit;
@@ -106,7 +107,7 @@
         h('p', { class: 'vl-q' }, kit.icon('ui:help', { size: 26, className: 'vl-q-icon' }), kit.sr('Question: '), c.question),
         h('span', { class: 'vl-resolve', 'aria-hidden': 'true' }, kit.icon('ui:arrowRight', { size: 26 })),
         h('p', { class: 'vl-d' }, kit.sr('Decision: '), c.decision)));
-    const chain = (o.chain || []).map((c) => h('span', { class: 'vl-link' }, h('b', null, c.step), h('small', null, c.note)));
+    const chain = (o.chain || []).map((c, i) => h('span', { class: 'vl-link', 'data-tone': String(i) }, h('b', null, c.step), h('small', null, c.note)));
     return {
       body: [
         h('ol', { class: 'vl-grid' }, o.cards.map(story)),
@@ -142,23 +143,29 @@
     }
     return drawing(kit, '0 0 448 150', 'ak-svg', ...dots);
   }
-  // Evidence to grow: measured bars, the last one the accent, a dashed goal arrow (a direction, not a result).
-  function artEvidence(kit) {
+  // Context infrastructure (planned, not shipped): four sources (an AI chat, another AI, a photo app, the phone's
+  // own pictures) on dashed lines into one phone, the lime spark where the context lands. Dashed because these
+  // easier ways are still to build: today a person pastes a summary and no account is read.
+  function artContext(kit) {
     const { svg } = kit;
+    const sources = [
+      { y: 21, icon: 'ui:agent' }, { y: 57, icon: 'ui:sparkle' }, { y: 93, icon: 'app:camera' }, { y: 129, icon: 'ui:image' },
+    ];
     return drawing(kit, '0 0 448 150', 'ak-svg',
-      svg('path', { class: 'ak-soft-stroke', d: 'M136 132H312' }),
-      svg('rect', { class: 'ak-stroke', x: '150', y: '98', width: '26', height: '34', rx: '7' }),
-      svg('rect', { class: 'ak-stroke', x: '188', y: '80', width: '26', height: '52', rx: '7' }),
-      svg('rect', { class: 'ak-stroke', x: '226', y: '58', width: '26', height: '74', rx: '7' }),
-      svg('rect', { class: 'ak-lime-fill ak-grow', x: '264', y: '32', width: '26', height: '100', rx: '7' }),
-      svg('path', { class: 'ak-dash', d: 'M150 76L262 14' }),
-      svg('path', { class: 'ak-dash-head', d: 'M246.7 13.3L262 14L254.5 27.3' }));
+      ...sources.map((s, i) => svg('path', { class: 'ak-dash ak-feed', d: `M144 ${s.y}C206 ${s.y} 204 75 254 75`, style: { '--d': String(i) } })),
+      ...sources.map((s, i) => svg('g', { class: 'ak-source', style: { '--d': String(i) } },
+        svg('circle', { class: 'ak-source-ring', cx: '126', cy: String(s.y), r: '17' }),
+        glyph(kit, s.icon, 116, s.y - 10, 20, 'ak-glyph'))),
+      svg('rect', { class: 'ak-stroke', x: '258', y: '10', width: '84', height: '130', rx: '18' }),
+      svg('rect', { class: 'ak-soft-bar', x: '284', y: '122', width: '32', height: '6', rx: '3' }),
+      svg('circle', { class: 'ak-lime-fill ak-pop', cx: '300', cy: '68', r: '27' }),
+      glyph(kit, 'ui:sparkle', 286, 54, 28, 'ak-on-lime-glyph ak-pop'));
   }
 
   slides.ask = (scene, kit) => {
     const { h, svg } = kit;
     const o = scene.onScreen;
-    const ART_USES = [artReliable, artPilot, artEvidence];
+    const ART_USES = [artReliable, artPilot, artContext];
     const [amount, ...rest] = String(o.hero).split('. ');
     const equity = rest.join('. ');
     const weeks = Number(String(o.timeline || '').match(/\d+/)?.[0] || 0);
@@ -183,7 +190,9 @@
               svg('path', { class: 'ak-weeks-path', d: 'M8 14H1112', pathLength: '1' }), ...ticks)) : null,
           h('ul', { class: 'ak-use-list' }, o.uses.map((u, i) => h('li', { class: 'ak-use', style: { '--c': String(i) } },
             h('div', { class: 'ak-panel' }, (ART_USES[i] || artReliable)(kit)),
-            h('span', { class: 'ak-use-label' }, u.label))))),
+            h('div', { class: 'ak-use-text' },
+              h('span', { class: 'ak-use-label' }, u.label),
+              u.note ? h('span', { class: 'ak-use-note' }, u.note) : null))))),
         h('p', { class: 'ak-bottom' }, accentAt > 0
           ? [bottom.slice(0, accentAt), h('span', { class: 'ak-bottom-accent' }, o.bottomAccent), bottom.slice(accentAt + o.bottomAccent.length)]
           : bottom),

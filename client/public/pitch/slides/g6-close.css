@@ -8,15 +8,24 @@
 /* ============================================================================================== */
 
 .layout-velocity .vl-body { padding-top: 26px; }
+
+/* Four tones from the brand palette, one per story: a tinted panel (--vt-bg) and its border (--vt-line), the
+   drawing's accent (--vt-fill, with --vt-on-fill on it) and a deeper colour for the question, its icon and the
+   arrow (--vt-deep). Text on the canvas (#f7f8fc), WCAG AA: blue 6.0:1, violet 5.6:1, orange-ink 7.1:1,
+   ink 15.2:1. Lime is only a fill, under ink lines; the panels carry no text. */
+.layout-velocity .vl-story { --vt-bg: var(--blue-soft); --vt-line: #c2c9fc; --vt-fill: var(--blue); --vt-on-fill: #fff; --vt-deep: var(--blue); }
+.layout-velocity .vl-story:nth-child(2) { --vt-bg: var(--lilac); --vt-line: #b9a2f2; --vt-fill: #6c47d9; --vt-on-fill: #fff; --vt-deep: #6c47d9; }
+.layout-velocity .vl-story:nth-child(3) { --vt-bg: var(--warm); --vt-line: #f1c3ac; --vt-fill: var(--orange); --vt-on-fill: #fff; --vt-deep: var(--orange-ink); }
+.layout-velocity .vl-story:nth-child(4) { --vt-bg: var(--lime); --vt-line: #bcd94f; --vt-fill: var(--ink); --vt-on-fill: var(--lime); --vt-deep: var(--ink); }
 .layout-velocity .vl-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 26px 36px; }
 .layout-velocity .vl-story { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 28px; align-items: center; min-width: 0; }
-.layout-velocity .vl-art { width: 360px; height: 292px; border-radius: 28px; background: #fff; border: 1.5px solid var(--line); box-shadow: 0 1px 0 rgba(22, 32, 57, 0.04), 0 12px 32px -22px rgba(22, 32, 57, 0.28); }
+.layout-velocity .vl-art { width: 360px; height: 292px; border-radius: 28px; background: var(--vt-bg); border: 2px solid var(--vt-line); box-shadow: 0 1px 0 rgba(22, 32, 57, 0.04), 0 12px 32px -22px rgba(22, 32, 57, 0.28); }
 .layout-velocity .vl-svg { display: block; width: 100%; height: 100%; }
 .layout-velocity .vl-text { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0; }
-.layout-velocity .vl-q { display: flex; align-items: center; gap: 8px; margin: 0; font-family: var(--font-body); font-weight: 600; font-size: 24px; line-height: 1.2; color: var(--fg-muted); white-space: nowrap; }
+.layout-velocity .vl-q { display: flex; align-items: center; gap: 8px; margin: 0; font-family: var(--font-body); font-weight: 600; font-size: 24px; line-height: 1.2; color: var(--vt-deep); white-space: nowrap; }
 .layout-velocity .vl-q .kit-icon { width: 24px; height: 24px; }
-.layout-velocity .vl-q-icon { color: var(--fg-muted); }
-.layout-velocity .vl-resolve { display: inline-flex; color: var(--accent); transform: rotate(90deg); margin-left: 1px; }
+.layout-velocity .vl-q-icon { color: var(--vt-deep); }
+.layout-velocity .vl-resolve { display: inline-flex; color: var(--vt-deep); transform: rotate(90deg); margin-left: 1px; }
 .layout-velocity .vl-d { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 36px; line-height: 1.08; letter-spacing: -0.035em; color: var(--fg); text-wrap: balance; }
 
 /* The attribution line: what Velocity did, what it became, what is still to test. */
@@ -26,26 +35,30 @@
 .layout-velocity .vl-link { display: inline-flex; align-items: baseline; gap: 10px; }
 .layout-velocity .vl-link b { font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -0.02em; color: var(--fg); }
 .layout-velocity .vl-link small { font-size: 18px; font-weight: 600; color: var(--fg-muted); border: 1.5px solid var(--line-2); border-radius: 99px; padding: 2px 12px; }
+/* The chain's tags in tone (AA: blue-ink on blue-soft 7.3:1, ink on lime 14:1, orange-ink on warm 6.5:1). */
+.layout-velocity .vl-link[data-tone='0'] small { color: var(--blue-ink); background: var(--blue-soft); border-color: #c2c9fc; }
+.layout-velocity .vl-link[data-tone='1'] small { color: var(--ink); background: var(--lime); border-color: #bcd94f; }
+.layout-velocity .vl-link[data-tone='2'] small { color: var(--orange-ink); background: var(--warm); border-color: #f1c3ac; }
 
-/* The drawings: ink lines, white surfaces, one blue accent each. */
-.layout-velocity .vl-node { fill: var(--canvas); stroke: var(--ink); stroke-width: 3; }
+/* The drawings: ink lines, white surfaces on the tinted panel, one accent each (the story's --vt-fill). */
+.layout-velocity .vl-node { fill: #fff; stroke: var(--ink); stroke-width: 3; }
 .layout-velocity .vl-glyph { color: var(--ink); }
-.layout-velocity .vl-glyph-on-accent { color: #fff; }
+.layout-velocity .vl-glyph-on-accent { color: var(--vt-on-fill); }
 .layout-velocity .vl-line, .layout-velocity .vl-head { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .layout-velocity .vl-branch { fill: none; stroke: var(--muted); stroke-width: 2.5; stroke-linecap: round; }
-.layout-velocity .vl-chip { fill: #fff; stroke: var(--line-2); stroke-width: 2; }
-.layout-velocity .vl-accent-fill { fill: var(--blue); }
-.layout-velocity .vl-accent-stroke, .layout-velocity .vl-accent-head { fill: none; stroke: var(--blue); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.layout-velocity .vl-chip { fill: #fff; stroke: var(--vt-line); stroke-width: 2; }
+.layout-velocity .vl-accent-fill { fill: var(--vt-fill); }
+.layout-velocity .vl-accent-stroke, .layout-velocity .vl-accent-head { fill: none; stroke: var(--vt-fill); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
 .layout-velocity .vl-screen { fill: #fff; stroke: var(--ink); stroke-width: 3; }
 .layout-velocity .vl-bar { fill: var(--ink); }
 .layout-velocity .vl-bar-soft { fill: var(--line); }
 .layout-velocity .vl-field { fill: none; stroke: var(--line-2); stroke-width: 2; }
 .layout-velocity .vl-field-new { fill: none; stroke: var(--muted); stroke-width: 2; stroke-dasharray: 5 5; }
-.layout-velocity .vl-ripple { fill: none; stroke: var(--blue); stroke-width: 2.5; opacity: 0.4; }
+.layout-velocity .vl-ripple { fill: none; stroke: var(--vt-fill); stroke-width: 2.5; opacity: 0.4; }
 .layout-velocity .vl-pointer { fill: #fff; stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; }
-.layout-velocity .vl-record { fill: var(--blue); }
+.layout-velocity .vl-record { fill: var(--vt-fill); }
 .layout-velocity .vl-thumb { fill: #fff; }
-.layout-velocity .vl-thumb-line { fill: none; stroke: var(--blue); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.layout-velocity .vl-thumb-line { fill: none; stroke: var(--vt-fill); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 .layout-velocity .vl-ink-bar { fill: #fff; opacity: 0.9; }
 
 /* Arrival: each story draws its decision, staggered by card (--c), once. */
@@ -73,13 +86,13 @@
 
 .layout-ask .ak-body { padding-top: 0; }
 .layout-ask .ak-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 40px; }
-.layout-ask .ak-hero { font-size: 136px; line-height: 0.95; letter-spacing: -0.055em; color: var(--fg); text-wrap: nowrap; }
+.layout-ask .ak-hero { font-size: 130px; line-height: 0.95; letter-spacing: -0.055em; color: var(--fg); text-wrap: nowrap; }
 .layout-ask .ak-amount, .layout-ask .ak-equity { display: block; }
 .layout-ask .ak-equity { color: var(--lime); }
 .layout-ask .ak-punchline { margin: 18px 0 0; font-family: var(--font-display); font-weight: 700; font-size: 44px; letter-spacing: -0.03em; color: var(--fg); }
 .layout-ask .ak-ori { margin-top: 6px; margin-right: 36px; animation: ak-rise 0.6s cubic-bezier(.3, .7, .3, 1) both 0.2s; }
 
-.layout-ask .ak-uses { margin-top: 30px; }
+.layout-ask .ak-uses { margin-top: 24px; }
 .layout-ask .ak-weeks { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 22px; margin-bottom: 14px; }
 .layout-ask .ak-weeks-label { font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -0.02em; color: var(--lime); white-space: nowrap; }
 .layout-ask .ak-weeks-line { display: block; width: 100%; height: auto; }
@@ -87,29 +100,34 @@
 .layout-ask .ak-tick { fill: var(--on-ink-muted); }
 .layout-ask .ak-tick-end { fill: var(--lime); }
 .layout-ask .ak-use-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px; }
-.layout-ask .ak-use { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.layout-ask .ak-use { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.layout-ask .ak-use-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .layout-ask .ak-panel { height: 170px; border-radius: 24px; background: var(--ink-2); border: 1.5px solid var(--on-ink-line); }
 .layout-ask .ak-svg { display: block; width: 100%; height: 100%; }
-.layout-ask .ak-use-label { font-family: var(--font-display); font-weight: 750; font-size: 32px; letter-spacing: -0.03em; color: var(--fg); }
-.layout-ask .ak-bottom { margin: 32px 0 0; padding-top: 24px; border-top: 2px solid var(--on-ink-line); font-family: var(--font-display); font-weight: 800; font-size: 72px; line-height: 1.05; letter-spacing: -0.045em; color: var(--fg); white-space: nowrap; }
+.layout-ask .ak-use-label { font-family: var(--font-display); font-weight: 750; font-size: 32px; line-height: 1.2; letter-spacing: -0.03em; color: var(--fg); }
+/* The note names the context sources (on ink, on-ink-muted 8.8:1). */
+.layout-ask .ak-use-note { font-size: 20px; font-weight: 600; line-height: 1.25; color: var(--on-ink-muted); white-space: nowrap; }
+.layout-ask .ak-bottom { margin: 24px 0 0; padding-top: 18px; border-top: 2px solid var(--on-ink-line); font-family: var(--font-display); font-weight: 800; font-size: 72px; line-height: 1.05; letter-spacing: -0.045em; color: var(--fg); white-space: nowrap; }
 .layout-ask .ak-bottom-accent { color: var(--lime); }
 
 .layout-ask .ak-stroke { fill: none; stroke: var(--on-ink); stroke-width: 3; stroke-linejoin: round; }
 .layout-ask .ak-soft-fill { fill: rgba(255, 255, 255, 0.2); }
 .layout-ask .ak-soft-bar { fill: rgba(255, 255, 255, 0.35); }
-.layout-ask .ak-soft-stroke { fill: none; stroke: var(--on-ink-muted); stroke-width: 2.5; stroke-linecap: round; }
 .layout-ask .ak-lime-fill { fill: var(--lime); }
 .layout-ask .ak-on-lime { fill: none; stroke: var(--ink); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
 .layout-ask .ak-dot { fill: var(--lime); transform-box: fill-box; transform-origin: center; animation: ak-dot 0.3s ease-out both; animation-delay: calc(var(--d, 0) * 12ms + 0.45s); }
-.layout-ask .ak-dash, .layout-ask .ak-dash-head { fill: none; stroke: var(--on-ink-muted); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.layout-ask .ak-dash { fill: none; stroke: var(--on-ink-muted); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 .layout-ask .ak-dash { stroke-dasharray: 6 9; }
+.layout-ask .ak-source-ring { fill: var(--ink); stroke: var(--on-ink); stroke-width: 2.5; }
+.layout-ask .ak-glyph { color: var(--on-ink); }
+.layout-ask .ak-on-lime-glyph { color: var(--ink); }
+.layout-ask .ak-source, .layout-ask .ak-feed { animation: ak-fade 0.35s ease-out both; animation-delay: calc(var(--d, 0) * 90ms + 0.45s); }
 .layout-ask .ak-pop { transform-box: fill-box; transform-origin: center; animation: ak-pop 0.35s cubic-bezier(.3, 1.4, .5, 1) both 0.55s; }
-.layout-ask .ak-grow { transform-box: fill-box; transform-origin: 50% 100%; animation: ak-grow 0.5s cubic-bezier(.3, .7, .3, 1) both 0.6s; }
 @keyframes ak-rise { from { opacity: 0; transform: translateY(14px); } }
 @keyframes ak-draw { from { stroke-dashoffset: 1; } }
 @keyframes ak-dot { from { opacity: 0; transform: scale(0.3); } }
 @keyframes ak-pop { from { opacity: 0; transform: scale(0.5); } }
-@keyframes ak-grow { from { transform: scaleY(0.2); } }
+@keyframes ak-fade { from { opacity: 0; } }
 
 /* ============================================================================================== */
 /* Phones and narrow windows (flow mode: no scaling, the scene scrolls)                            */
@@ -142,6 +160,7 @@
 .is-flow .layout-ask .ak-use { flex-direction: row; align-items: center; gap: 12px; }
 .is-flow .layout-ask .ak-panel { flex: none; width: 132px; height: 48px; border-radius: 12px; }
 .is-flow .layout-ask .ak-use-label { font-size: 17px; }
+.is-flow .layout-ask .ak-use-note { font-size: 14px; white-space: normal; }
 .is-flow .layout-ask .ak-bottom { font-size: 26px; margin-top: 22px; padding-top: 14px; white-space: normal; text-wrap: balance; }
 
 /* Print shows the finished compositions (every slide is laid out at once, so arrival motion must not run). */

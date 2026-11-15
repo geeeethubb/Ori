@@ -368,10 +368,19 @@ async function checkBrowser(name, launchOptions) {
       companion: !!companion && !companion.hidden && slide.contains(companion),
     };
   });
-  const expectedText = `${SIGNATURE.line} ${SIGNATURE.name} ${SIGNATURE.email} ${SIGNATURE.phone}`;
-  record(name, 'closing scene shows only the signature line, the QR code and the contact details',
-    close.line === SIGNATURE.line && close.text.replace(/ \./g, '.') === expectedText && close.images === 1 && !close.companion && JSON.stringify(close.links) === JSON.stringify([...SIGNATURE.links].sort()) && close.qrHref === PRODUCT,
-    `line "${close.line}"; text "${close.text}"; links ${close.links.join(', ')}; QR ${close.qrSize}px → ${close.qrHref}; companion ${close.companion}`);
+  // The founder's closing slide: the signature line, Ori's logo and happy face, the QR with "Try Ori now" under it,
+  // and the contact details; no other text, no visible URL.
+  let rest = close.text.replace(/ \./g, '.');
+  const missing = [SIGNATURE.line, SIGNATURE.name, SIGNATURE.email, SIGNATURE.phone, 'Try Ori now'].filter((part) => {
+    const at = rest.indexOf(part);
+    if (at < 0) return true;
+    rest = rest.slice(0, at) + rest.slice(at + part.length);
+    return false;
+  });
+  const extra = rest.replace(/\s+/g, ' ').trim();
+  record(name, 'closing scene: the signature line, the QR with "Try Ori now", Ori\'s face and the contact details, nothing else',
+    close.line === SIGNATURE.line && !missing.length && !extra && close.images >= 2 && close.images <= 3 && !close.companion && JSON.stringify(close.links) === JSON.stringify([...SIGNATURE.links].sort()) && close.qrHref === PRODUCT,
+    `line "${close.line}"; text "${close.text}"${missing.length ? `; missing ${missing.join(' | ')}` : ''}${extra ? `; extra "${extra}"` : ''}; images ${close.images}; links ${close.links.join(', ')}; QR ${close.qrSize}px → ${close.qrHref}; corner companion ${close.companion}`);
 
   // Links: same-origin links must open (the QR's product link too, when the deck is served from the product); nothing
   // may point at a developer's machine.
