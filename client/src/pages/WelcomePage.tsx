@@ -12,6 +12,7 @@ import { OriWordmark } from '../components/ori/OriWordmark.tsx';
 import { Skeleton } from '../components/ui.tsx';
 import { ExampleTag } from './parts/badges.tsx';
 import { ExampleReady, ExampleReply, ExampleShare, LandingScene, OriAppIcon } from './parts/PhoneMock.tsx';
+import { WaitlistForm } from './parts/WaitlistForm.tsx';
 import { usePageTitle } from './parts/usePageTitle.ts';
 import './pages.css';
 import './landing.css';
@@ -71,6 +72,14 @@ export function WelcomePage() {
           <p className="ld-signature">{BRAND.signature}</p>
         </div>
         <LandingScene />
+      </section>
+
+      <section className="ld-waitlist" aria-labelledby="ld-waitlist-title" data-testid="welcome-waitlist">
+        <div className="ld-waitlist-copy">
+          <h2 id="ld-waitlist-title">Sign up for the waitlist</h2>
+          <p className="muted">Be first to hear what’s next for Ori.</p>
+        </div>
+        <WaitlistForm />
       </section>
 
       <section id={EXAMPLE_ANCHOR} className="ld-example" tabIndex={-1} aria-labelledby="ld-example-title" data-testid="welcome-example-section">

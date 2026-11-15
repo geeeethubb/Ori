@@ -127,6 +127,19 @@
   .lp-home-icons svg, .lp-home-icons img { width: calc(var(--u) * 11.5); height: calc(var(--u) * 11.5); }
 }
 
+/* ---------- waitlist: one email field (stored only; nothing is sent from the app) ---------- */
+.ld-waitlist { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: center; padding: 26px 22px; border-radius: var(--radius-l); background: var(--lilac-soft); border: 1px solid var(--line); }
+@media (min-width: 860px) { .ld-waitlist { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 36px; padding: 36px 40px; } }
+.ld-waitlist-copy h2 { margin: 0 0 6px; font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2.4rem); letter-spacing: -0.025em; text-wrap: balance; }
+.ld-waitlist-copy p { margin: 0; }
+.ld-waitlist-form { position: relative; display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+.ld-waitlist-form .input { flex: 1 1 220px; min-width: 0; min-height: 52px; font-size: 1rem; background: var(--surface); }
+.ld-waitlist-form .btn { flex: 0 0 auto; min-height: 52px; }
+.ld-waitlist-form p { flex-basis: 100%; margin: 0; }
+.ld-waitlist-hp { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+.ld-waitlist-done { margin: 0; padding: 14px 18px; border-radius: var(--radius); background: var(--surface); font-weight: 700; color: var(--ink); }
+@media (max-width: 480px) { .ld-waitlist-form .btn { flex: 1 1 100%; } }
+
 /* ---------- one example, start to finish ---------- */
 .ld-example { display: flex; flex-direction: column; gap: 24px; scroll-margin-top: 84px; }
 .ld-example:focus { outline: none; }
