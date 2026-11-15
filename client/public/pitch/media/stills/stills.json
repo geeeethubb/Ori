@@ -1,0 +1,608 @@
+{
+  "about": "Real screenshots of Ori for the pitch's media slots, standing in until Zuyu films the new clips. No video was generated, recorded or edited for these; each file is a browser screenshot of the running product (crops and downscaling only).",
+  "captured": "2026-11-15",
+  "product": "Ori built from this repository (product code at HEAD b8a1808; no local changes under client/src, server or shared), served on a throwaway local server and database in Sample mode (MODEL_PROVIDER=sample): scripted rules and a built-in catalog, no AI model, photos not read.",
+  "caption": "Caption every still where sampleModeContent is true as 'Sample mode' (these are screenshots, not recordings). sampleModeLabelInFrame / exampleLabelInFrame say whether the product's own 'Sample mode' or 'Example' labels are visible inside the image.",
+  "account": "One fresh account, signed up through the sign-up form (display name 'Zuyu'), used throughout like a person would: one Light app, one photo.",
+  "photo": "server/fixtures/media/light-1.jpg (CC0, Fons Heijnsbroek, Wikimedia Commons; server/fixtures/media/sources.json). The product's own example photos come from the same CC0 set.",
+  "continuity": "Same photo, thought ('I keep stopping for long shadows on brick walls in the late afternoon. I want to get better at noticing light on my walks.'), observation ('Low sun turns the brick wall gold'), request ('Add camera settings to my photo notes') and camera value ('Fuji X100V') as the existing clips 01 and 02. The focus words differ: 'Focus on golden-hour shadows' here, 'Focus on shadows and reflections' in clip 01.",
+  "journey": [
+    "Signed up; Agent: attached the photo, typed the thought, sent.",
+    "Ori's Sample-mode reply proposed Light; Preview Light; typed 'Focus on golden-hour shadows' and pressed Update preview; Make mine; Ready; Open Light.",
+    "In Light: opened the photo entry, Edit, typed the observation, Save.",
+    "Edit with Ori: typed the request, Preview change, Apply change; then typed 'Fuji X100V' into the new Camera field and saved.",
+    "To retake the 'before' frames without a toast: the product's Undo (History, 'Undo last change'), the frames, then the same change applied again with Edit with Ori.",
+    "Settings > Bring context from your AI: Copy the prompt; pasted a hand-written summary labelled 'Example written for this demo'; Add it; What you've shared.",
+    "Playground (ideas made on the first visit): Preview Riff; Make mine; Riff's timer run 8 seconds, paused and reset (nothing saved).",
+    "Agent: shared 'Follow up with Maya Thursday about the proposal'; Preview People; Make mine; four fictional follow-ups typed by hand (two due today, two later this week).",
+    "My apps; optional: Course Assignments from the Playground with three fictional assignments typed by hand."
+  ],
+  "viewports": "Phone stills: 390x844 CSS px at deviceScaleFactor 2 (780x1688 px), iPhone Safari user agent in Chromium. Desktop frames: 1280x800 CSS px at 2x, downscaled. Icons: the server's 512 px manifest PNGs, converted losslessly.",
+  "format": "WebP (lossy q84 for screens, lossless for icons).",
+  "stills": [
+    {
+      "file": "agent-share-photo-thought.webp",
+      "slides": [
+        5,
+        6
+      ],
+      "use": "Slide 6 step 1 'Share the spark'; slide 5 input (photo + thought).",
+      "shows": "Agent first screen 'What caught your eye? A thought. A photo. A link.' with the shared photo attached (light-1.jpg, 'Your photo') and the typed thought 'I keep stopping for long shadows on brick walls in the late afternoon. I want to get better at noticing light on my walks.', before sending.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 84114,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": false,
+      "sampleModeLabelInFrame": true,
+      "exampleLabelInFrame": true,
+      "notes": "Nothing generated yet; the product's Sample mode badge is in frame. The Example card at the bottom is the product's own starter, not the person's."
+    },
+    {
+      "file": "agent-share-composer-crop.webp",
+      "slides": [
+        5,
+        6
+      ],
+      "use": "Small step thumbnail: the photo and the thought together.",
+      "shows": "Only the composer card: the attached photo chip (light-1.jpg, Your photo, 184 KB) and the typed thought.",
+      "width": 716,
+      "height": 468,
+      "bytes": 25814,
+      "kind": "crop of the phone screen above (composer card only)",
+      "sampleModeContent": false,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "Person's own input only."
+    },
+    {
+      "file": "agent-reply-light-proposal.webp",
+      "slides": [
+        6
+      ],
+      "use": "Slide 6 step 2 'Shape the idea' (the proposal), or slide 5's centre exchange.",
+      "shows": "The share in the conversation (thought bubble, the photo, 'Note read, photo not read'), Ori's reply 'Sample mode cannot read images, so I'm using your words. Want a place for the shots you notice?' and the Light card ('A photo journal shaped around you.', two Example photos, Preview Light, Keep inspiration).",
+      "width": 780,
+      "height": 1688,
+      "bytes": 140338,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": true,
+      "exampleLabelInFrame": true,
+      "notes": "Sample mode is named in Ori's own reply; the badge itself is above the frame. The product's example photos are the same CC0 set as the shared photo (server/fixtures/media), so one example tile shows the same street as the person's photo; the product labels them Example."
+    },
+    {
+      "file": "agent-reply-light-card-crop.webp",
+      "slides": [
+        5,
+        6
+      ],
+      "use": "Step thumbnail for the proposal: Ori's reply and the Light card.",
+      "shows": "Ori (Found something expression) with the reply 'Sample mode cannot read images, so I'm using your words. Want a place for the shots you notice?' and the Light card with two Example photos, Preview Light, Keep inspiration, Why this?",
+      "width": 780,
+      "height": 834,
+      "bytes": 64618,
+      "kind": "crop of the reply screen (reply bubble + Light card)",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": true,
+      "exampleLabelInFrame": true,
+      "notes": "Sample mode named in the reply text. The product's example photos are the same CC0 set as the shared photo (server/fixtures/media), so one example tile shows the same street as the person's photo; the product labels them Example."
+    },
+    {
+      "file": "make-light-shaped-preview.webp",
+      "slides": [
+        5,
+        6
+      ],
+      "use": "Slide 6 step 2 'Shape the idea': the preview with one detail shaped, labels in frame.",
+      "shows": "Make Light yours, preview open: 'Example photos' + Sample mode badge, 'EXAMPLE CONTENT, NOT SAVED', Light 'Notice the light.', Contact sheet / This month, and 'This week's prompt: Focus on golden-hour shadows' (the focus words typed on this page, applied with Update preview), above example photos.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 130570,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": true,
+      "exampleLabelInFrame": true,
+      "notes": "The shaped detail is real: typed focus words become the week's prompt (Sample-mode rule, PRODUCT_FACTS section 5). The photos are the product's example content, not the person's. The product's example photos are the same CC0 set as the shared photo (server/fixtures/media), so one example tile shows the same street as the person's photo; the product labels them Example."
+    },
+    {
+      "file": "make-light-focus-words.webp",
+      "slides": [
+        5,
+        6
+      ],
+      "use": "The real small exchange: 'What should it focus on?' -> 'Focus on golden-hour shadows', with Make mine.",
+      "shows": "The same preview scrolled: 'This week's prompt: Focus on golden-hour shadows', example photos (Today / Yesterday / Nov 12), Show less, 'What should it focus on?' filled with 'Focus on golden-hour shadows', and Make mine.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 126220,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "The Sample mode badge and the 'Example content, not saved' banner are just above this frame: the photos here are example content. Caption it, or prefer make-light-shaped-preview where the labels must show."
+    },
+    {
+      "file": "light-ready.webp",
+      "slides": [
+        6
+      ],
+      "use": "Slide 6 step 3 'Open your app': Ready.",
+      "shows": "'Light is yours', 'Ready to use', Ori (Ready expression), the Light card (icon, 'Notice the light.') holding the person's own photo, 'Your photo is the first entry in \"Contact sheet\"; add what you noticed when you open it.', Open Light, Add to home screen, Copy app link, 'Your own app. Its own link.'",
+      "width": 780,
+      "height": 1688,
+      "bytes": 97244,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "Light's design came from the Sample-mode catalog; the photo is the person's own share. Add to home screen is a button here, not proof of installation."
+    },
+    {
+      "file": "light-ready-card-crop.webp",
+      "slides": [
+        5,
+        6
+      ],
+      "use": "Slide 5 output 'Your app': Light's icon, name and the person's photo.",
+      "shows": "Light's card on Ready: camera icon, 'Light', 'Notice the light.', and the person's shared photo as its first entry.",
+      "width": 716,
+      "height": 498,
+      "bytes": 60482,
+      "kind": "element crop from Ready (the app card)",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "Sample-mode design; person's own photo."
+    },
+    {
+      "file": "light-open-first-photo.webp",
+      "slides": [
+        6
+      ],
+      "use": "Slide 6 step 3: Light opened, with the photo in it.",
+      "shows": "Light itself (its own page /apps/<id>/): header with icon and Edit with Ori, 'Notice the light.', Contact sheet / This month, 'This week's prompt: Focus on golden-hour shadows', the shared photo as the first entry (Today), Add photo.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 103618,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "The prompt carried over from the focus words typed before Make mine."
+    },
+    {
+      "file": "icon-light.webp",
+      "slides": [
+        5,
+        6,
+        9
+      ],
+      "use": "Light's icon wherever the slide needs the app's mark.",
+      "shows": "Light's real home-screen icon as the server renders it for the app's web manifest (/apps/<id>/icon-512.png): white camera on near-black.",
+      "width": 512,
+      "height": 512,
+      "bytes": 1850,
+      "kind": "app icon, 512x512, full-bleed square (round its corners in CSS)",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "Converted losslessly from the server's PNG. The icon was chosen by the Sample-mode design; live AI may choose another."
+    },
+    {
+      "file": "light-gallery-observation.webp",
+      "slides": [
+        7,
+        9
+      ],
+      "use": "Slide 7 'Before' (existing gallery with a saved observation); slide 9's Light mini view.",
+      "shows": "Light's contact sheet: 'This week's prompt: Focus on golden-hour shadows' and the person's photo captioned with their saved observation 'Low sun turns the brick wall gold', Today.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 104754,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "The gallery looks the same before and after the camera-settings change (fields show on the entry). Captured after the product's Undo had restored the earlier design, so no 'Saved' toast covers it; the first capture of this state had that toast."
+    },
+    {
+      "file": "light-entry-before.webp",
+      "slides": [
+        7
+      ],
+      "use": "Slide 7 'Before': the entry with its photo and observation.",
+      "shows": "The entry opened: the photo, 'Low sun turns the brick wall gold', Sunday, November 15, Light: Golden hour, Where: Not added, Keeper: No, Edit, Delete.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 120708,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "The pre-change design. Captured after the product's own Undo (History, 'Undo last change') restored version 1, to get a frame without the 'Saved' toast; its fields match the first, toast-covered capture exactly. The observation was typed by hand in Light's form ('What caught your eye?')."
+    },
+    {
+      "file": "light-edit-with-ori-ask.webp",
+      "slides": [
+        7
+      ],
+      "use": "Slide 7 'Tell Ori'.",
+      "shows": "Edit Light sheet over Light: 'Tell Ori what would make Light work better for you.', the request 'Add camera settings to my photo notes' typed, suggestion chips (Add a field for the lens, Make it darker), Preview change.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 80726,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": false,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "Person-led: nothing changes until Preview change, then Apply change."
+    },
+    {
+      "file": "light-edit-review.webp",
+      "slides": [
+        7
+      ],
+      "use": "Slide 7 'Review'.",
+      "shows": "'Here's the change' with the Sample mode badge: '\"Camera\", \"Shutter\" and \"Aperture\" will be added to each photo.', 'Keep your photos and notes', Preview (New fields) drawn on the person's own photo and observation, Camera / Shutter / Aperture inputs (placeholder text), Keep current version, Apply change.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 109950,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": true,
+      "exampleLabelInFrame": false,
+      "notes": "'Fujifilm X100V', '1/250' and 'f/8' are grey placeholder hints in empty inputs, not detected values."
+    },
+    {
+      "file": "light-edit-applied-notes-kept.webp",
+      "slides": [
+        7
+      ],
+      "use": "Slide 7 'Update', the moment after Apply: new fields, notes kept, Undo offered.",
+      "shows": "The same entry right after Apply change: the photo, 'Low sun turns the brick wall gold', new fields Camera / Shutter / Aperture (Not added), Light: Golden hour, Where, and the product's toast 'Updated. Existing photos and notes kept.' with Undo.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 137404,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "The toast covers the Keeper row; it disappears after 10 seconds."
+    },
+    {
+      "file": "light-entry-after.webp",
+      "slides": [
+        7
+      ],
+      "use": "Slide 7 'After': same photo and observation, new detail visible.",
+      "shows": "The same entry after the change: the photo, 'Low sun turns the brick wall gold', Camera: Fuji X100V, Shutter / Aperture: Not added, Light: Golden hour, Where, Keeper.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 128862,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "'Fuji X100V' was typed by hand in the new Camera field after the change (as in clip 02). Captured from the first application of the change, before the Undo used for light-entry-before."
+    },
+    {
+      "file": "context-copy-prompt.webp",
+      "slides": [
+        8
+      ],
+      "use": "Slide 8A 'Copy prompt'.",
+      "shows": "Bring context from your AI (from Settings): 'Optional...', 'Only what you add here is used. Nothing is read from your accounts or other chats.', Paste / Upload / Questions, 'Ask your AI to write your profile' with Copy the prompt, and the toast after pressing it: 'Prompt copied. Paste it into your AI, then bring the answer back here.'",
+      "width": 780,
+      "height": 1688,
+      "bytes": 71614,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": false,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "Provider names (ChatGPT, Claude, Gemini) appear only as where the person can ask; nothing is connected."
+    },
+    {
+      "file": "context-prompt-text.webp",
+      "slides": [
+        8
+      ],
+      "use": "Optional 'Ask your AI' visual: the prompt itself.",
+      "shows": "Show the prompt opened: 'Help me create a portable context profile for Ori, an AI companion that makes small personal apps for me...' including 'Use only information actually available in this conversation and memory you are permitted to use. Do not claim to read other conversations, accounts, apps, or my full history.'",
+      "width": 780,
+      "height": 1688,
+      "bytes": 77164,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": false,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "No toast in frame."
+    },
+    {
+      "file": "context-paste-summary.webp",
+      "slides": [
+        8
+      ],
+      "use": "Slide 8A 'Bring back the summary' (copy step and paste-back in one frame).",
+      "shows": "Copy the prompt above; 'The profile your AI wrote' filled with a short summary that begins 'Example profile, written for this demo (not a real person)' (1. Goals: Notice light on my afternoon walks (Confirmed); Practice guitar 15 minutes on weeknights (Confirmed); 2. Projects and friction...), 'Where it came from: Example written for this demo', Add it.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 64942,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": false,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "The summary was written by hand for this capture and says so; it is not real or private data and did not come from ChatGPT or Claude. Captured before Add it was pressed again (the same text had already been added once)."
+    },
+    {
+      "file": "context-what-youve-shared.webp",
+      "slides": [
+        8
+      ],
+      "use": "Slide 8A 'Review what Ori keeps' (after Add it).",
+      "shows": "What you've shared: '6 things Ori works from, out of 2 sources and 1 thing you shared. Edit or remove anything; apps keep their own records.' Interests: 'Street photography, especially long shadows' (Confirmed) and 'A fingerpicked acoustic riff' (Inferred), each 'from Example written for this demo' with edit and remove.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 71374,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "Facts were taken from the pasted text by Sample-mode rules. The review inside Ori comes after Add it (facts saved, then edited or removed); 'from Example written for this demo' marks the source in frame."
+    },
+    {
+      "file": "context-what-youve-shared-needs.webp",
+      "slides": [
+        8
+      ],
+      "use": "Optional second review frame: current needs and the source.",
+      "shows": "Current needs: 'Wants to get better at noticing light on my walks' (Inferred, from Photo: learned from the person's own words in the photo share), 'Notice light on my afternoon walks', 'Practice guitar 15 minutes on weeknights', 'I lose track of follow-ups after meetings' (Confirmed, from Example written for this demo); Sources: 'Example written for this demo'.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 66600,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "Sample-mode extraction."
+    },
+    {
+      "file": "playground-phone.webp",
+      "slides": [
+        8
+      ],
+      "use": "Slide 8B 'Explore possibilities' (phone).",
+      "shows": "Playground 'A little more you.' / 'Useful things. New interests. Yours to explore.', filters For you / Explore / Everyday, Sample mode badge, Update app ideas, and the featured Riff idea (15:00 timer preview, EXAMPLE, Preview Riff).",
+      "width": 780,
+      "height": 1688,
+      "bytes": 63372,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": true,
+      "exampleLabelInFrame": true,
+      "notes": "Ideas were made automatically on this first Playground visit, from what this account had shared (the photo share and the example summary)."
+    },
+    {
+      "file": "playground-phone-ideas.webp",
+      "slides": [
+        8
+      ],
+      "use": "Slide 8B: three visually distinct directions on one phone screen.",
+      "shows": "Riff (dark timer card, Preview Riff), 'Take your camera out with Light' (Light already does this, so there is nothing new to make), Course Assignments (board preview); each preview labelled EXAMPLE.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 83564,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": true,
+      "notes": "Sample mode badge is above this frame. Course Assignments was suggested from 'I lose track of follow-ups after meetings'."
+    },
+    {
+      "file": "playground-desktop.webp",
+      "slides": [
+        8
+      ],
+      "use": "Slide 8B as a landscape feature view: the whole Playground.",
+      "shows": "The whole Playground at 1280 px: nav (Agent / Playground / My apps), 'A little more you.', Ori, For you / Explore / Everyday, Sample mode, Update app ideas, Riff, 'Take your camera out with Light', Course Assignments, 'Something unexpected: A twenty-minute light walk' (Try it), 'Make something new'.",
+      "width": 1600,
+      "height": 1175,
+      "bytes": 131944,
+      "kind": "desktop page, 1280x985 CSS px at 2x, downscaled to 1600 px wide",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": true,
+      "exampleLabelInFrame": true,
+      "notes": "Same account and same ideas as the phone frames."
+    },
+    {
+      "file": "playground-chosen-make-riff.webp",
+      "slides": [
+        8
+      ],
+      "use": "Slide 8B 'Choose a direction': the step after choosing Riff.",
+      "shows": "After Preview Riff: 'Make Riff yours', 'Example sessions' + Sample mode, a compact 15:00 practice preview with 15 / 10 / 25 min, 'What should it focus on?' (placeholder 'Focus on clean chord changes'), Session length with 15 min chosen, Make mine.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 47724,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": true,
+      "exampleLabelInFrame": false,
+      "notes": "15 min was already selected when the page opened. The focus field shows a placeholder; nothing was typed."
+    },
+    {
+      "file": "playground-chosen-make-riff-desktop.webp",
+      "slides": [
+        8
+      ],
+      "use": "Slide 8B landscape alternative of the step after choosing.",
+      "shows": "Make Riff yours at 1280 px: focus field, Session length (15 min), Make mine, Why this? / What's inside, and the preview 'Example sessions' + Sample mode, 'EXAMPLE CONTENT, NOT SAVED', Riff 'A little practice. A little progress.', Practice / Inspiration / Progress, 15:00 timer.",
+      "width": 1600,
+      "height": 1000,
+      "bytes": 53144,
+      "kind": "desktop viewport, 1280x800 CSS px at 2x, downscaled to 1600 px wide",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": true,
+      "exampleLabelInFrame": true
+    },
+    {
+      "file": "riff-timer.webp",
+      "slides": [
+        9
+      ],
+      "use": "Slide 9 interests: Riff's practice timer (at rest).",
+      "shows": "Riff after Make mine: 'A little practice. A little progress.', Practice / Inspiration / Progress, presets 15 / 10 / 25 min, a 15:00 countdown with play, '15 minutes of practice', Save session, 'Nothing timed yet...', and Tonight's prompt 'One minute of only the right hand, then only the left'.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 63820,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "Riff was made from the Playground idea (Preview Riff, Make mine). It is a timer; nothing listens to audio."
+    },
+    {
+      "file": "riff-timer-running.webp",
+      "slides": [
+        9
+      ],
+      "use": "Slide 9 alternative: the timer in use.",
+      "shows": "The timer running at 14:52 with the pause button, 'Keep going.', Reset, Save session, 'Timed 00:08 so far of a 15-minute plan; you can adjust before saving.'",
+      "width": 780,
+      "height": 1688,
+      "bytes": 59702,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "Run for 8 seconds, then paused and reset; no session was saved."
+    },
+    {
+      "file": "people-today.webp",
+      "slides": [
+        9
+      ],
+      "use": "Slide 9 workflows: People, Today.",
+      "shows": "People 'Keep the conversation going.', Next actions, Today (2) / Upcoming (2) with Today chosen: Priya 'Send the deck' (Today, Via Email, Draft message, Mark done, Edit details) and Lena 'Send the photo walk route' (Today); Add person.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 46322,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "People was made from Ori's reply to the share 'Follow up with Maya Thursday about the proposal'. The four follow-ups are fictional and were typed by hand in People's form; the share did not create an entry. Draft message drafts text for the person to copy; nothing is sent."
+    },
+    {
+      "file": "people-upcoming.webp",
+      "slides": [
+        9
+      ],
+      "use": "Slide 9 workflows: People, Upcoming.",
+      "shows": "The same list with Upcoming chosen: Maya 'Follow up about the proposal' (Thursday, Via Email, Draft message, Mark done) and Marcus 'Intro to a design partner' (Friday).",
+      "width": 780,
+      "height": 1688,
+      "bytes": 48934,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "Due days are relative to the capture date, Sunday, November 15, 2026."
+    },
+    {
+      "file": "my-apps-three-apps.webp",
+      "slides": [
+        9
+      ],
+      "use": "Slide 9 centre: one place holding the person's apps (Light, Riff, People).",
+      "shows": "My apps 'Your little world' with Ori, 'Continue in People, 4 follow-ups', tiles People (selected), Riff and Light, the People actions Open / Edit with Ori / Add to home screen, and Make something new.",
+      "width": 780,
+      "height": 1688,
+      "bytes": 47618,
+      "kind": "phone screen, 390x844 CSS px at 2x",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "A web page in the browser, not a phone home screen."
+    },
+    {
+      "file": "icon-riff.webp",
+      "slides": [
+        9
+      ],
+      "use": "Riff's mark on slide 9.",
+      "shows": "Riff's real home-screen icon from its web manifest: lime sound bars on navy.",
+      "width": 512,
+      "height": 512,
+      "bytes": 902,
+      "kind": "app icon, 512x512, full-bleed square (round its corners in CSS)",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "Lossless."
+    },
+    {
+      "file": "icon-people.webp",
+      "slides": [
+        9
+      ],
+      "use": "People's mark on slide 9.",
+      "shows": "People's real home-screen icon from its web manifest: orange people outline on white.",
+      "width": 512,
+      "height": 512,
+      "bytes": 2286,
+      "kind": "app icon, 512x512, full-bleed square (round its corners in CSS)",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "White background: give it a hairline border or shadow on a pale slide."
+    },
+    {
+      "file": "assignments-board-desktop.webp",
+      "slides": [
+        9
+      ],
+      "use": "Optional: the 'recurring task/workflow already supported in the product' (brief slide 9, right side, second example).",
+      "shows": "Course Assignments 'See what is due first': All / Needs attention (1), '1 due soon', a board with Not started (Lab report, Physics, Due in 6 days; Essay outline, Writing, Due in 9 days), In progress (Problem set 4, Databases, 'Due in 2 days' highlighted) and the start of Submitted.",
+      "width": 1000,
+      "height": 1020,
+      "bytes": 39570,
+      "kind": "crop of a desktop viewport (1280x800 CSS px at 2x), downscaled to 1000 px wide",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "Optional extra. A Sample-catalog app made from the Playground idea (Preview, Make mine); the three assignments are fictional and typed by hand. On a phone the board scrolls sideways, so only a desktop crop is provided; the Submitted column is cut by the board's own scroll. Fix pass: slide 9 now shows assignments-card-crop.webp instead."
+    },
+    {
+      "file": "light-open-shadows-reflections.webp",
+      "slides": [
+        5
+      ],
+      "use": "Slide 5 (presented #4), 'Your app': Light as Ori made it, with the same focus words as recordings 01-03.",
+      "shows": "Light: camera icon, 'Notice the light.', Contact sheet / This month, this week's prompt 'Focus on shadows and reflections', and the shared photo as the first entry ('Today').",
+      "width": 390,
+      "height": 786,
+      "bytes": 52162,
+      "kind": "a frame of the real recording media/02-use-and-revise.mp4 at 0.3 s (Sample mode) with its burned-in caption bar (rows 0-57) cropped off; 1x, no pixels edited",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "Fix pass: replaces light-open-first-photo.webp on presented #4 so the exchange and the preview use the recordings' focus words ('shadows and reflections') rather than this separate capture's 'golden-hour shadows'."
+    },
+    {
+      "file": "assignments-card-crop.webp",
+      "slides": [
+        9
+      ],
+      "use": "Slide 9 (presented #8), the second everyday-workflow example: the due-soon highlight as the visible action.",
+      "shows": "Course Assignments, In progress (1): Problem set 4, Databases, 'Due in 2 days' highlighted, due date Nov 17, and the In progress menu.",
+      "width": 540,
+      "height": 718,
+      "bytes": 12066,
+      "kind": "crop of the same raw desktop capture as assignments-board-desktop.webp (1280x800 CSS px at 2x): the In progress column only, not downscaled",
+      "sampleModeContent": true,
+      "sampleModeLabelInFrame": false,
+      "exampleLabelInFrame": false,
+      "notes": "A Sample-catalog app made from the Playground idea (Preview, Make mine); the assignment is fictional and typed by hand."
+    }
+  ]
+}

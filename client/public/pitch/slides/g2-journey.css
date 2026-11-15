@@ -1,0 +1,160 @@
+/* Group 2 · the layouts "journey" (brief slide 4) and "feeling" (brief slide 5). Stage px on the 1600 x 900
+   design (the body is 1424 px wide); phone overrides under .is-flow. Every rule is scoped to its layout.
+   Motion explains a relationship only (the path joining the stages; context moving into Ori); the global
+   reduced-motion rule removes every transition and animation, and each finished state is the static style. */
+
+/* ------------------------------------------------------------------------------------------ */
+/* Slide 4 · journey: five stages, one continuous path, Ori at its centre                       */
+/* ------------------------------------------------------------------------------------------ */
+.layout-journey .jr-body { padding-top: 16px; }
+.layout-journey .jr-map { position: relative; flex: none; width: 1424px; height: 620px; margin: 0 auto; }
+.layout-journey .jr-lines { position: absolute; left: 0; top: 0; width: 1424px; height: 620px; pointer-events: none; }
+.layout-journey .jr-lines svg { display: block; overflow: visible; }
+.layout-journey .jr-run,
+.layout-journey .jr-return { fill: none; stroke: var(--blue); stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.layout-journey .jr-head { fill: var(--blue); }
+/* Step 5: the run draws through the five stages, then the path returns home. Hidden only while the slide
+   builds, so any complete state (a hash arrival, Previous, print) shows the finished path. */
+.layout-journey.is-building .jr-lines:not(.is-revealed) .jr-run,
+.layout-journey.is-building .jr-lines:not(.is-revealed) .jr-return { stroke-dashoffset: 1; }
+.layout-journey.is-building .jr-lines:not(.is-revealed) .jr-head { opacity: 0; }
+.layout-journey .jr-lines.is-revealed .jr-run { transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.05s; }
+.layout-journey .jr-lines.is-revealed .jr-return { transition: stroke-dashoffset 0.75s cubic-bezier(0.4, 0, 0.2, 1) 0.7s; }
+.layout-journey .jr-lines.is-revealed .jr-head { transition: opacity 0.15s ease 1.4s; }
+
+.layout-journey .jr-stages { list-style: none; margin: 0; padding: 0; position: absolute; left: 59.5px; top: 26px; width: 1305px; display: grid; grid-template-columns: repeat(5, 261px); align-items: start; }
+.layout-journey .jr-stage { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.layout-journey .jr-node { position: relative; display: grid; place-items: center; width: 132px; height: 132px; border-radius: 50%; background: #fff; border: 3px solid var(--line-2); color: var(--ink); box-shadow: 0 16px 32px -20px rgba(22, 32, 57, 0.45); transition: border-color 0.35s ease, color 0.35s ease, background-color 0.35s ease; }
+.layout-journey .jr-name { margin: 18px 0 0; max-width: 200px; font-family: var(--font-display); font-weight: 800; font-size: 34px; line-height: 1.06; letter-spacing: -0.035em; color: var(--fg); }
+/* The finished slide: every stage sits on Ori's path. */
+.layout-journey:not(.is-building) .jr-node { border-color: var(--blue); color: var(--blue-ink); background: var(--blue-soft); }
+
+.layout-journey .jr-hub { position: absolute; left: 312px; top: 286px; width: 800px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.layout-journey .jr-together { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: var(--fs-h2); line-height: 1.05; letter-spacing: -0.04em; color: var(--fg); text-align: center; }
+.layout-journey .jr-hub[data-reveal].is-revealed { transition: opacity 0.35s ease 0.35s, transform 0.35s ease 0.35s, visibility 0s linear 0s; }
+.layout-journey .jr-return-line { position: absolute; left: 0; right: 0; top: 547px; width: fit-content; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 6px 24px; border-radius: 999px; background: var(--slide-bg, var(--canvas)); font-size: var(--fs-lead); font-weight: 700; line-height: 1.3; color: var(--blue-ink); white-space: nowrap; }
+.layout-journey .jr-return-icon { display: inline-flex; color: var(--blue); }
+.layout-journey .jr-return-line[data-reveal].is-revealed { transition: opacity 0.3s ease 1.2s, transform 0.3s ease 1.2s, visibility 0s linear 0s; }
+
+/* ------------------------------------------------------------------------------------------ */
+/* Slide 5 · feeling: Feeling → Ori → Your app                                                  */
+/* ------------------------------------------------------------------------------------------ */
+.layout-feeling .fe-body { padding-top: 16px; }
+.layout-feeling .fe-map { position: relative; flex: none; width: 1424px; height: 620px; margin: 0 auto; }
+.layout-feeling .fe-links { position: absolute; left: 0; top: 0; width: 1424px; height: 620px; pointer-events: none; }
+.layout-feeling .fe-links svg { display: block; overflow: visible; }
+.layout-feeling .fe-link { fill: none; stroke: var(--blue); stroke-width: 4; stroke-linecap: round; opacity: 0.45; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.layout-feeling .fe-out-link { fill: none; stroke: var(--blue); stroke-width: 10; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.layout-feeling .fe-out-head { fill: var(--blue); }
+
+/* The structure: Feeling → Ori → Your app, one label over each zone. */
+.layout-feeling .fe-structure { position: absolute; left: 0; top: 0; width: 1424px; margin: 0; display: grid; grid-template-columns: 500px 48px 328px 48px 500px; align-items: center; justify-items: center; font-family: var(--font-display); font-weight: 800; font-size: var(--fs-h2); line-height: 1.1; letter-spacing: -0.04em; color: var(--fg); }
+.layout-feeling .fe-label-2 { color: var(--blue); }
+.layout-feeling .fe-structure .flow-arrow { color: var(--blue); }
+.layout-feeling .fe-structure .flow-arrow .kit-icon { width: 40px; height: 40px; }
+
+.layout-feeling .fe-zone { position: absolute; top: 0; height: 620px; margin: 0; }
+.layout-feeling .fe-in { left: 0; width: 500px; }
+.layout-feeling .fe-ori { left: 548px; width: 328px; }
+.layout-feeling .fe-out { left: 924px; width: 500px; }
+
+/* Feeling: four things a person brings, loose like a pile on a table. */
+.layout-feeling .fe-thought { position: absolute; left: 0; top: 84px; width: 400px; margin: 0; padding: 20px 26px; border-radius: 30px 30px 30px 8px; background: var(--lilac-soft); border: 2px solid var(--lilac); font-size: var(--fs-lead); font-weight: 650; line-height: 1.22; color: var(--fg); }
+.layout-feeling .fe-thought::before { content: '\201C'; }
+.layout-feeling .fe-thought::after { content: '\201D'; }
+.layout-feeling .fe-photo { position: absolute; left: 14px; top: 236px; margin: 0; padding: 10px; border-radius: 14px; background: #fff; box-shadow: 0 18px 36px -20px rgba(22, 32, 57, 0.5); transform: rotate(-4deg); }
+.layout-feeling .fe-photo img { display: block; width: 232px; height: 186px; object-fit: cover; border-radius: 8px; background: var(--line); }
+.layout-feeling .fe-reel { position: absolute; left: 308px; top: 190px; display: flex; flex-direction: column; align-items: center; gap: 12px; transform: rotate(4deg); }
+.layout-feeling .fe-reel-screen { position: relative; display: grid; place-items: center; width: 148px; height: 216px; border-radius: 22px; background-color: var(--charcoal); background-image: linear-gradient(165deg, rgba(155, 167, 255, 0.38), rgba(24, 26, 31, 0) 58%), linear-gradient(0deg, rgba(223, 255, 118, 0.16), rgba(24, 26, 31, 0) 40%); box-shadow: 0 18px 36px -20px rgba(22, 32, 57, 0.6); }
+.layout-feeling .fe-reel-play { display: grid; place-items: center; width: 68px; height: 68px; border-radius: 50%; background: rgba(255, 255, 255, 0.94); color: var(--ink); }
+.layout-feeling .fe-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: #fff; border: 1.5px solid var(--line); font-size: var(--fs-small); font-weight: 700; color: var(--fg); white-space: nowrap; }
+.layout-feeling .fe-chip .kit-icon { color: var(--blue-ink); }
+.layout-feeling .fe-summary { position: absolute; left: 30px; top: 476px; width: 440px; display: grid; gap: 14px; padding: 18px 22px 20px; border-radius: 20px; background: #fff; border: 1.5px solid var(--line); box-shadow: 0 18px 36px -24px rgba(22, 32, 57, 0.45); transform: rotate(-2deg); }
+.layout-feeling .fe-summary-head { margin: 0; display: flex; align-items: center; gap: 12px; font-size: 22px; font-weight: 700; color: var(--fg); }
+.layout-feeling .fe-summary-icon { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 12px; background: var(--blue-soft); color: var(--blue-ink); }
+.layout-feeling .fe-lines { display: grid; gap: 9px; }
+.layout-feeling .fe-line { display: block; height: 10px; border-radius: 6px; background: var(--line); }
+.layout-feeling .fe-line:nth-child(1) { width: 94%; }
+.layout-feeling .fe-line:nth-child(2) { width: 80%; }
+.layout-feeling .fe-line:nth-child(3) { width: 58%; }
+
+/* Ori: the clarifying question and the person's answer. */
+.layout-feeling .fe-ori .kit-ori { position: absolute; left: 46px; top: 184px; }
+.layout-feeling .fe-ask { position: absolute; left: -48px; right: -48px; top: 84px; width: fit-content; max-width: 424px; margin: 0 auto; padding: 14px 22px; border-radius: 24px; background: #fff; border: 2px solid var(--lilac); font-size: var(--fs-body); font-weight: 700; line-height: 1.2; color: var(--fg); text-align: center; white-space: nowrap; }
+.layout-feeling .fe-ask::after { content: ''; position: absolute; left: 50%; bottom: -11px; width: 18px; height: 18px; margin-left: -9px; background: #fff; border-right: 2px solid var(--lilac); border-bottom: 2px solid var(--lilac); transform: rotate(45deg); }
+.layout-feeling .fe-answer { position: absolute; right: -10px; top: 440px; margin: 0; padding: 14px 22px; border-radius: 24px 8px 24px 24px; background: var(--blue); color: #fff; font-size: var(--fs-body); font-weight: 700; line-height: 1.2; white-space: nowrap; }
+
+/* Your app: the real Light screen, its own icon and name. */
+.layout-feeling .fe-phone { position: absolute; left: 100px; top: 84px; display: block; width: 300px; height: 383px; padding: 10px; border-radius: 40px; background: var(--charcoal); box-shadow: 0 30px 60px -30px rgba(22, 32, 57, 0.6); }
+.layout-feeling .fe-phone img { display: block; width: 280px; height: 363px; border-radius: 30px; object-fit: cover; object-position: top; background: #f6f4ef; }
+.layout-feeling .fe-app { position: absolute; left: 0; right: 0; top: 488px; width: fit-content; margin: 0 auto; display: flex; align-items: center; gap: 16px; }
+.layout-feeling .fe-app-name { font-family: var(--font-display); font-weight: 800; font-size: 52px; line-height: 1; letter-spacing: -0.04em; color: var(--fg); }
+.layout-feeling .fe-caption { position: absolute; left: 0; right: 0; top: 588px; margin: 0; text-align: center; font-size: var(--fs-label); font-weight: 650; color: var(--fg-muted); }
+
+/* On arrival: the context moves into Ori, Ori answers, then the arrow reaches the app. */
+@keyframes g2-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes g2-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes g2-rise { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
+.layout-feeling.fe-play .fe-link { animation: g2-draw 0.6s cubic-bezier(0.4, 0, 0.2, 1) var(--fe-d, 0s) both; }
+.layout-feeling.fe-play .fe-ask { animation: g2-fade 0.3s ease 0.45s both; }
+.layout-feeling.fe-play .fe-answer { animation: g2-fade 0.3s ease 0.65s both; }
+.layout-feeling.fe-play .fe-out-link { animation: g2-draw 0.35s cubic-bezier(0.4, 0, 0.2, 1) 0.8s both; }
+.layout-feeling.fe-play .fe-out-head { animation: g2-fade 0.15s ease 1.1s both; }
+.layout-feeling.fe-play .fe-phone,
+.layout-feeling.fe-play .fe-app,
+.layout-feeling.fe-play .fe-caption { animation: g2-rise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) 1s both; }
+
+/* ------------------------------------------------------------------------------------------ */
+/* Phones and portrait tablets (flow mode): stacked, no line art, nothing wider than the screen */
+/* ------------------------------------------------------------------------------------------ */
+.is-flow .layout-journey .jr-map,
+.is-flow .layout-feeling .fe-map { width: auto; height: auto; display: flex; flex-direction: column; gap: 18px; }
+.is-flow .layout-journey .jr-lines,
+.is-flow .layout-feeling .fe-links { display: none; }
+
+.is-flow .layout-journey .jr-stages { position: relative; left: auto; top: auto; width: auto; grid-template-columns: 1fr; gap: 10px; }
+.is-flow .layout-journey .jr-stages::before { content: ''; position: absolute; left: 27px; top: 24px; bottom: 24px; width: 4px; border-radius: 4px; background: var(--line-2); }
+.is-flow .layout-journey:not(.is-building) .jr-stages::before { background: var(--blue); }
+.is-flow .layout-journey .jr-stage { position: relative; flex-direction: row; gap: 14px; text-align: left; }
+.is-flow .layout-journey .jr-node { width: 58px; height: 58px; border-width: 2px; }
+.is-flow .layout-journey .jr-node .kit-icon { width: 28px; height: 28px; }
+.is-flow .layout-journey .jr-name { margin: 0; max-width: none; font-size: 22px; }
+.is-flow .layout-journey .jr-hub { position: static; width: auto; flex-direction: row; gap: 14px; }
+.is-flow .layout-journey .jr-together { font-size: 22px; text-align: left; }
+.is-flow .layout-journey .jr-return-line { position: static; width: auto; margin: 0; padding: 0; gap: 8px; background: none; font-size: 17px; white-space: normal; }
+
+.is-flow .layout-feeling .fe-structure { position: static; width: auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 10px; font-size: 26px; }
+.is-flow .layout-feeling .fe-structure .flow-arrow .kit-icon { width: 22px; height: 22px; }
+.is-flow .layout-feeling .fe-zone { position: static; width: auto; height: auto; }
+.is-flow .layout-feeling .fe-in { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: center; }
+.is-flow .layout-feeling .fe-thought,
+.is-flow .layout-feeling .fe-summary { grid-column: 1 / -1; }
+.is-flow .layout-feeling .fe-thought,
+.is-flow .layout-feeling .fe-photo,
+.is-flow .layout-feeling .fe-reel,
+.is-flow .layout-feeling .fe-summary { position: static; width: auto; transform: none; }
+.is-flow .layout-feeling .fe-thought { padding: 12px 16px; font-size: 18px; }
+.is-flow .layout-feeling .fe-photo { padding: 6px; }
+.is-flow .layout-feeling .fe-photo img { width: 100%; height: auto; aspect-ratio: 5 / 4; }
+.is-flow .layout-feeling .fe-reel { justify-self: center; gap: 8px; }
+.is-flow .layout-feeling .fe-reel-screen { width: 90px; height: 140px; border-radius: 16px; }
+.is-flow .layout-feeling .fe-reel-play { width: 42px; height: 42px; }
+.is-flow .layout-feeling .fe-chip { padding: 6px 10px; font-size: 14px; }
+.is-flow .layout-feeling .fe-summary { gap: 10px; padding: 12px 14px; }
+.is-flow .layout-feeling .fe-summary-head { font-size: 16px; }
+.is-flow .layout-feeling .fe-summary-icon { width: 34px; height: 34px; }
+.is-flow .layout-feeling .fe-line { height: 8px; }
+.is-flow .layout-feeling .fe-ori { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.is-flow .layout-feeling .fe-ori .kit-ori { position: relative; left: auto; top: auto; }
+.is-flow .layout-feeling .fe-ori::before,
+.is-flow .layout-feeling .fe-out::before { content: ''; flex: none; width: 14px; height: 14px; margin: -2px 0 6px; border-right: 3px solid var(--blue); border-bottom: 3px solid var(--blue); transform: rotate(45deg); }
+.is-flow .layout-feeling .fe-ask,
+.is-flow .layout-feeling .fe-answer { position: static; max-width: 100%; margin: 0; font-size: 16px; white-space: normal; }
+.is-flow .layout-feeling .fe-out { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.is-flow .layout-feeling .fe-phone { position: static; width: 220px; height: auto; padding: 8px; border-radius: 30px; }
+.is-flow .layout-feeling .fe-phone img { width: 204px; height: 264px; border-radius: 22px; }
+.is-flow .layout-feeling .fe-app,
+.is-flow .layout-feeling .fe-caption { position: static; margin: 0; }
+.is-flow .layout-feeling .fe-app .kit-app-icon { width: 56px; height: 56px; }
+.is-flow .layout-feeling .fe-app-name { font-size: 30px; }
+.is-flow .layout-feeling .fe-caption { font-size: 13px; }

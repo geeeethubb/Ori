@@ -32,7 +32,7 @@ node scripts/build-apk.mjs --api-base http://192.168.1.20:8787
 
 Windows note: `scripts/build-apk.mjs` uses `C:\Program Files\Android\Android Studio\jbr` as the JDK when `JAVA_HOME` is unset and `%LOCALAPPDATA%\Android\Sdk` as the SDK.
 
-Server side for phones: run `npm run build && npm start` with `PUBLIC_ORIGIN=http://<laptop-lan-ip>:8787` and `HOST=0.0.0.0` (default) so the phone can reach it; add the phone-facing origin to `CORS_ORIGINS` only if you serve the web app from a different host than the API.
+Server side for phones: run `npm run build && npm start` with `HOST=0.0.0.0` (default) so the phone can reach it; add the phone-facing origin to `CORS_ORIGINS` only if you serve the web app from a different host than the API.
 
 ## Install and verify
 
@@ -89,7 +89,7 @@ Same environment (headless `Pixel_9_Pro`, Android 17, Google Play image without 
 | **Add shortcut** from Riff → Settings → On your phone → launcher dialog shows Riff with its own ink/lime icon → Add | ✅ | `dumpsys shortcut`: `Pinned: app-K2FQ9RsuGXzUVBi7` with icon flags; `docs/screenshots/after/android-pin-dialog-riff.jpg` |
 | Home screen shows the Riff shortcut next to the session-1 shortcuts (legacy apps still open in the new bundle) | ✅ | `docs/screenshots/after/android-home-riff-shortcut.jpg` |
 | **Warm launch**: tap the Riff icon while the shell runs → Riff is the resumed activity with the timer on screen | ✅ | `docs/screenshots/after/android-riff-warm-tap.jpg`; `topResumedActivity … MainActivity` |
-| Cold launch by **tapping** the icon | ⚠️ unchanged | still intercepted by Play Protect on this account-less image (see above); verify on a physical phone |
+| Cold launch by **tapping** the icon | ⚠️ not retried | not tapped cold in this session; the session-1 Play Protect interception (see above) is expected on this account-less image; verify on a physical phone |
 | Example photographs and the landing's phone mock inside the shell | ✅ after fix | the shell's page origin is the local bundle, so `/examples/*.jpg` had to be resolved against the API base (`client/src/pages/parts/MiniPreview.tsx`, `client/src/runtime/media.ts`); rebuilt APK after the fix |
 | Launcher label | changed | `android/app/src/main/res/values/strings.xml` and `capacitor.config.ts` now use the temporary brand label; the package id is unchanged so existing installs and shortcuts keep working |
 | Physical Android device | ⏳ not run | none connected |
@@ -97,7 +97,7 @@ Same environment (headless `Pixel_9_Pro`, Android 17, Google Play image without 
 
 ## Ori re-verification (session 3, 2026-11-15 00:05–00:10)
 
-Headless `Pixel_9_Pro` (Android 17, Google Play image without an account). APK built from the Ori tree with `node scripts/build-apk.mjs --api-base http://10.0.2.2:8851` (9.6 MB) against a throwaway host server on :8851 (Sample mode, its own database), seeded with one account and a Light app holding one photo entry. Screenshots: `docs/ori/evidence/android/`.
+Headless `Pixel_9_Pro` (Android 17, Google Play image without an account). APK built from the Ori tree with `node scripts/build-apk.mjs --api-base http://10.0.2.2:8851` (9.8 MB, 9,826,722 bytes; about 4.9 MB of that is the pitch deck's three generated concept images (create.png, home.png, revise.png) under `assets/public/pitch`, which the Vite build copies in from `client/public/pitch`) against a throwaway host server on :8851 (Sample mode, its own database), seeded with one account and a Light app holding one photo entry. Screenshots: `docs/ori/evidence/android/`.
 
 | Check | Status | Notes |
 | --- | --- | --- |

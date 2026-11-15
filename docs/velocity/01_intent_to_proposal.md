@@ -1,7 +1,7 @@
 # Velocity run 1: 01_intent_to_proposal
 
 Date: 2026-11-14 (America/Chicago).
-Source: https://kearney-perlab.growthsignals.com/research/id-1794674829478-0.d43a12a7b3c1c
+Source (Kearney Velocity; may require workspace access): https://kearney-perlab.growthsignals.com/research/id-1794674829478-0.d43a12a7b3c1c
 
 Status: Actually submitted and completed in the user's Velocity workspace. Output copied using Velocity's Copy control. Generated design proposal; not app implementation or test results.
 

@@ -44,7 +44,7 @@ npm run build
 npm start                 # http://localhost:8787 serves API + built client
 ```
 
-For a phone on the same Wi-Fi, set `PUBLIC_ORIGIN=http://<your-laptop-ip>:8787` in `.env` and open that URL on the phone (or use a tunnel such as ngrok for an HTTPS URL, which iOS prefers for home-screen web apps).
+For a phone on the same Wi-Fi, open `http://<your-laptop-ip>:8787` on the phone (the server listens on all interfaces by default, `HOST=0.0.0.0`), or use a tunnel such as ngrok for an HTTPS URL, which iOS prefers for home-screen web apps.
 
 ## Environment variables
 
@@ -56,10 +56,10 @@ See [`.env.example`](.env.example). Names only; never commit real values.
 | `DATABASE_PATH` | SQLite file (default `./data/app.db`) |
 | `MEDIA_DIR`, `MAX_IMAGE_BYTES` | Uploaded photos (owner-scoped files; default `./data/media`, 6 MB) |
 | `LINK_METADATA` | `on` (default) looks up public titles from allowlisted oEmbed providers only; `off` saves links without any lookup |
-| `PUBLIC_ORIGIN` | Absolute origin used in links and CORS |
+| `PUBLIC_ORIGIN` | Origin added to the API's CORS allow-list; links and manifests use the address the page was opened from |
 | `MODEL_PROVIDER` | `auto` (default), `anthropic`, or `sample` |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Live AI (default model `claude-opus-5-5`; `claude-sonnet-5-5` is cheaper/faster) |
-| `MODEL_TIMEOUT_MS` | Per-call timeout for the model adapter |
+| `MODEL_TIMEOUT_MS` | Per-attempt timeout for the model calls that set none of their own (fact extraction, improvement suggestions); the Agent reply, Playground ideas and revision previews always use 90 s and app design 120 s (`docs/DEPLOY.md`) |
 | `AI_GENERATION_ALLOWANCE` | Disclosed monthly fair-use allowance |
 | `SEED_DEMO_PASSWORD` | Password for the seeded demo account |
 | `VITE_API_BASE_URL` | Baked into the client at build time; required for the Android APK |

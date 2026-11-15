@@ -1,0 +1,149 @@
+/* Group 3 · slides 6–8 (presented #5–#7; layouts "create", "grow" and "features"). Stage px on the 1600 x 900
+   design stage; phone overrides under .is-flow. Every rule is scoped to these three layouts.
+   Composition: the recording fills the left at full height on a soft backdrop; the headline and the visual story
+   sit on the right (the corner companion keeps its corner: the headline wraps around it). */
+
+:is(.layout-create, .layout-grow, .layout-features) .scene-body.g3-body { padding-top: 0; justify-content: center; }
+:is(.layout-create, .layout-grow, .layout-features) .g3-grid {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: 'media head' 'media story'; column-gap: 80px; row-gap: 34px; align-items: start; min-height: 0;
+}
+:is(.layout-create, .layout-grow, .layout-features) .g3-media { grid-area: media; position: relative; display: grid; justify-items: center; align-self: center; }
+:is(.layout-create, .layout-grow, .layout-features) .g3-media .media-slot { position: relative; z-index: 1; }
+:is(.layout-create, .layout-grow, .layout-features) .g3-backdrop { position: absolute; left: -34px; right: -34px; top: 56px; bottom: 112px; border-radius: 44px; background: var(--lilac-soft); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--lilac) 70%, transparent); }
+:is(.layout-create, .layout-grow, .layout-features) .g3-head { grid-area: head; padding-top: 4px; }
+:is(.layout-create, .layout-grow, .layout-features).has-companion .g3-head::before { content: ''; float: right; width: 120px; height: 84px; }
+:is(.layout-create, .layout-grow, .layout-features) .g3-story { grid-area: story; min-width: 0; display: grid; align-content: start; gap: 16px; }
+:is(.layout-create, .layout-grow, .layout-features) .g3-note { margin: 0; font-size: var(--fs-label); font-weight: 650; color: var(--fg-muted); }
+
+/* Steps with a rail: a line joins the markers; when the slot has cue points it fills with the clip and the
+   matching step lights up. Without cue points every step stays as it is: complete and readable. */
+:is(.layout-create, .layout-features) .g3-steps { --mark: 72px; --row: 188px; --fill: 0; position: relative; list-style: none; margin: 0; padding: 0; display: grid; grid-auto-rows: var(--row); }
+:is(.layout-create, .layout-features) .g3-steps::before,
+:is(.layout-create, .layout-features) .g3-steps::after { content: ''; position: absolute; left: calc(var(--mark) / 2 - 2px); width: 4px; top: calc(var(--row) / 2); bottom: calc(var(--row) / 2); border-radius: 2px; background: var(--line-2); }
+:is(.layout-create, .layout-features) .g3-steps::after { background: var(--blue); transform-origin: top center; transform: scaleY(var(--fill)); opacity: 0; transition: transform 0.26s linear, opacity 0.2s ease; }
+:is(.layout-create, .layout-features) .g3-steps.has-fill::after { opacity: 1; }
+:is(.layout-create, .layout-features) .g3-step { display: grid; align-items: center; column-gap: 28px; min-width: 0; }
+:is(.layout-create, .layout-features) .g3-mark { position: relative; z-index: 1; display: grid; place-items: center; width: var(--mark); height: var(--mark); border-radius: 50%; background: var(--blue-soft); color: var(--blue-ink); box-shadow: 0 0 0 8px var(--slide-bg); transition: background-color 0.3s ease, color 0.3s ease, transform 0.3s ease; }
+:is(.layout-create, .layout-features) .g3-step h3 { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 42px; letter-spacing: -0.035em; line-height: 1.05; color: var(--fg); transition: color 0.3s ease; }
+:is(.layout-create, .layout-features) .g3-step p { margin: 8px 0 0; font-size: var(--fs-body); line-height: 1.3; color: var(--fg-muted); }
+:is(.layout-create, .layout-features) .g3-step-text { min-width: 0; transition: opacity 0.3s ease; }
+:is(.layout-create, .layout-features) .g3-step.is-active .g3-mark { background: var(--blue); color: #fff; transform: scale(1.08); }
+:is(.layout-create, .layout-features) .g3-step.is-active .g3-mark.is-ori { background: var(--lime); }
+:is(.layout-create, .layout-features) .g3-step.is-active h3 { color: var(--blue-ink); }
+:is(.layout-create, .layout-features) .g3-step.is-past .g3-mark { background: var(--blue-soft); color: var(--blue-ink); }
+:is(.layout-create, .layout-features) .g3-steps.has-active .g3-step:not(.is-active) .g3-step-text { opacity: 0.72; }
+
+/* Slide 6 · create: marker, a crop of the real screen, the step's name */
+.layout-create .cr-steps { --row: 190px; }
+.layout-create .cr-steps .g3-step { grid-template-columns: var(--mark) 304px minmax(0, 1fr); }
+.layout-create .cr-steps .g3-mark .kit-app-icon { width: 44px; height: 44px; border-radius: 12px; }
+.layout-create .g3-shot { display: block; width: 304px; height: 172px; border-radius: 20px; overflow: hidden; background: #fff; box-shadow: 0 0 0 1.5px var(--line), 0 18px 36px -26px rgba(14, 20, 40, 0.55); }
+.layout-create .g3-shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+.layout-create .g3-shot.crop-1 img { object-position: center 30%; }
+/* Step 2 leads with Ori's real proposal card (Light, Preview Light, Keep inspiration), not the Sample-mode line. */
+.layout-create .g3-shot.crop-2 img { object-position: center 62%; }
+.layout-create .g3-story { gap: 10px; }
+.layout-create .g3-story .g3-note { padding-left: calc(72px + 28px); }
+
+/* Slide 7 · grow */
+.layout-grow .gr-story { gap: 26px; }
+.layout-grow .gr-loop { position: relative; display: inline-grid; justify-self: start; }
+.layout-grow .gr-loop-steps { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: 14px; }
+.layout-grow .gr-loop-steps .flow-arrow { display: inline-grid; place-items: center; color: var(--blue); }
+.layout-grow .gr-loop-steps .flow-arrow .kit-icon { width: 30px; height: 30px; }
+.layout-grow .gr-node { padding: 12px 26px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink); font-family: var(--font-display); font-weight: 800; font-size: 28px; letter-spacing: -0.02em; line-height: 1.1; white-space: nowrap; }
+.layout-grow .gr-loop-back { position: relative; height: 58px; margin: 0 0 0; }
+.layout-grow .gr-arc { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; }
+.layout-grow .gr-arc path { stroke: var(--blue); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 2 9; }
+.layout-grow .gr-arc path.gr-arc-head { stroke-dasharray: none; }
+.layout-grow .gr-again { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); padding: 2px 14px; border-radius: 999px; background: var(--lime); color: var(--ink); font-family: var(--font-display); font-weight: 800; font-size: 20px; letter-spacing: -0.01em; }
+
+.layout-grow .gr-evidence { display: grid; grid-template-columns: auto; grid-template-areas: 'pair' 'note'; column-gap: 26px; row-gap: 10px; justify-content: start; align-items: end; }
+.layout-grow .gr-evidence .gr-pair { grid-area: pair; }
+.layout-grow .gr-evidence .g3-note { grid-area: note; }
+.layout-grow .gr-evidence .gr-return { grid-area: ret; }
+.layout-grow .gr-pair { display: flex; align-items: flex-end; gap: 24px; }
+.layout-grow .gr-panel { margin: 0; display: grid; gap: 8px; justify-items: start; }
+.layout-grow .gr-panel-tag { font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: -0.01em; color: var(--fg); }
+.layout-grow .gr-panel.is-after .gr-panel-tag { padding: 0 12px; border-radius: 999px; background: var(--lime); color: var(--ink); }
+.layout-grow .gr-frame { position: relative; display: block; width: 236px; border-radius: 22px; overflow: hidden; background: #faf8f4; box-shadow: 0 0 0 5px var(--bezel), 0 22px 40px -28px rgba(14, 20, 40, 0.6); }
+.layout-grow .g3-shot.crop-entry { display: block; width: 100%; aspect-ratio: 780 / 1130; overflow: hidden; }
+/* The window shows the lower photo and every field: After keeps Light, Where and Keeper under the three new rows. */
+.layout-grow .g3-shot.crop-entry img { display: block; width: 100%; height: auto; margin-top: -50%; }
+.layout-grow .gr-new { position: absolute; left: 1.5%; right: 1.5%; top: 46.7%; height: 26%; border-radius: 10px; border: 3px solid var(--blue); background: color-mix(in srgb, var(--lime) 34%, transparent); mix-blend-mode: multiply; }
+/* Motion that shows the app changing: when the slide opens, the new fields light up after the pair settles.
+   Under reduced motion the highlight is simply there (the deck removes every animation). */
+.layout-grow.active .gr-new { animation: gr-new-in 0.7s 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes gr-new-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
+.layout-grow .gr-mech-col { display: grid; justify-items: center; gap: 12px; align-self: center; padding-top: 30px; }
+.layout-grow .gr-mech { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; justify-items: stretch; }
+.layout-grow .gr-mech-step { display: flex; align-items: center; gap: 10px; padding: 7px 16px 7px 7px; border-radius: 999px; background: var(--card, #fff); box-shadow: 0 0 0 1.5px var(--line); font-family: var(--font-display); font-weight: 800; font-size: 21px; letter-spacing: -0.01em; color: var(--fg); white-space: nowrap; }
+/* A plain step list, not pills: nothing here should look like a button beside the real media controls. */
+.layout-grow .gr-mech-step { background: none; box-shadow: none; padding: 4px 0; }
+.layout-grow .gr-mech-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--blue-soft); color: var(--blue-ink); flex: none; }
+.layout-grow .gr-mech-arrow { color: var(--blue); display: grid; place-items: center; }
+.layout-grow .gr-return { position: relative; padding-left: 26px; border-left: 2px dashed var(--line-2); align-self: stretch; display: grid; align-content: end; }
+:is(.layout-create, .layout-grow, .layout-features) .media-label .label-rest { white-space: nowrap; }
+.layout-grow .gr-return-badge { position: absolute; z-index: 2; left: 4px; top: 22px; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--lime); color: var(--ink); box-shadow: 0 0 0 4px var(--slide-bg); }
+.layout-grow .gr-takeaway { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 46px; letter-spacing: -0.04em; line-height: 1.05; color: var(--fg); }
+
+/* Slide 8 · features: the founder's recording and three steps that follow it */
+.layout-features .ft-grid { column-gap: 96px; }
+.layout-features .ft-steps { --mark: 104px; --row: 168px; }
+.layout-features .ft-steps .g3-step { grid-template-columns: var(--mark) minmax(0, 1fr); column-gap: 34px; }
+.layout-features .ft-steps .g3-mark.is-ori { background: var(--lilac-soft); }
+.layout-features .ft-steps .g3-step h3 { font-size: 48px; }
+.layout-features .g3-story { align-content: center; height: 100%; }
+
+/* Reduced motion: the rail and the highlights switch instantly (the deck also removes every transition). */
+@media (prefers-reduced-motion: reduce) {
+  :is(.layout-create, .layout-features) .g3-steps::after,
+  :is(.layout-create, .layout-features) .g3-mark,
+  :is(.layout-create, .layout-features) .g3-step h3,
+  :is(.layout-create, .layout-features) .g3-step-text { transition: none; }
+  :is(.layout-create, .layout-features) .g3-step.is-active .g3-mark { transform: none; }
+}
+
+/* Phones and portrait tablets: one column, headline first, then the recording, then the story. */
+.is-flow :is(.layout-create, .layout-grow, .layout-features) .g3-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: 'head' 'media' 'story'; row-gap: 22px; }
+.is-flow :is(.layout-create, .layout-grow, .layout-features).has-companion .g3-head::before { display: none; }
+.is-flow :is(.layout-create, .layout-grow, .layout-features).has-companion .g3-head { padding-right: calc(var(--cs, 48px) + 14px); min-height: var(--cs, 48px); }
+.is-flow :is(.layout-create, .layout-grow, .layout-features) .g3-backdrop { display: none; }
+.is-flow :is(.layout-create, .layout-features) .g3-steps { --mark: 48px; --row: auto; grid-auto-rows: auto; gap: 18px; }
+.is-flow :is(.layout-create, .layout-features) .g3-steps::before,
+.is-flow :is(.layout-create, .layout-features) .g3-steps::after { top: 24px; bottom: 24px; }
+.is-flow :is(.layout-create, .layout-features) .g3-step { grid-template-columns: var(--mark) minmax(0, 1fr); column-gap: 14px; align-items: start; }
+.is-flow :is(.layout-create, .layout-features) .g3-step h3 { font-size: 21px; }
+.is-flow :is(.layout-create, .layout-features) .g3-step p { font-size: 15px; margin-top: 4px; }
+.is-flow :is(.layout-create, .layout-features) .g3-mark .kit-icon { width: 22px; height: 22px; }
+.is-flow .layout-create .cr-steps .g3-step { grid-template-columns: var(--mark) minmax(0, 1fr); grid-template-areas: 'mark text' 'mark shot'; row-gap: 10px; }
+.is-flow .layout-create .cr-steps .g3-mark { grid-area: mark; }
+.is-flow .layout-create .cr-steps .g3-mark .kit-app-icon { width: 30px; height: 30px; border-radius: 8px; }
+.is-flow .layout-create .cr-steps .g3-step-text { grid-area: text; align-self: center; }
+.is-flow .layout-create .g3-shot { grid-area: shot; width: 100%; max-width: 304px; height: auto; aspect-ratio: 304 / 172; }
+.is-flow .layout-create .g3-story .g3-note { padding-left: 0; }
+.is-flow .layout-features .ft-steps .g3-mark.is-ori .kit-ori { --ori-size: 40px !important; }
+.is-flow .layout-features .g3-story { height: auto; }
+.is-flow .layout-grow .gr-story { gap: 18px; }
+.is-flow .layout-grow .gr-loop { justify-self: stretch; }
+.is-flow .layout-grow .gr-loop-steps { flex-wrap: wrap; gap: 8px; }
+.is-flow .layout-grow .gr-node { font-size: 16px; padding: 8px 14px; }
+.is-flow .layout-grow .gr-loop-steps .flow-arrow .kit-icon { width: 18px; height: 18px; }
+.is-flow .layout-grow .gr-loop-back { height: 34px; }
+.is-flow .layout-grow .gr-again { font-size: 14px; bottom: -6px; }
+.is-flow .layout-grow .gr-pair { flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.is-flow .layout-grow .gr-panel { width: calc(50% - 7px); }
+.is-flow .layout-grow .gr-panel-tag { font-size: 15px; }
+.is-flow .layout-grow .gr-frame { width: 100%; box-shadow: 0 0 0 3px var(--bezel); border-radius: 14px; }
+.is-flow .layout-grow .gr-mech-col { order: 3; width: 100%; padding-top: 0; justify-items: start; }
+.is-flow .layout-grow .gr-mech { display: flex; flex-wrap: wrap; gap: 8px; }
+.is-flow .layout-grow .gr-mech-step { font-size: 14px; padding: 4px 10px 4px 4px; }
+.is-flow .layout-grow .gr-mech-icon { width: 26px; height: 26px; }
+.is-flow .layout-grow .gr-mech-icon .kit-icon { width: 16px; height: 16px; }
+.is-flow .layout-grow .gr-mech-arrow { display: none; }
+.is-flow .layout-grow .gr-evidence { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'pair' 'note' 'ret'; }
+.is-flow .layout-grow .gr-return { padding-left: 0; padding-top: 14px; border-left: 0; border-top: 2px dashed var(--line-2); justify-items: center; }
+.is-flow .layout-grow .gr-return .media-frame.size-height { width: min(100%, 200px); }
+.is-flow .layout-grow .gr-return-badge { left: 0; top: 0; width: 32px; height: 32px; }
+.is-flow .layout-grow .gr-takeaway { font-size: 24px; }

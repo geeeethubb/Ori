@@ -18,6 +18,8 @@ The actual research changed the planned contract by adding text-only captures, e
 
 ## Evidence
 
+The research, concept and canvas links below are in the Kearney Velocity workspace and may require workspace access.
+
 - Research: https://kearney-perlab.growthsignals.com/research/id-1794674829478-0.d43a12a7b3c1c
 - Concept: https://kearney-perlab.growthsignals.com/concept/32c37b9f-e0b8-4c35-a1c2-1a45bfe7c1a4
 - Canvas: https://kearney-perlab.growthsignals.com/concept/32c37b9f-e0b8-4c35-a1c2-1a45bfe7c1a4/canvas/2800237e-d388-4420-a883-d1b204347149

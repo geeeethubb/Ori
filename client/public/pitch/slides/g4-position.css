@@ -1,0 +1,138 @@
+/* Group 4 · slides 9–10 (layouts "zones" and "position"). Stage px on the 1600 x 900 design stage; phone rules
+   under .is-flow. Every rule is scoped to its layout. Motion: one-shot entrances under .g4-play (added on arrival,
+   never under reduced motion; the global reduced-motion rule also removes them). */
+
+/* ------------------------------------------------------------------------------------------------ */
+/* Slide 9 · zones                                                                                   */
+/* ------------------------------------------------------------------------------------------------ */
+.layout-zones .zn-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px minmax(0, 1fr); align-items: center; }
+.layout-zones .zn-zone { background: var(--card); border: 1.5px solid var(--line); border-radius: 30px; padding: 22px 24px 20px; box-shadow: 0 24px 50px -40px rgba(22, 32, 57, 0.45); }
+.layout-zones .zn-title { display: flex; align-items: center; gap: 12px; margin: 0 0 18px; font-family: var(--font-display); font-size: var(--fs-h3); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+.layout-zones .zn-title-icon { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; flex: none; }
+.layout-zones .zn-love { background: var(--lilac-soft); border-color: var(--lilac); }
+.layout-zones .zn-do { background: var(--blue-soft); border-color: color-mix(in srgb, var(--blue) 24%, #fff); }
+.layout-zones .zn-love .zn-title-icon { background: var(--surface); color: var(--ink); }
+.layout-zones .zn-do .zn-title-icon { background: var(--surface); color: var(--blue-ink); }
+.layout-zones .zn-apps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.layout-zones .zn-app { margin: 0; display: grid; gap: 14px; min-width: 0; }
+.layout-zones .zn-screen { height: 312px; border-radius: 22px; overflow: hidden; background: #f3f4f8; border: 1.5px solid var(--line-2); box-shadow: 0 18px 34px -26px rgba(22, 32, 57, 0.55); }
+.layout-zones .zn-screen img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: left top; }
+.layout-zones .zn-cap { display: grid; grid-template-columns: 44px minmax(0, 1fr); column-gap: 12px; align-items: center; line-height: 1.15; }
+.layout-zones .zn-cap .zn-mark { grid-row: span 2; width: 44px; height: 44px; border-radius: 12px; }
+.layout-zones .zn-mark-glyph { display: grid; place-items: center; background: #4338ca; color: #fff; }
+.layout-zones .zn-app-people .zn-mark { box-shadow: 0 0 0 1.5px var(--line); }
+.layout-zones .zn-cap b { font-family: var(--font-display); font-size: 22px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.layout-zones .zn-cap span { font-size: var(--fs-small); color: var(--fg-muted); }
+
+.layout-zones .zn-hub { position: relative; width: 340px; height: 400px; justify-self: center; }
+.layout-zones .zn-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.layout-zones .zn-half { fill: none; stroke-width: 24; }
+.layout-zones .zn-half-love { stroke: var(--lilac); }
+.layout-zones .zn-half-do { stroke: color-mix(in srgb, var(--blue) 24%, #fff); }
+.layout-zones .zn-feed { fill: none; stroke: var(--blue); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.layout-zones .zn-return { fill: none; stroke: var(--blue); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; }
+.layout-zones .zn-head { fill: var(--blue); }
+.layout-zones .zn-core { position: absolute; left: 50%; top: 50%; width: 172px; height: 172px; margin: -86px 0 0 -86px; border-radius: 50%; background: var(--lime); display: grid; place-items: center; box-shadow: 0 0 0 6px var(--card); }
+
+.layout-zones .zn-foot { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 14px; margin-top: 30px; }
+.layout-zones .zn-bottom { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: var(--fs-h2); letter-spacing: -0.035em; line-height: 1.1; text-align: center; }
+.layout-zones .zn-bottom mark { color: inherit; background: linear-gradient(transparent 58%, var(--lime) 58%, var(--lime) 92%, transparent 92%); padding: 0 4px; }
+.layout-zones .zn-media-label { margin: 0; font-size: var(--fs-label); font-weight: 650; color: var(--fg-muted); text-align: center; }
+
+/* Entrance: both sides feed the ring, then the return arrow turns once. */
+@keyframes g4-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes g4-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.layout-zones.g4-play .zn-zone { animation: g4-rise 0.45s ease-out both; }
+.layout-zones.g4-play .zn-do { animation-delay: 0.08s; }
+.layout-zones.g4-play .zn-feed { animation: g4-draw 0.5s ease-out 0.35s both; }
+.layout-zones.g4-play .zn-return { animation: g4-draw 0.6s ease-in-out 0.8s both; }
+
+/* ------------------------------------------------------------------------------------------------ */
+/* Slide 10 · position                                                                               */
+/* ------------------------------------------------------------------------------------------------ */
+.layout-position .ps-wrap { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 36px; align-items: center; }
+.layout-position .ps-map { display: grid; grid-template-columns: 150px 960px; grid-template-rows: 520px auto; column-gap: 22px; row-gap: 18px; }
+.layout-position .ps-ylab { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; text-align: right; gap: 12px; }
+.layout-position .ps-xlab { grid-column: 2; grid-row: 2; display: flex; justify-content: space-between; align-items: baseline; gap: 24px; }
+.layout-position .ps-end { font-size: var(--fs-small); line-height: 1.2; color: var(--fg); font-weight: 600; }
+.layout-position .ps-xlab .ps-end { max-width: 42%; }
+.layout-position .ps-xlab .ps-end-high { text-align: right; }
+.layout-position .ps-title { font-family: var(--font-display); font-size: 18px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
+.layout-position .ps-title-y { writing-mode: vertical-rl; transform: rotate(180deg); }
+
+.layout-position .ps-plot { grid-column: 2; grid-row: 1; position: relative; border-left: 2.5px solid var(--ink); border-bottom: 2.5px solid var(--ink); }
+.layout-position .ps-axis-head { position: absolute; color: var(--ink); line-height: 0; }
+.layout-position .ps-axis-head-x { right: -14px; bottom: -12.5px; }
+.layout-position .ps-axis-head-y { left: -12.5px; top: -14px; transform: rotate(-90deg); }
+
+.layout-position .ps-region { position: absolute; display: flex; flex-direction: column; padding: 14px 18px; border-radius: 30px; border: 1.5px solid; }
+.layout-position .ps-at-tl { justify-content: flex-start; align-items: flex-start; }
+.layout-position .ps-at-bl { justify-content: flex-end; align-items: flex-start; }
+.layout-position .ps-at-mr { justify-content: center; align-items: flex-end; text-align: right; }
+.layout-position .ps-region-label { margin: 0; display: grid; gap: 2px; line-height: 1.15; }
+.layout-position .ps-region-label b { font-family: var(--font-display); font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
+.layout-position .ps-region-label span { font-size: var(--fs-small); color: var(--ink-3); font-weight: 600; }
+.layout-position .ps-tone-store { background: rgba(255, 106, 61, 0.13); border-color: rgba(154, 46, 14, 0.42); }
+.layout-position .ps-tone-builder { background: rgba(219, 203, 255, 0.52); border-color: rgba(120, 90, 210, 0.5); }
+.layout-position .ps-tone-assistant { background: rgba(49, 71, 242, 0.12); border-color: rgba(49, 71, 242, 0.5); }
+.layout-position .ps-tone-workspace { background: rgba(89, 97, 122, 0.13); border-color: rgba(89, 97, 122, 0.46); }
+
+.layout-position .ps-overlay { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.layout-position .ps-link { stroke: var(--ink); stroke-width: 3; stroke-dasharray: 9 9; stroke-linecap: round; }
+
+/* A point is a zero-size anchor at its map position; its disc and name are placed around it. */
+.layout-position .ps-point { position: absolute; width: 0; height: 0; }
+.layout-position .ps-ori-disc { position: absolute; left: -64px; top: -64px; width: 128px; height: 128px; border-radius: 50%; background: var(--lime); display: grid; place-items: center; box-shadow: 0 0 0 5px var(--canvas), 0 18px 36px -18px rgba(22, 32, 57, 0.6); }
+.layout-position .ps-point-name { position: absolute; left: 0; transform: translateX(-50%); white-space: nowrap; font-family: var(--font-display); font-weight: 800; }
+.layout-position .ps-ori .ps-point-name { top: 70px; font-size: 30px; letter-spacing: -0.03em; color: var(--ink); background: var(--lime); border-radius: 99px; padding: 2px 16px; }
+.layout-position .ps-vision-ring { position: absolute; left: -36px; top: -36px; width: 72px; height: 72px; border-radius: 50%; border: 3px dashed var(--ink); background: rgba(223, 255, 118, 0.35); }
+.layout-position .ps-vision .ps-point-name { top: 42px; font-size: var(--fs-label); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); }
+
+.layout-position .ps-side { display: grid; gap: 22px; justify-items: start; align-content: center; }
+.layout-position .ps-line { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 34px; letter-spacing: -0.03em; line-height: 1.16; }
+
+.layout-position.g4-play .ps-region { animation: g4-rise 0.4s ease-out both; animation-delay: calc(var(--i, 0) * 0.08s); }
+.layout-position.g4-play .ps-ori { animation: g4-rise 0.45s ease-out 0.4s both; }
+.layout-position.g4-play .ps-vision, .layout-position.g4-play .ps-link { animation: g4-rise 0.45s ease-out 0.75s both; }
+
+/* ------------------------------------------------------------------------------------------------ */
+/* Phones and narrow screens (flow mode: no scaling, the scene scrolls vertically)                    */
+/* ------------------------------------------------------------------------------------------------ */
+.is-flow .layout-zones .zn-grid { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.is-flow .layout-zones .zn-zone { padding: 14px 14px 12px; border-radius: 20px; }
+.is-flow .layout-zones .zn-title { font-size: 18px; margin-bottom: 12px; gap: 8px; }
+.is-flow .layout-zones .zn-title-icon { width: 30px; height: 30px; }
+.is-flow .layout-zones .zn-apps { gap: 12px; }
+.is-flow .layout-zones .zn-app { gap: 8px; }
+.is-flow .layout-zones .zn-screen { height: auto; aspect-ratio: 236 / 312; border-radius: 14px; }
+.is-flow .layout-zones .zn-cap { grid-template-columns: 30px minmax(0, 1fr); column-gap: 8px; }
+.is-flow .layout-zones .zn-cap .zn-mark { width: 30px; height: 30px; border-radius: 8px; }
+.is-flow .layout-zones .zn-mark-glyph svg { width: 18px; height: 18px; }
+.is-flow .layout-zones .zn-cap b { font-size: 15px; }
+.is-flow .layout-zones .zn-cap span { font-size: 13px; }
+.is-flow .layout-zones .zn-hub { width: 200px; height: 200px; margin: 6px auto; }
+.is-flow .layout-zones .zn-ring { inset: auto; left: 0; top: -18px; width: 200px; height: 236px; }
+.is-flow .layout-zones .zn-feed { display: none; }
+.is-flow .layout-zones .zn-core { width: 100px; height: 100px; margin: -50px 0 0 -50px; box-shadow: 0 0 0 3px var(--card); }
+.is-flow .layout-zones .zn-core .kit-ori { --ori-size: 84px !important; }
+.is-flow .layout-zones .zn-foot { grid-template-columns: minmax(0, 1fr); margin-top: 16px; gap: 10px; }
+.is-flow .layout-zones .zn-bottom { font-size: 22px; }
+.is-flow .layout-zones .zn-media-label { font-size: 13px; white-space: normal; text-align: center; max-width: 100%; }
+
+.is-flow .layout-position .ps-wrap { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.is-flow .layout-position .ps-map { grid-template-columns: 64px minmax(0, 1fr); grid-template-rows: 340px auto; column-gap: 10px; row-gap: 10px; }
+.is-flow .layout-position .ps-end { font-size: 12px; }
+.is-flow .layout-position .ps-xlab { gap: 8px; }
+.is-flow .layout-position .ps-xlab .ps-end { max-width: 34%; }
+.is-flow .layout-position .ps-title { font-size: 11px; letter-spacing: 0.06em; white-space: normal; text-align: center; }
+.is-flow .layout-position .ps-region { padding: 6px 8px; border-radius: 14px; }
+.is-flow .layout-position .ps-region-label b { font-size: 12px; letter-spacing: 0; overflow-wrap: anywhere; }
+.is-flow .layout-position .ps-region-label span { font-size: 11px; }
+.is-flow .layout-position .ps-region { min-width: 0; overflow: hidden; }
+.is-flow .layout-position .ps-ori-disc { left: -30px; top: -30px; width: 60px; height: 60px; box-shadow: 0 0 0 3px var(--canvas); }
+.is-flow .layout-position .ps-ori-disc .kit-ori { --ori-size: 50px !important; }
+.is-flow .layout-position .ps-ori .ps-point-name { top: 33px; font-size: 14px; padding: 1px 8px; }
+.is-flow .layout-position .ps-vision-ring { left: -16px; top: -16px; width: 32px; height: 32px; border-width: 2px; }
+.is-flow .layout-position .ps-vision .ps-point-name { top: auto; bottom: 19px; font-size: 11px; letter-spacing: 0.04em; transform: translateX(-88%); }
+.is-flow .layout-position .ps-link { stroke-width: 2; stroke-dasharray: 5 5; }
+.is-flow .layout-position .ps-line { font-size: 22px; }

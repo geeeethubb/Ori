@@ -269,7 +269,11 @@ export async function seedDemo(opts: { reset?: boolean; quiet?: boolean } = {}):
 }
 
 const isMain = process.argv[1] && /seed\.ts$/.test(process.argv[1]);
-if (isMain) {
+if (isMain && process.env.NODE_ENV === 'production' && (process.env.SEED_DEMO_PASSWORD ?? '').length < 12) {
+  // On a public host the documented development default would make the demo account's password public.
+  console.error('Refusing to seed: set SEED_DEMO_PASSWORD to a dedicated value of at least 12 characters (not the documented default) first.');
+  process.exitCode = 1;
+} else if (isMain) {
   seedDemo({ reset: process.argv.includes('--reset') }).catch((err) => {
     console.error(err);
     process.exitCode = 1;

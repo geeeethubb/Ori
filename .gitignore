@@ -18,3 +18,17 @@ android/app/src/main/assets/capacitor.plugins.json
 android/local.properties
 android/.idea/
 android/capacitor-cordova-android-plugins/
+# Local env variants (Vite also reads .env.[mode] and .env.[mode].local); the template stays tracked
+.env.*
+!.env.example
+# Deploy-check state files: they hold the throwaway account's password and session cookie
+deploy-check*.json
+# Databases, browser storage states and signing keys never belong in the repository
+*.db
+*.db-*
+*.sqlite*
+storageState*.json
+*.jks
+*.keystore
+*.pem
+*.p12

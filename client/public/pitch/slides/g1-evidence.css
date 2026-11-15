@@ -1,0 +1,96 @@
+/* Group 1 · the discovery slide (layout "discovery", presented #2) and refinements to the appendix panel
+   #appendix-research (the brief's slide 2, not presented). Stage px (1600 x 900 design) on the slide; phone rules
+   under .is-flow. Every rule is scoped to .layout-discovery or #appendix-research. */
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Discovery                                                                                        */
+/* ---------------------------------------------------------------------------------------------- */
+
+.layout-discovery .ds-question { font-size: 54px; line-height: 1.08; max-width: 1240px; }
+.layout-discovery .ds-quote { color: var(--blue); }
+.layout-discovery .scene-body.ds-body { padding-top: 36px; }
+.layout-discovery .ds-grid { display: grid; grid-template-columns: 560px 792px; justify-content: space-between; align-items: stretch; }
+
+/* 21 / 26, the dots, the asterisk */
+.layout-discovery .ds-count { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.layout-discovery .ds-figure { font-family: var(--font-display); font-weight: 800; font-size: 178px; letter-spacing: -0.06em; line-height: 0.92; margin: 0; color: var(--ink); white-space: nowrap; }
+.layout-discovery .ds-yes { color: var(--blue); }
+.layout-discovery .ds-of { color: var(--ink); }
+.layout-discovery .ds-star { font-size: 64px; vertical-align: top; position: relative; top: 8px; margin-left: 6px; color: var(--muted); text-decoration: none; letter-spacing: 0; }
+.layout-discovery .ds-star:hover, .layout-discovery .ds-star:focus-visible { color: var(--blue); }
+.layout-discovery .ds-count-label { font-family: var(--font-display); font-size: 34px; font-weight: 800; letter-spacing: -0.02em; margin: 14px 0 26px; }
+.layout-discovery .ds-dots { display: grid; grid-template-columns: repeat(13, 34px); gap: 10px; }
+.layout-discovery .ds-dot { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--blue); box-sizing: border-box; background: transparent; }
+.layout-discovery .ds-dot.is-yes { background: var(--blue); }
+.layout-discovery .ds-footnote { margin: 34px 0 0; font-size: 18px; color: var(--muted); }
+
+/* Counting up: the 21 dots fill in order when the slide arrives (explains the count; off under reduced motion). */
+.slide.active.layout-discovery .ds-dot.is-yes { animation: g1-dot-fill 0.28s ease-out both; animation-delay: calc(0.18s + var(--i) * 0.024s); }
+@keyframes g1-dot-fill { from { background: transparent; transform: scale(0.82); } to { background: var(--blue); transform: scale(1); } }
+
+/* The friend's insight: the dominant element */
+.layout-discovery .ds-voice { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.layout-discovery .ds-bubble { position: relative; margin: 0; width: 792px; height: 352px; box-sizing: border-box; padding: 38px 56px 0; color: var(--on-ink); }
+.layout-discovery .ds-bubble-art { position: absolute; inset: 0; width: 792px; height: 352px; fill: var(--ink); }
+.layout-discovery .ds-insight-text { position: relative; margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 64px; letter-spacing: -0.04em; line-height: 1.05; text-wrap: balance; }
+.layout-discovery .ds-em { color: var(--lime); }
+.layout-discovery .ds-insight-label { position: absolute; left: 58px; bottom: 62px; margin: 0; font-family: var(--font-display); font-size: 16px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--on-ink-muted); }
+
+/* Exactly two sparks: a saved reel and a note that trails off */
+.layout-discovery .ds-examples { display: flex; align-items: flex-end; justify-content: flex-end; gap: 40px; margin-top: -6px; }
+.layout-discovery .ds-example { margin: 0; position: relative; }
+.layout-discovery .ds-reel { display: flex; align-items: flex-end; gap: 16px; }
+.layout-discovery .ds-reel-art { display: block; width: 116px; height: 192px; filter: drop-shadow(0 10px 18px rgba(22, 32, 57, 0.18)); transform: rotate(-4deg); }
+.layout-discovery .ds-example-label { font-family: var(--font-display); font-size: 22px; font-weight: 800; letter-spacing: -0.01em; margin: 0 0 8px; color: var(--ink); white-space: nowrap; }
+.layout-discovery .ds-note { width: 372px; height: 163px; transform: rotate(2deg); }
+.layout-discovery .ds-note-art { position: absolute; inset: 0; width: 372px; height: 163px; fill: var(--warm); stroke: #f1c3ac; stroke-width: 2; filter: drop-shadow(0 10px 18px rgba(154, 46, 14, 0.12)); }
+.layout-discovery .ds-note-text { position: relative; margin: 0; padding: 40px 30px 0 36px; font-family: var(--font-display); font-size: 37px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; color: var(--orange-ink); white-space: nowrap; }
+
+/* Phones and narrow windows: one column, the bubble drawn by CSS (its art is sized for the stage). */
+.is-flow .layout-discovery .ds-question { font-size: 26px; max-width: none; }
+.is-flow .layout-discovery .scene-body.ds-body { padding-top: 16px; }
+.is-flow .layout-discovery .ds-grid { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+.is-flow .layout-discovery .ds-figure { font-size: 76px; }
+.is-flow .layout-discovery .ds-star { font-size: 30px; top: 4px; }
+.is-flow .layout-discovery .ds-count-label { font-size: 20px; margin: 6px 0 12px; }
+.is-flow .layout-discovery .ds-dots { grid-template-columns: repeat(13, minmax(0, 1fr)); gap: 5px; max-width: 420px; }
+.is-flow .layout-discovery .ds-dot { width: auto; height: auto; aspect-ratio: 1; border-width: 2px; }
+.is-flow .layout-discovery .ds-footnote { font-size: 13px; margin-top: 12px; }
+.is-flow .layout-discovery .ds-bubble { width: auto; height: auto; padding: 20px 20px 18px; background: var(--ink); border-radius: 22px; }
+.is-flow .layout-discovery .ds-bubble-art { display: none; }
+.is-flow .layout-discovery .ds-insight-text { font-size: 25px; }
+.is-flow .layout-discovery .ds-insight-label { position: static; margin-top: 12px; font-size: 12px; }
+.is-flow .layout-discovery .ds-examples { justify-content: flex-start; gap: 18px; flex-wrap: wrap; margin-top: 14px; }
+.is-flow .layout-discovery .ds-reel-art { width: 62px; height: 102px; margin-left: 4px; }
+.is-flow .layout-discovery .ds-example-label { font-size: 15px; margin-bottom: 4px; }
+.is-flow .layout-discovery .ds-note { width: 200px; height: 88px; }
+.is-flow .layout-discovery .ds-note-art { width: 200px; height: 88px; }
+.is-flow .layout-discovery .ds-note-text { font-size: 19px; padding: 22px 16px 0 20px; }
+
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Appendix panel #appendix-research ("Research behind this", the brief's slide 2, not presented):   */
+/* findings stacked left, the takeaway as the dominant right-hand statement, a bridge line joining   */
+/* them, the two bars on one scale. Refines the panel's own light appendix style; not a scene.        */
+/* ---------------------------------------------------------------------------------------------- */
+#appendix-research .research-grid { align-items: stretch; column-gap: 40px; }
+#appendix-research .research-findings { gap: 16px; align-content: center; }
+#appendix-research .research-finding { position: relative; }
+#appendix-research .research-display { font-size: 44px; }
+#appendix-research .research-bars { max-width: 340px; margin: 10px 0 6px; }
+#appendix-research .research-bar-track { height: 12px; }
+#appendix-research .research-bar-fill.is-behavior { background: var(--blue-ink); }
+#appendix-research .research-takeaway { position: relative; display: flex; align-items: center; min-height: 100%; box-sizing: border-box; padding: 26px 32px; font-size: 44px; line-height: 1.04; letter-spacing: -0.04em; text-wrap: balance; }
+#appendix-research .research-takeaway::before { content: ''; position: absolute; right: 100%; top: 50%; width: 40px; height: 2px; margin-top: -1px; background: var(--blue); }
+#appendix-research .research-takeaway::after { content: ''; position: absolute; right: calc(100% + 34px); top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%; background: var(--blue); }
+#appendix-research .research-notes li::marker { color: var(--blue); }
+@media (max-width: 900px) {
+  #appendix-research .research-takeaway { font-size: 34px; padding: 22px 24px; }
+}
+@media (max-width: 640px) {
+  #appendix-research .research-grid { row-gap: 22px; }
+  #appendix-research .research-takeaway { font-size: 26px; padding: 18px 20px; }
+  #appendix-research .research-takeaway::before { right: auto; left: 28px; top: auto; bottom: 100%; width: 2px; height: 22px; margin-top: 0; }
+  #appendix-research .research-takeaway::after { display: none; }
+  #appendix-research .research-display { font-size: 36px; }
+}

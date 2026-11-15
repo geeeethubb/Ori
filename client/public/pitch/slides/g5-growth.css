@@ -1,0 +1,209 @@
+/* Group 5 · the brief's slides 11–13 (presented 10–12): layouts "founder", "growth" and "pricing".
+   Stage px on the 1600 x 900 design stage; flow-mode (phone) overrides under .is-flow. Every rule is scoped to
+   its layout. Motion runs on .slide.active only and style.css removes it under reduced motion. */
+
+/* Labels over a drawing (slides/g5-growth.js overlay()): HTML text placed in % of the drawing's box. */
+.layout-founder .g5-labels, .layout-growth .g5-labels { position: absolute; inset: 0; pointer-events: none; }
+.layout-founder .g5-label, .layout-growth .g5-label { position: absolute; white-space: nowrap; line-height: 1.1; transform: translate(-50%, -50%); }
+.layout-founder .g5-label.is-start, .layout-growth .g5-label.is-start { transform: translate(0, -50%); }
+.layout-founder .g5-label.is-end, .layout-growth .g5-label.is-end { transform: translate(-100%, -50%); }
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Slide 11 · founder                                                                              */
+/* ---------------------------------------------------------------------------------------------- */
+
+.layout-founder .fd-body { padding-top: 24px; }
+.layout-founder .fd-top { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 64px; align-items: center; }
+
+/* Who and why: Zuyu, lines to each group (solid: his roles; dotted: friends), the group chips. */
+.layout-founder .fd-community { display: grid; grid-template-columns: 160px 250px max-content; height: 280px; align-items: start; }
+.layout-founder .fd-who { position: relative; z-index: 1; }
+.layout-founder .fd-disc-wrap { position: relative; display: block; width: 160px; height: 160px; }
+.layout-founder .fd-disc { display: block; width: 160px; height: 160px; }
+.layout-founder .fd-disc-fill { fill: var(--ink); }
+.layout-founder .fd-disc-ring { fill: none; stroke: var(--lime); stroke-width: 3; opacity: 0.85; }
+.layout-founder .fd-initials { position: absolute; inset: 0; display: grid; place-items: center; color: var(--lime); font-family: var(--font-display); font-weight: 800; font-size: 60px; letter-spacing: -0.04em; line-height: 1; }
+.layout-founder .fd-name { margin: 16px 0 0; font-family: var(--font-display); font-weight: 800; font-size: 40px; line-height: 1.05; letter-spacing: -0.035em; white-space: nowrap; color: var(--fg); }
+.layout-founder .fd-line { margin: 6px 0 0; font-size: 20px; line-height: 1.3; font-weight: 650; color: var(--fg-muted); white-space: nowrap; }
+.layout-founder .fd-links { display: block; width: 250px; height: 280px; overflow: visible; }
+.layout-founder .fd-link path { fill: none; stroke: var(--ink-3); stroke-width: 2.5; stroke-linecap: round; }
+.layout-founder .fd-link circle { fill: var(--ink-3); }
+.layout-founder .fd-link.is-lead path { stroke: var(--ink); stroke-width: 4; }
+.layout-founder .fd-link.is-lead circle { fill: var(--ink); }
+.layout-founder .fd-link.is-friends path { stroke: var(--muted); stroke-dasharray: 2 9; stroke-width: 3.5; }
+.layout-founder .fd-link.is-friends circle { fill: var(--muted); }
+.layout-founder .fd-groups { list-style: none; margin: 0; padding: 0; height: 280px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; }
+.layout-founder .fd-group { display: flex; align-items: center; height: 52px; box-sizing: border-box; padding: 0 22px; border-radius: 99px; font-size: 20px; line-height: 1.2; white-space: nowrap; background: var(--card); border: 2px solid var(--ink-3); color: var(--fg); }
+.layout-founder .fd-group b { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.01em; }
+.layout-founder .fd-role { font-weight: 600; white-space: pre; }
+.layout-founder .fd-group.is-lead { background: var(--ink); border-color: var(--ink); color: #fff; }
+.layout-founder .fd-group.is-lead .fd-role { color: var(--lime); }
+.layout-founder .fd-group.is-friends { background: transparent; border: 2px dashed var(--muted); }
+.layout-founder .fd-group.is-friends b { font-weight: 750; }
+
+/* The discovery callback. */
+.layout-founder .fd-evidence { display: grid; gap: 16px; justify-items: start; align-content: center; }
+.layout-founder .fd-count { margin: 0; font-family: var(--font-display); font-weight: 800; letter-spacing: -0.05em; line-height: 0.92; color: var(--blue); white-space: nowrap; }
+.layout-founder .fd-count b { font-size: 112px; }
+.layout-founder .fd-of { font-size: 60px; color: var(--blue-ink); white-space: pre; }
+.layout-founder .fd-dots { display: block; width: 382px; height: 52px; }
+.layout-founder .fd-dots .is-yes { fill: var(--blue); }
+.layout-founder .fd-dots .is-no { fill: none; stroke: var(--blue); stroke-width: 2.5; }
+.layout-founder .fd-evidence-label { margin: 0; max-width: 340px; text-wrap: balance; font-size: 24px; line-height: 1.3; font-weight: 650; color: var(--fg); }
+
+/* What next: the pipeline on its lane, labels under the nodes. */
+.layout-founder .fd-pipeline { margin-top: 36px; }
+.layout-founder .fd-lane { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; height: 152px; border-radius: 76px; background: var(--blue-soft); }
+.layout-founder .fd-cell { position: relative; display: grid; place-items: center; height: 100%; }
+.layout-founder .fd-node { display: grid; place-items: center; width: 116px; height: 116px; border-radius: 50%; background: #fff; color: var(--blue); box-shadow: inset 0 0 0 3px var(--blue); }
+.layout-founder .fd-cell:last-child .fd-node { background: var(--blue); color: #fff; }
+.layout-founder .fd-arrow { position: absolute; left: 0; top: 50%; width: 120px; height: 24px; margin: -12px 0 0 -60px; overflow: visible; }
+.layout-founder .fd-arrow path { fill: none; stroke: var(--blue); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.layout-founder .fd-steps { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); text-align: center; font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -0.01em; line-height: 1.2; color: var(--fg); }
+
+/* Pilot goals: two dated targets. */
+.layout-founder .fd-goals { display: flex; align-items: center; gap: 28px; margin-top: 30px; }
+.layout-founder .fd-goal-list { list-style: none; margin: 0; padding: 0; display: flex; gap: 56px; }
+.layout-founder .fd-goal { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+.layout-founder .fd-goal-icon { align-self: center; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; background: var(--lime); color: var(--ink); margin-right: 4px; }
+.layout-founder .fd-goal-figure { font-family: var(--font-display); font-weight: 800; font-size: 52px; line-height: 1; letter-spacing: -0.045em; color: var(--fg); }
+.layout-founder .fd-goal-label { font-family: var(--font-display); font-weight: 800; font-size: 26px; white-space: pre; color: var(--fg); }
+.layout-founder .fd-goal-date { font-size: 22px; font-weight: 600; color: var(--fg-muted); }
+
+/* Motion: the lines reach the groups; the arrows carry the pipeline forward. */
+.slide.active.layout-founder .fd-links { animation: g5-reveal-x 0.7s cubic-bezier(0.3, 0.7, 0.2, 1) 0.2s both; }
+.slide.active.layout-founder .fd-arrow { animation: g5-reveal-x 0.45s ease-out both; animation-delay: calc(0.35s + var(--i) * 0.14s); }
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Slide 12 · growth                                                                               */
+/* ---------------------------------------------------------------------------------------------- */
+
+.layout-growth .gw-grid { display: grid; grid-template-columns: 820px minmax(0, 1fr); gap: 60px; align-items: center; }
+.layout-growth .gw-chart { margin: 0; display: grid; gap: 8px; }
+.layout-growth .gw-chart-head { display: flex; align-items: center; gap: 16px; }
+.layout-growth .gw-title { font-family: var(--font-display); font-weight: 800; font-size: 32px; letter-spacing: -0.025em; color: var(--fg); }
+.layout-growth .gw-plot { position: relative; width: 820px; }
+.layout-growth .gw-svg { display: block; width: 820px; height: 560px; overflow: visible; }
+.layout-growth .gw-svg .gw-gridline { stroke: var(--line); stroke-width: 1.5; }
+.layout-growth .gw-svg .gw-baseline { stroke: var(--ink); stroke-width: 2.5; }
+.layout-growth .gw-area { fill: var(--blue-soft); }
+.layout-growth .gw-line { fill: none; stroke: var(--blue); stroke-width: 5; stroke-dasharray: 16 11; stroke-linecap: round; stroke-linejoin: round; }
+.layout-growth .gw-dot { fill: #fff; stroke: var(--blue); stroke-width: 4; }
+.layout-growth .gw-dot.is-last { fill: var(--blue); stroke: #fff; stroke-width: 4; }
+.layout-growth .gw-halo { fill: var(--lime); }
+.layout-growth .gw-tick { font-family: var(--font-body); font-weight: 600; font-size: 20px; color: var(--fg-muted); }
+.layout-growth .gw-month { font-family: var(--font-display); font-weight: 750; font-size: 22px; color: var(--fg); }
+.layout-growth .gw-value { font-family: var(--font-display); font-weight: 800; font-size: 28px; letter-spacing: -0.02em; color: var(--ink); }
+.layout-growth .gw-value.is-last { font-size: 56px; letter-spacing: -0.045em; color: var(--blue-ink); }
+.layout-growth .gw-caption { font-family: var(--font-display); font-weight: 750; font-size: 20px; color: var(--fg-muted); }
+
+.layout-growth .gw-side { display: flex; flex-direction: column; gap: 44px; min-width: 0; }
+.layout-growth .gw-yc { display: grid; gap: 26px; padding: 34px 38px 40px; border-radius: 32px; background: var(--ink); color: #fff; }
+.layout-growth .gw-yc-top { display: flex; align-items: center; gap: 16px; }
+.layout-growth .gw-yc-logo { display: block; width: 56px; height: 56px; border-radius: 12px; }
+.layout-growth .gw-yc .gw-yc-tag { background: var(--lime); color: var(--ink); }
+.layout-growth .gw-yc-title { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 68px; line-height: 0.98; letter-spacing: -0.05em; }
+.layout-growth .gw-branch-wrap { position: relative; width: 460px; height: 172px; }
+.layout-growth .gw-branch { display: block; width: 460px; height: 172px; overflow: visible; }
+.layout-growth .gw-branch-line { fill: none; stroke: var(--blue); stroke-width: 4; stroke-linecap: round; }
+.layout-growth .gw-branch-root { fill: var(--blue); }
+.layout-growth .gw-branch-leaf { fill: #fff; stroke: var(--blue); stroke-width: 4; }
+.layout-growth .gw-branch-root-label { font-family: var(--font-display); font-weight: 800; font-size: 26px; color: var(--fg); }
+.layout-growth .gw-branch-label { font-family: var(--font-display); font-weight: 750; font-size: 24px; color: var(--fg); }
+
+/* Motion: the goal line draws from January to September; each value appears as the line reaches it. */
+.slide.active.layout-growth .gw-data { animation: g5-reveal-x 1.2s cubic-bezier(0.35, 0.6, 0.2, 1) 0.25s both; }
+.slide.active.layout-growth .gw-value, .slide.active.layout-growth .gw-caption { animation: g5-fade 0.35s ease-out both; animation-delay: calc(0.3s + var(--k, 0) * 0.28s); }
+.slide.active.layout-growth .gw-branch { animation: g5-reveal-x 0.7s ease-out 0.5s both; }
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Slide 13 · pricing                                                                              */
+/* ---------------------------------------------------------------------------------------------- */
+
+.layout-pricing .pr-label { align-self: flex-start; }
+.layout-pricing .pr-ladder { list-style: none; margin: 26px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; align-items: end; height: 440px; border-bottom: 4px solid var(--ink); }
+.layout-pricing .pr-step { position: relative; height: var(--h, 200px); box-sizing: border-box; padding: 24px 34px; color: var(--ink); }
+.layout-pricing .pr-block { position: absolute; inset: 0; border-radius: 30px 30px 0 0; background: var(--lilac-soft); }
+.layout-pricing .pr-step.is-2 .pr-block { background: var(--lilac); }
+.layout-pricing .pr-step.is-3 .pr-block { background: var(--ink); }
+.layout-pricing .pr-step.is-3 { color: #fff; }
+.layout-pricing .pr-text { position: relative; display: grid; gap: 10px; }
+.layout-pricing .pr-figure { font-family: var(--font-display); font-weight: 800; font-size: 88px; line-height: 0.95; letter-spacing: -0.05em; white-space: nowrap; }
+.layout-pricing .pr-step.is-3 .pr-figure { color: var(--lime); }
+.layout-pricing .pr-unit { margin-left: 4px; font-size: 32px; letter-spacing: -0.02em; }
+.layout-pricing .pr-step.is-3 .pr-unit { color: #fff; }
+.layout-pricing .pr-rest { font-family: var(--font-display); font-weight: 750; font-size: 28px; letter-spacing: -0.01em; }
+.layout-pricing .pr-values { list-style: none; margin: 34px 0 0; padding: 0; display: flex; justify-content: center; gap: 72px; }
+.layout-pricing .pr-values li { display: flex; align-items: center; gap: 16px; font-family: var(--font-display); font-weight: 800; font-size: 26px; color: var(--fg); }
+.layout-pricing .pr-value-icon { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--blue-soft); color: var(--blue); flex: none; }
+
+/* Motion: the steps rise one after another (try, make it yours, keep). */
+.slide.active.layout-pricing .pr-step { animation: g5-rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(0.15s + var(--i) * 0.14s); }
+
+@keyframes g5-reveal-x { from { clip-path: inset(-40px 100% -40px -40px); } to { clip-path: inset(-40px -40px -40px -40px); } }
+@keyframes g5-rise { from { clip-path: inset(100% -20px 0 -20px); } to { clip-path: inset(-20px -20px 0 -20px); } }
+@keyframes g5-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------------------------------------------------------------------------------------------- */
+/* Flow mode (phones, small or portrait screens): the scene scrolls; nothing scrolls sideways      */
+/* ---------------------------------------------------------------------------------------------- */
+
+.is-flow .layout-founder .fd-top { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+.is-flow .layout-founder .fd-community { display: block; height: auto; }
+.is-flow .layout-founder .fd-who { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 2px 14px; align-items: center; }
+.is-flow .layout-founder .fd-disc-wrap { width: 64px; height: 64px; grid-row: span 2; }
+.is-flow .layout-founder .fd-disc { width: 64px; height: 64px; }
+.is-flow .layout-founder .fd-initials { font-size: 24px; }
+.is-flow .layout-founder .fd-name { margin: 0; font-size: 24px; }
+.is-flow .layout-founder .fd-line { margin: 0; font-size: 14px; white-space: normal; }
+.is-flow .layout-founder .fd-links { display: none; }
+.is-flow .layout-founder .fd-groups { height: auto; margin-top: 14px; gap: 8px; justify-content: flex-start; }
+.is-flow .layout-founder .fd-group { display: block; height: auto; padding: 7px 12px; border-radius: 14px; font-size: 14px; white-space: normal; max-width: 100%; }
+.is-flow .layout-founder .fd-count b { font-size: 56px; }
+.is-flow .layout-founder .fd-of { font-size: 30px; }
+.is-flow .layout-founder .fd-dots { width: 100%; max-width: 300px; height: auto; }
+.is-flow .layout-founder .fd-evidence { gap: 10px; }
+.is-flow .layout-founder .fd-evidence-label { font-size: 16px; max-width: none; }
+.is-flow .layout-founder .fd-pipeline { margin-top: 24px; }
+.is-flow .layout-founder .fd-lane { height: 76px; border-radius: 38px; }
+.is-flow .layout-founder .fd-node { width: 50px; height: 50px; box-shadow: inset 0 0 0 2px var(--blue); }
+.is-flow .layout-founder .fd-node .kit-icon { width: 24px; height: 24px; }
+.is-flow .layout-founder .fd-arrow { display: none; }
+.is-flow .layout-founder .fd-steps { font-size: 11px; letter-spacing: -0.025em; margin-top: 8px; }
+.is-flow .layout-founder .fd-steps li { min-width: 0; padding: 0 1px; }
+.is-flow .layout-founder .fd-goals { flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.is-flow .layout-founder .fd-goal-list { flex-direction: column; gap: 8px; }
+.is-flow .layout-founder .fd-goal { flex-wrap: wrap; white-space: normal; gap: 6px; }
+.is-flow .layout-founder .fd-goal-icon { width: 34px; height: 34px; border-radius: 10px; }
+.is-flow .layout-founder .fd-goal-icon .kit-icon { width: 18px; height: 18px; }
+.is-flow .layout-founder .fd-goal-figure { font-size: 28px; }
+.is-flow .layout-founder .fd-goal-label { font-size: 16px; }
+.is-flow .layout-founder .fd-goal-date { font-size: 14px; }
+
+.is-flow .layout-growth .gw-grid { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+.is-flow .layout-growth .gw-title { font-size: 18px; }
+.is-flow .layout-growth .gw-plot { width: 100%; }
+.is-flow .layout-growth .gw-svg { width: 100%; height: auto; }
+.is-flow .layout-growth .gw-tick { font-size: 11px; }
+.is-flow .layout-growth .gw-month { font-size: 12px; }
+.is-flow .layout-growth .gw-value { font-size: 13px; }
+.is-flow .layout-growth .gw-value.is-last { font-size: 22px; }
+.is-flow .layout-growth .gw-caption { font-size: 11px; }
+.is-flow .layout-growth .gw-side { gap: 20px; }
+.is-flow .layout-growth .gw-yc { gap: 14px; padding: 20px 22px; border-radius: 20px; }
+.is-flow .layout-growth .gw-yc-logo { width: 40px; height: 40px; border-radius: 9px; }
+.is-flow .layout-growth .gw-yc-title { font-size: 38px; }
+.is-flow .layout-growth .gw-branch-wrap { width: 100%; max-width: 330px; height: auto; }
+.is-flow .layout-growth .gw-branch { width: 100%; height: auto; }
+.is-flow .layout-growth .gw-branch-root-label, .is-flow .layout-growth .gw-branch-label { font-size: 15px; }
+
+.is-flow .layout-pricing .pr-ladder { gap: 8px; height: auto; margin-top: 16px; }
+.is-flow .layout-pricing .pr-step { height: calc(var(--h, 200px) * 0.5); padding: 12px 10px; }
+.is-flow .layout-pricing .pr-block { border-radius: 16px 16px 0 0; }
+.is-flow .layout-pricing .pr-figure { font-size: 26px; white-space: normal; }
+.is-flow .layout-pricing .pr-unit { display: block; margin: 2px 0 0; font-size: 14px; }
+.is-flow .layout-pricing .pr-rest { font-size: 14px; }
+.is-flow .layout-pricing .pr-values { flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 20px; }
+.is-flow .layout-pricing .pr-values li { font-size: 17px; gap: 12px; }
+.is-flow .layout-pricing .pr-value-icon { width: 40px; height: 40px; }
+.is-flow .layout-pricing .pr-value-icon .kit-icon { width: 22px; height: 22px; }

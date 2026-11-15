@@ -19,17 +19,20 @@
  * --demo-password-file  a local file holding the demo account's password (never printed or stored)
  *
  * It creates one throwaway account (random password, kept only in the state file), one stranger account and one
- * app ("… Deploy check" entries). The state file holds the throwaway account's email, password and ids: keep it
- * out of Git. Never point this at a server you care about without reading it first.
+ * app (its entry's note starts "Deploy check:"). The state file holds the throwaway account's email, password, ids
+ * and a session cookie: it defaults to the system temp folder, and if you pass --state keep it outside the
+ * repository (deploy-check*.json is git-ignored as a safety net). Never point this at a server you care about
+ * without reading it first.
  */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 const args = Object.fromEntries(process.argv.slice(2).map((a, i, all) => (a.startsWith('--') ? [a.slice(2), all[i + 1] ?? ''] : [])).filter((x) => x.length));
 const BASE = (args.base ?? 'http://localhost:8850').replace(/\/$/, '');
 const PHASE = args.phase ?? 'before';
-const STATE = path.resolve(args.state ?? 'deploy-check-state.json');
+const STATE = path.resolve(args.state ?? path.join(os.tmpdir(), 'ori-deploy-check-state.json'));
 const PITCH = args.pitch !== 'no';
 const EXPECT_LIVE = args['expect-live'] === 'yes';
 const DEMO_PASSWORD_FILE = args['demo-password-file'] ? path.resolve(args['demo-password-file']) : '';

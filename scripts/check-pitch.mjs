@@ -7,12 +7,17 @@
 //   --dir   serve a folder with `python -m http.server` on 127.0.0.1:<port> instead, and stop it afterwards
 //   --out   where screenshots and results.json go (default: a folder in the system temp directory)
 //
-// Checks, in Chromium (the WebM clips) and Microsoft Edge (the MP4 clips; Playwright's Chromium cannot decode H.264):
-//   navigation by buttons, keys and #1..#N; a refresh keeps the scene; the notes follow the scene; the timer starts,
-//   pauses and resets; every clip plays and its scene says Sample mode; same-origin links open ("Open Ori" reaches
-//   the product), no link to a developer machine, the GitHub link present; no failed requests, no requests to other
-//   hosts, no console errors; no horizontal overflow at 1440x900, 768x1024, 390x844 and 320x568, with screenshots.
-// Browser viewport sizes are emulated: this is not a check on a physical phone.
+// Checks, in Chromium and Microsoft Edge (each plays the MP4 or falls back to the WebM):
+//   navigation by buttons, keys and #1..#N; Next on the second-to-last scene reaches the last one and Next is then
+//   disabled; a refresh keeps the scene; step reveals build with Next and arrive complete by hash; the notes follow
+//   the scene; every spoken track fits its budget and the budgets total 238 s; the timer starts, pauses and resets;
+//   every media slot either plays its recording (labelled Sample mode) or shows its real screenshot (labelled
+//   Product screenshot); a playing clip pauses when its scene changes; the closing scene shows only the signature
+//   line, the QR code (linking to the product) and the contact links; same-origin links open, nothing links to a
+//   developer machine; no failed requests, no requests to other hosts, no console errors; every scene fits its stage
+//   at 1366x768, 1600x900 and 1920x1080 in the normal page and in presentation mode (no vertical overflow, the bars
+//   hidden in presentation mode); no horizontal overflow at 768x1024, 390x844 and 320x568; screenshots.
+// Browser viewport sizes are emulated: this is not a check on a physical phone or projector.
 
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -28,8 +33,11 @@ const opt = (name, fallback) => {
 const DIR = opt('dir', '') ? resolve(opt('dir', '')) : '';
 const PORT = Number(opt('port', '8870'));
 const OUT = resolve(opt('out', join(tmpdir(), `ori-pitch-check-${process.pid}`)));
+// 15 presented scenes and 238 s (3:58): the brief's slide 2 moved to the appendix; slide 8 (presented #7) runs 25 s.
 const EXPECTED_SCENES = Number(opt('scenes', '15'));
-const GITHUB = 'https://github.com/geeeethubb/Ori';
+const EXPECTED_SECONDS = Number(opt('seconds', '238'));
+const PRODUCT = 'https://ori-fjrx.onrender.com/';
+const SIGNATURE = { line: 'Ori. Your phone, your story.', name: 'Zuyu Liu', email: 'zliu2017@illinois.edu', phone: '847-962-2868', links: ['mailto:zliu2017@illinois.edu', 'tel:+18479622868', PRODUCT] };
 let BASE = opt('base', '');
 mkdirSync(OUT, { recursive: true });
 
@@ -69,6 +77,8 @@ async function active(page) {
       count: (document.querySelector('#slide-count')?.textContent || '').replace(/\s+/g, ' ').trim(),
       hash: location.hash,
       headline: label.replace(/^Scene \d+ of \d+: /, ''),
+      step: Number(slide?.dataset.step || 1),
+      steps: Number(slide?.dataset.steps || 1),
     };
   });
 }
@@ -82,6 +92,33 @@ const dialogOpen = (page, id) => page.evaluate((sel) => {
   return !!d && (d.open === true || d.hasAttribute('open') || (!d.hidden && getComputedStyle(d).display !== 'none' && d.getClientRects().length > 0));
 }, id);
 
+// Does the active scene fit its stage? Every visible element inside the scene must lie within the stage box, and the
+// scene must not scroll. Also reports horizontal page overflow and the bars' opacity.
+const fitReport = (page) => page.evaluate(() => {
+  const slide = document.querySelector('.slide:not([hidden])');
+  const stage = slide.querySelector('.stage');
+  const scene = slide.querySelector('.scene');
+  const s = stage.getBoundingClientRect();
+  const d = document.getElementById('deck').getBoundingClientRect();
+  const outside = [];
+  for (const el of scene.querySelectorAll('*')) {
+    if (el.closest('.sr-only, [hidden]')) continue;
+    const cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) continue;
+    if (r.left < s.left - 1 || r.right > s.right + 1 || r.top < s.top - 1 || r.bottom > s.bottom + 1) outside.push(`${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0]}`);
+  }
+  return {
+    stageInDeck: s.left >= d.left - 1 && s.right <= d.right + 1 && s.top >= d.top - 1 && s.bottom <= d.bottom + 1 && s.height > 0,
+    sceneScroll: scene.scrollHeight - scene.clientHeight,
+    outside,
+    hScroll: document.documentElement.scrollWidth - window.innerWidth,
+    bars: ['.topbar', '.controls'].map((sel) => Number(getComputedStyle(document.querySelector(sel)).opacity)),
+    stageMode: document.documentElement.classList.contains('is-stage'),
+  };
+});
+
 async function checkBrowser(name, launchOptions) {
   let browser;
   try {
@@ -94,7 +131,7 @@ async function checkBrowser(name, launchOptions) {
   const failures = [];
   const external = [];
   const consoleErrors = [];
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const context = await browser.newContext({ viewport: { width: 1600, height: 900 } });
   const watch = (page) => {
     page.on('requestfailed', (r) => {
       const why = r.failure()?.errorText || '';
@@ -107,7 +144,7 @@ async function checkBrowser(name, launchOptions) {
       const u = r.url();
       if (!u.startsWith(origin) && !/^(data|blob):/.test(u)) external.push(u);
     });
-    page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+    page.on('console', (m) => { if (m.type() === 'error' || (m.type() === 'warning' && /\[ori-pitch\]/.test(m.text()))) consoleErrors.push(m.text()); });
     page.on('pageerror', (e) => consoleErrors.push(String(e)));
   };
   const page = await context.newPage();
@@ -156,6 +193,17 @@ async function checkBrowser(name, launchOptions) {
   }
   record(name, `#1..#${total} each open their scene`, badHashes.length === 0, badHashes.join('; '));
 
+  // The last two scenes: Next on the second-to-last reaches the last; the last stays (Q&A) with Next disabled.
+  await goScene(page, total - 1);
+  await page.click('#next-btn');
+  await sleep(250);
+  const last = await active(page);
+  const nextDisabled = await page.isDisabled('#next-btn');
+  await page.keyboard.press('ArrowRight');
+  await sleep(200);
+  const stillLast = (await active(page)).index;
+  record(name, `Next on ${total - 1} reaches ${total}; ${total} stays for Q&A`, last.index === total && last.hash === `#${total}` && nextDisabled && stillLast === total, `→ ${last.index} ${last.hash}; Next disabled ${nextDisabled}; → again ${stillLast}`);
+
   for (const n of [7, 12]) {
     if (n > total) continue;
     await page.goto(`${BASE}#${n}`, { waitUntil: 'load' });
@@ -166,6 +214,29 @@ async function checkBrowser(name, launchOptions) {
     const a = await active(page);
     record(name, `refresh on #${n} keeps scene ${n}`, a.index === n, `${a.count} ${a.hash}`);
   }
+
+  // Step reveals: arriving with Next from the scene before starts the build at step 1; each Next reveals a step and
+  // then moves on; a hash arrival shows the complete scene.
+  const builders = await page.evaluate(() => [...document.querySelectorAll('.slide')].filter((sl) => Number(sl.dataset.steps || 1) > 1).map((sl) => ({ n: Number(sl.dataset.index) + 1, steps: Number(sl.dataset.steps) })));
+  for (const b of builders.filter((x) => x.n > 1)) {
+    await goScene(page, b.n - 1);
+    await page.click('#next-btn');
+    await sleep(200);
+    const first = await active(page);
+    for (let i = 1; i < b.steps; i++) {
+      await page.click('#next-btn');
+      await sleep(120);
+    }
+    const full = await active(page);
+    await page.click('#next-btn');
+    await sleep(200);
+    const moved = (await active(page)).index;
+    await goScene(page, b.n);
+    const byHash = await active(page);
+    record(name, `scene ${b.n} builds in ${b.steps} steps with Next`, first.index === b.n && first.step === 1 && full.step === b.steps && moved === Math.min(total, b.n + 1) && byHash.step === b.steps,
+      `arrive step ${first.step}; after ${b.steps - 1} Next step ${full.step}; then scene ${moved}; by hash step ${byHash.step}`);
+  }
+  if (!builders.length) note(name, 'step reveals', 'no scene builds in steps');
 
   // Notes follow the scene.
   await goScene(page, 1);
@@ -180,6 +251,12 @@ async function checkBrowser(name, launchOptions) {
   const t2 = (await page.textContent('#notes-title'))?.trim();
   record(name, 'notes open and follow the scene', notesOpen && t1 === h1 && a2.index === 2 && t2 === a2.headline,
     `open=${notesOpen}; scene 1 notes "${t1}"; after Next scene ${a2.index} notes "${t2}"`);
+
+  // Every spoken track fits its budget (about 150 words a minute); the budgets total four minutes.
+  const timing = await page.evaluate(() => (window.ORI_PITCH_TIMING || []).map((t) => ({ ...t })));
+  const over = timing.filter((t) => t.estimate > t.seconds).map((t) => `${t.scene} ${t.id} ${t.estimate}s > ${t.seconds}s`);
+  const budget = timing.reduce((sum, t) => sum + t.seconds, 0);
+  record(name, `spoken tracks fit their budgets; budgets total ${EXPECTED_SECONDS} s`, timing.length === total && over.length === 0 && budget === EXPECTED_SECONDS, `${budget} s budgeted; ${timing.reduce((sum, t) => sum + t.words, 0)} words${over.length ? `; over: ${over.join(', ')}` : ''}`);
 
   // Timer: start, pause, reset.
   await page.click('#timer-toggle');
@@ -197,66 +274,111 @@ async function checkBrowser(name, launchOptions) {
   await page.keyboard.press('Escape');
   await sleep(200);
 
-  // Clips: every media slot plays its recording, and its scene says Sample mode.
-  const clipScenes = await page.evaluate(() => [...document.querySelectorAll('.slide')]
-    .filter((sl) => sl.querySelector('.media-shell'))
+  // Media slots: each recording plays and says Sample mode; each screenshot loads and says Product screenshot.
+  const slotScenes = await page.evaluate(() => [...document.querySelectorAll('.slide')]
+    .filter((sl) => sl.querySelector('[data-slot]'))
     .map((sl) => Number(sl.dataset.index) + 1));
-  record(name, 'scenes with a demo clip', clipScenes.length === 3, `scenes ${clipScenes.join(', ') || 'none'}`);
-  for (const n of clipScenes) {
+  let recordings = 0;
+  let screenshots = 0;
+  const recordingScenes = [];
+  for (const n of slotScenes) {
     await goScene(page, n);
-    const clip = await page.evaluate(async () => {
-      const slide = document.querySelector('.slide:not([hidden])');
-      const shell = slide.querySelector('.media-shell');
-      const video = shell.querySelector('video');
-      const label = (shell.querySelector('.media-label')?.textContent || '').trim();
-      const sceneText = slide.innerText;
-      let playError = '';
-      if (video) {
-        video.muted = true;
-        // play() never settles on a video with no source, so give it a few seconds.
-        try {
-          await Promise.race([video.play(), new Promise((_, reject) => setTimeout(() => reject(new Error('play() did not start within 4 s')), 4000))]);
-        } catch (e) { playError = String(e); }
+    await sleep(600);
+    const slots = await page.evaluate(() => [...document.querySelectorAll('.slide:not([hidden]) [data-slot]')].map((el) => ({ key: el.dataset.slot, state: el.dataset.state })));
+    for (const slot of slots) {
+      if (slot.state === 'video') {
+        recordings += 1;
+        if (!recordingScenes.includes(n)) recordingScenes.push(n);
+        const clip = await page.evaluate(async (key) => {
+          const shell = document.querySelector(`.slide:not([hidden]) [data-slot="${key}"]`);
+          const video = shell.querySelector('video');
+          const label = (shell.querySelector('.media-label')?.textContent || '').trim();
+          let playError = '';
+          video.muted = true;
+          // play() never settles on a video with no source, so give it a few seconds.
+          try {
+            await Promise.race([video.play(), new Promise((_, reject) => setTimeout(() => reject(new Error('play() did not start within 4 s')), 4000))]);
+          } catch (e) { playError = String(e); }
+          return { label, playError };
+        }, slot.key);
+        await sleep(1800);
+        const media = await page.evaluate((key) => {
+          const video = document.querySelector(`.slide:not([hidden]) [data-slot="${key}"] video`);
+          return { t: video.currentTime, src: video.currentSrc, error: video.error ? video.error.code : 0, hidden: video.hidden, w: video.videoWidth, state: video.closest('[data-slot]').dataset.state };
+        }, slot.key);
+        await page.evaluate((key) => document.querySelector(`.slide:not([hidden]) [data-slot="${key}"] video`).pause(), slot.key);
+        // The founder's context recording is labelled Live AI (its UI shows the badge); the others are Sample mode.
+        const ok = media.state === 'video' && !media.hidden && media.t > 0.5 && media.error === 0 && /Sample mode|Live AI/.test(clip.label);
+        record(name, `scene ${n} "${slot.key}" recording plays with an honest label`, ok,
+          `label "${clip.label}"; ${media.src.split('/').pop()} at ${media.t.toFixed(1)} s, ${media.w}px wide${clip.playError ? `; play(): ${clip.playError}` : ''}`);
+      } else {
+        screenshots += 1;
+        const still = await page.evaluate((key) => {
+          const shell = document.querySelector(`.slide:not([hidden]) [data-slot="${key}"]`);
+          const img = shell.querySelector('.media-still');
+          return { state: shell.dataset.state, label: (shell.querySelector('.media-label')?.textContent || '').trim(), src: img.getAttribute('src') || '', loaded: img.complete && img.naturalWidth > 0, hidden: img.hidden };
+        }, slot.key);
+        record(name, `scene ${n} "${slot.key}" shows its real screenshot, labelled`, still.state === 'still' && still.loaded && !still.hidden && /^Product screenshot/.test(still.label) && /media\/stills\//.test(still.src),
+          `state ${still.state}; label "${still.label}"; ${still.src}`);
       }
-      return { state: shell.dataset.state || '', label, sampleMode: /Sample mode/i.test(sceneText), playError };
-    });
-    await sleep(1800);
-    const media = await page.evaluate(() => {
-      const video = document.querySelector('.slide:not([hidden]) .media-shell video');
-      if (!video) return null;
-      return { t: video.currentTime, ready: video.readyState, src: video.currentSrc, error: video.error ? video.error.code : 0, hidden: video.hidden, w: video.videoWidth };
-    });
-    const ok = !!media && clip.state === 'published' && !media.hidden && media.t > 0.5 && media.error === 0 && clip.sampleMode;
-    record(name, `scene ${n} clip plays with a Sample-mode label`, ok,
-      `state ${clip.state}; label "${clip.label}"; ${media ? `${media.src.split('/').pop()} at ${media.t.toFixed(1)} s, ${media.w}px wide` : 'no video'}${clip.playError ? `; play(): ${clip.playError}` : ''}${clip.sampleMode ? '' : '; no "Sample mode" text on the scene'}`);
+    }
   }
-  if (clipScenes.length) {
-    await goScene(page, clipScenes[0]);
+  record(name, 'media slots: the three demo recordings (create, grow, context), each labelled', recordings >= 3, `${recordings} recordings, ${screenshots} screenshots, scenes ${slotScenes.join(', ') || 'none'}`);
+  if (recordingScenes.length) {
+    const n = recordingScenes[0];
+    await goScene(page, n);
     await page.evaluate(async () => {
-      const v = document.querySelector('.slide:not([hidden]) .media-shell video');
+      const v = document.querySelector('.slide:not([hidden]) [data-slot] video:not([hidden])');
       if (v) { v.muted = true; try { await Promise.race([v.play(), new Promise((r) => setTimeout(r, 4000))]); } catch { /* checked above */ } }
     });
     await sleep(600);
     const wasPlaying = await page.evaluate(() => {
-      const v = document.querySelector('.slide:not([hidden]) .media-shell video');
+      const v = document.querySelector('.slide:not([hidden]) [data-slot] video:not([hidden])');
       return !!v && !v.paused && v.currentTime > 0;
     });
-    await goScene(page, clipScenes[0] + 1);
+    await goScene(page, n + 1);
     const pausedAway = await page.evaluate((i) => {
-      const v = document.querySelector(`.slide[data-index="${i}"] .media-shell video`);
+      const v = document.querySelector(`.slide[data-index="${i}"] [data-slot] video`);
       return v ? v.paused : null;
-    }, clipScenes[0] - 1);
+    }, n - 1);
     record(name, 'a playing clip pauses when the scene changes', wasPlaying && pausedAway === true, `playing before=${wasPlaying}, paused after=${pausedAway}`);
   }
 
-  // Links: same-origin links must open ("Open Ori" must reach the product, not the deck or an error page);
-  // nothing may point at a developer's machine; the GitHub link stays.
+  // The closing scene: only the signature line, the QR code (to the product, no visible URL) and the contact links.
   await goScene(page, total);
+  await sleep(400);
+  const close = await page.evaluate(() => {
+    const slide = document.querySelector('.slide:not([hidden])');
+    const texts = [];
+    const walker = document.createTreeWalker(slide, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const t = walker.currentNode.textContent.trim();
+      const el = walker.currentNode.parentElement;
+      if (t && !el.closest('.sr-only, [hidden]') && el.getClientRects().length) texts.push(t);
+    }
+    const qr = slide.querySelector('a img[src*="qr"]');
+    const companion = document.querySelector('.companion');
+    return {
+      line: slide.querySelector('h1, h2')?.textContent || '',
+      text: texts.join(' ').replace(/\s+/g, ' ').trim(),
+      links: [...slide.querySelectorAll('a[href]')].map((a) => a.getAttribute('href')).sort(),
+      images: [...slide.querySelectorAll('img')].filter((i) => i.getClientRects().length).length,
+      qrHref: qr ? qr.closest('a').getAttribute('href') : '',
+      qrSize: qr ? Math.round(qr.getBoundingClientRect().width) : 0,
+      companion: !!companion && !companion.hidden && slide.contains(companion),
+    };
+  });
+  const expectedText = `${SIGNATURE.line} ${SIGNATURE.name} ${SIGNATURE.email} ${SIGNATURE.phone}`;
+  record(name, 'closing scene shows only the signature line, the QR code and the contact details',
+    close.line === SIGNATURE.line && close.text.replace(/ \./g, '.') === expectedText && close.images === 1 && !close.companion && JSON.stringify(close.links) === JSON.stringify([...SIGNATURE.links].sort()) && close.qrHref === PRODUCT,
+    `line "${close.line}"; text "${close.text}"; links ${close.links.join(', ')}; QR ${close.qrSize}px → ${close.qrHref}; companion ${close.companion}`);
+
+  // Links: same-origin links must open (the QR's product link too, when the deck is served from the product); nothing
+  // may point at a developer's machine.
   const links = await page.evaluate(() => [...document.querySelectorAll('a[href]')].map((a) => ({
-    text: a.textContent.replace(/\s+/g, ' ').trim(),
+    text: a.textContent.replace(/\s+/g, ' ').trim() || a.getAttribute('aria-label') || '',
     href: a.href,
     raw: a.getAttribute('href') || '',
-    visibleOnClosing: !!a.closest('.slide:not([hidden])'),
   })));
   const pageOrigin = new URL(page.url()).origin;
   const devMachine = links.filter((l) => /^https?:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)(:|\/|$)/.test(l.href) && new URL(l.href).origin !== pageOrigin);
@@ -276,24 +398,52 @@ async function checkBrowser(name, launchOptions) {
       body = String(e);
     }
     if (status === 0 || status >= 400) broken.push(`${l.text} → ${l.href} (${status || body})`);
-    else if (/open ori/i.test(l.text) && !/id="root"/.test(body)) broken.push(`${l.text} → ${l.href} is not the Ori product`);
+    else if (l.href === PRODUCT && !/id="root"/.test(body)) broken.push(`${l.text} → ${l.href} is not the Ori product`);
   }
-  record(name, 'same-origin links open ("Open Ori" reaches the product)', broken.length === 0, `${sameOrigin.length} checked${broken.length ? `; ${broken.join('; ')}` : ''}`);
-  const openOri = links.filter((l) => /open ori/i.test(l.text));
-  note(name, '"Open Ori" link', openOri.length ? openOri.map((l) => l.href).join(', ') : 'not shown (config appUrl is empty)');
-  const github = links.filter((l) => l.href.startsWith(GITHUB));
-  record(name, 'GitHub link present on the closing scene', github.some((l) => l.visibleOnClosing), `${github.length} GitHub link(s)`);
+  record(name, 'same-origin links open (the QR link reaches the product when served from it)', broken.length === 0, `${sameOrigin.length} checked${broken.length ? `; ${broken.join('; ')}` : ''}`);
+  if (new URL(PRODUCT).origin !== pageOrigin) note(name, 'QR link', `${PRODUCT} is another origin from this deck; not fetched here`);
 
-  // Layout at four sizes, with screenshots of selected scenes.
-  const shots = [1, 6, 7, 8, 11, 12, 13, 15].filter((n) => n <= total);
-  for (const [w, h] of [[1440, 900], [768, 1024], [390, 844], [320, 568]]) {
+  // Fit on desktop and presentation screens, with screenshots of selected scenes.
+  const shots = [1, 2, 3, 5, 6, 7, 9, 11, 14, 15].filter((n) => n <= total);
+  for (const [w, h] of [[1366, 768], [1600, 900], [1920, 1080]]) {
+    for (const mode of ['normal', 'presentation']) {
+      const p = await context.newPage();
+      watch(p);
+      await p.setViewportSize({ width: w, height: h });
+      await p.goto(BASE, { waitUntil: 'load' });
+      await p.waitForSelector('.slide:not([hidden])');
+      if (mode === 'presentation') {
+        await p.keyboard.press('f');
+        await p.waitForFunction(() => document.body.classList.contains('in-presentation'), null, { timeout: 5000 });
+        await sleep(300);
+      }
+      const problems = [];
+      for (let n = 1; n <= total; n++) {
+        await goScene(p, n);
+        const f = await fitReport(p);
+        if (!f.stageMode) problems.push(`scene ${n} not in stage mode`);
+        if (!f.stageInDeck) problems.push(`scene ${n} stage outside the screen`);
+        if (f.sceneScroll > 1) problems.push(`scene ${n} overflows by ${f.sceneScroll}px`);
+        if (f.outside.length) problems.push(`scene ${n} outside its stage: ${f.outside.slice(0, 3).join(', ')}`);
+        if (f.hScroll > 1) problems.push(`scene ${n} +${f.hScroll}px wide`);
+        if (mode === 'presentation' && f.bars.some((o) => o > 0)) problems.push(`scene ${n} bars visible (${f.bars.join(', ')})`);
+        if (name === 'chromium' && (w === 1600 || (w === 1920 && mode === 'presentation')) && shots.includes(n)) {
+          await p.screenshot({ path: join(OUT, `scene-${String(n).padStart(2, '0')}-${w}-${mode}.png`) });
+        }
+      }
+      record(name, `every scene fits at ${w}x${h} (${mode})`, problems.length === 0, problems.slice(0, 6).join('; '));
+      await p.close();
+    }
+  }
+  // Narrow screens scroll within a scene, but never sideways.
+  for (const [w, h] of [[768, 1024], [390, 844], [320, 568]]) {
     await page.setViewportSize({ width: w, height: h });
     const overflow = [];
     for (let n = 1; n <= total; n++) {
       await goScene(page, n);
       const extra = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       if (extra > 1) overflow.push(`scene ${n} +${extra}px`);
-      if (name === 'chromium' && (w === 1440 || w === 390) && shots.includes(n)) {
+      if (name === 'chromium' && w === 390 && shots.includes(n)) {
         await page.screenshot({ path: join(OUT, `scene-${String(n).padStart(2, '0')}-${w}.png`) });
       }
     }

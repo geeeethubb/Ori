@@ -1,33 +1,38 @@
 // The Ori pitch: one scene data source for the slides, overview, progress, labels, hashes, notes and timing.
-// Narrative authority, in order of precedence: docs/ori-pitch-kit/ORI_PITCH_COMMERCIAL_ADDENDUM.md (GTM, growth
-// roadmap, pricing, ask, the 15-scene timing table), ORI_PITCH_EXPRESSION_ADDENDUM.md (the four expressions, the
-// demo loop) and ORI_PITCH_STORYTELLING.md (everything else). 15 scenes, nine sections, 240 seconds.
+// Authority: docs/ori-pitch-kit/ORI_PITCH_REVISION_BRIEF.md (the 16-slide revision: order, copy, budgets), with
+// two founder decisions: the brief's slide 2 (research evidence) lives in the appendix, not in the talk, and
+// slide 8 runs 25 s for the founder's recording. 15 presented scenes (the brief's slide N is scene N - 1 from
+// its slide 3 on), 238 seconds (3:58) of presenting; Q&A (two minutes) is separate and happens on scene 15.
 //
 // Each scene:
-//   id         stable identifier (also the slide's element id: scene-<id>; #<id> opens it)
-//   section    { number, name }: the narrative section. Section numbers differ from scene numbers:
-//              Section 8 (How we used Velocity AI) is scene 14.
-//   headline   the audience-facing headline
-//   seconds    rehearsal budget; the main path totals 240
-//   companion  { expression, size }: one of the four expressions from the identity board
-//              (Listening, Thinking, Found something, Ready), drawn by assets/ori/companion-<art>.svg;
-//              size 'large' only at the opening and the spark reveal. Expressions tell the story; they
-//              never imply that Ori senses emotions.
-//   layout     which slide composition renders onScreen
-//   onScreen   the on-screen content (concise; expanded material lives in the appendix)
-//   footer     [left, right] labels at the bottom of the slide
+//   id         stable identifier: the slide's element id (scene-<id>) and a hash alias (#<id> opens it)
+//   aliases    older ids that still open the scene (links to the 15-scene deck keep working)
+//   label      a short name for the overview, the controls and the notes (not shown on the slide)
+//   headline   the slide's main line (also the overview title and the slide's accessible name)
+//   accent     optional: the part of the headline drawn in the accent colour (styling only)
+//   seconds    the rehearsal budget; the main path totals 238 (3:58)
+//   theme      'ink' for a dark scene (ink background, white type, lime emphasis); default is light
+//   companion  { expression, corner, size } or null for no companion. expression is one of the four
+//              expressions of the identity board (Listening, Thinking, Found something, Ready), drawn by
+//              assets/ori/companion-<art>.svg. corner: true shows the corner companion; false means the
+//              slide draws Ori inside its own composition (kit.ori). Expressions are story cues; they never
+//              imply that Ori senses emotions.
+//   layout     the renderer: window.ORI_SLIDES[layout] (slides/*.js) or pitch.js's built-in one
+//   group      the file that owns the layout (core = pitch.js; gN-name = slides/gN-name.js and .css)
+//   onScreen   the slide's copy and data (concise; qualifications live in the cue and the appendix)
 //   spoken     the spoken track (speaker notes). It must fit the budget at about 150 words a minute
 //              (2.5 words a second); pitch.js warns in the console when one does not.
-//   cue        the stage cue (speaker notes)
+//   cue        the stage cue (speaker notes): what to show, what to say carefully, what not to claim
 //   appendix   related appendix sections, linked from the notes
 window.ORI_SCENES = [
   {
     id: 'promise',
-    section: { number: 1, name: 'Promise' },
+    label: 'Promise',
     headline: 'Your phone, your story.',
-    seconds: 8,
-    companion: { expression: 'Ready', size: 'large' },
+    seconds: 7,
+    companion: { expression: 'Ready', corner: true, size: 'large' },
     layout: 'promise',
+    group: 'core',
     onScreen: {
       lead: 'An AI-native phone experience. Apps that grow with you.',
       support: 'Starting on the phone you already own.',
@@ -37,390 +42,413 @@ window.ORI_SCENES = [
         { app: 'people', name: 'People', note: 'people' }
       ],
       spark: 'one unfinished spark…',
-      caption: 'Your sparks, somewhere to grow'
+      chips: ['a new interest', 'a little more you'],
+      caption: 'Your sparks, somewhere to grow',
+      illustration: 'Illustration'
     },
-    footer: ['The vision', 'An illustration of where we are heading. Not a product screenshot.'],
-    spoken: 'We’re building Ori: an AI-native phone experience where little sparks become personal apps, on the phone you already own.',
-    cue: 'Answer first. Ori beside a personal collection: photography, music, people and one unfinished spark. “AI-native phone” is the vision for a software experience on the phone people already own, not a new handset or an operating-system replacement. Optional longer opening, outside the four minutes: “The smartphone put a world of software in our pockets. The next step is software that can take shape around our own lives.”',
+    spoken: 'Ori is an AI-native phone experience: apps that grow with you, on the phone you already own.',
+    cue: 'Answer first. Ori beside a personal collection: photography, music, people and one unfinished spark. The phone is an illustration of the vision, not a product screenshot. “AI-native phone” means a software experience on the phone people already own, not new hardware or an operating-system replacement.',
     appendix: ['companion']
   },
-  {
-    id: 'research',
-    section: { number: 2, name: 'Research and discovery' },
-    headline: 'Wanting is only the beginning.',
-    seconds: 10,
-    companion: { expression: 'Thinking', size: 'small' },
-    layout: 'research',
-    onScreen: {
-      cards: [
-        {
-          ref: 'R1',
-          tag: 'Physical activity',
-          figure: '47.6%',
-          text: 'Of people intending to be physically active, nearly half did not follow through.',
-          source: { label: 'Feil et al., 2023', href: 'https://pubmed.ncbi.nlm.nih.gov/37460164/' },
-          detail: 'Meta-analysis, 25 samples, 29,600 participants overall. Physical activity specifically.'
-        },
-        {
-          ref: 'R2',
-          tag: 'Intention and behavior',
-          figure: '47',
-          unit: 'experiments',
-          text: 'Strengthening intention produced a smaller change in behavior.',
-          source: { label: 'Webb & Sheeran, 2006', href: 'https://pubmed.ncbi.nlm.nih.gov/16536643/' },
-          detail: 'Effects on intention d = 0.66 and behavior d = 0.36. Effect sizes, not percentages.'
-        }
-      ]
-    },
-    footer: ['External research', 'Two separate findings, not a combined statistic.'],
-    spoken: 'Wanting is only the beginning. A meta-analysis of physical activity found nearly half of people who intended to act didn’t follow through.',
-    cue: 'Two separate cards, two separate findings. Keep “physical activity” audible beside 47.6%. The research shows follow-through is a serious, studied problem; it does not say how many people need Ori. d values are effect sizes, never percentages.',
-    appendix: ['sources']
-  },
+  // The brief's slide 2 (the research evidence, "Wanting is only the beginning.") is not presented: the founder
+  // moved it to the appendix ("Research behind this", #appendix-research, at the top of the sources section),
+  // linked from the discovery scene's notes. Its old hashes (#evidence, #research) open that panel.
   {
     id: 'discovery',
-    section: { number: 2, name: 'Research and discovery' },
-    headline: '21 of 26 students said yes.',
-    seconds: 21,
-    companion: { expression: 'Listening', size: 'small' },
+    label: 'Discovery and a friend’s insight',
+    headline: 'Do you struggle to turn your ideas into something consistent?',
+    seconds: 19,
+    companion: { expression: 'Listening', corner: true },
     layout: 'discovery',
+    group: 'g1-evidence',
     onScreen: {
-      question: '“Do you struggle to turn your ideas into something consistent?”',
+      question: 'Do you struggle to turn your ideas into something consistent?',
       yes: 21,
       total: 26,
-      footnote: 'Founder-reported, informal discovery with 26 UIUC students; a convenience sample. 21/26 = 80.8%. Early local signal, not a campus-wide estimate.',
-      turn: 'One conversation changed where we thought the problem began.',
-      insightLabel: 'A friend’s insight, paraphrased',
+      countLabel: 'students said yes.',
       insight: 'Sometimes the hard part is pinpointing what the idea even is.',
-      sparksLabel: 'Illustrative examples',
-      sparks: [
+      insightLabel: 'A friend’s insight · paraphrased',
+      examples: [
         { kind: 'reel', label: 'A saved reel' },
-        { kind: 'sentence', label: 'A sentence that stayed', text: 'Notice the light before it goes.' },
-        { kind: 'note', label: 'An unfinished note', text: 'Why do I never…' }
-      ]
+        { kind: 'note', text: 'Why do I never…' }
+      ],
+      footnote: 'Informal conversations with 26 UIUC students.'
     },
-    footer: ['Customer discovery', 'Founder-reported and informal. Not a survey transcript.'],
-    spoken: 'We asked twenty-six UIUC students whether they struggle to turn ideas into something consistent. Twenty-one said yes. But a friend explained she sometimes struggles to pinpoint the idea itself. Maybe you have a saved reel, a sentence that stayed with you, or a frustration you can’t explain yet.',
-    cue: 'Show the count first, then shift to the friend’s insight: paraphrased, not a transcript. The reel, the sentence and the note are illustrative. 21/26 = 80.8% from a founder-reported convenience sample: never “80.8% of college students”, and do not present this count again later as a second validation.',
-    appendix: ['discovery', 'sources']
+    spoken: 'We asked twenty-six UIUC students if they struggle to turn ideas into something consistent. Twenty-one said yes. Then a friend told us sometimes the hard part is pinpointing what the idea even is. A saved reel. A note that starts, “Why do I never…”',
+    cue: 'Straight from the promise to the question. The count first, then let the friend’s insight carry the moment. 21/26 is founder-reported, informal discovery with a convenience sample of UIUC students: not 21 users, paying customers or product-market fit, and never “80.8% of college students”. The friend’s words are paraphrased; no name, no testimonial. The reel and the note are illustrative. If asked for research: “Research behind this” in the appendix (47.6% of people who intended to exercise didn’t follow through; behavior changed about half as much as intention), physical activity only, and neither study measures Ori.',
+    appendix: ['research', 'discovery', 'sources']
   },
   {
-    id: 'stages',
-    section: { number: 3, name: 'Five stages' },
+    id: 'journey',
+    aliases: ['stages'],
+    label: 'Five stages, one Ori',
     headline: 'There is work between a spark and a habit.',
-    seconds: 18,
-    companion: { expression: 'Thinking', size: 'small' },
-    layout: 'stages',
+    accent: 'between a spark and a habit.',
+    seconds: 17,
+    companion: { expression: 'Ready', corner: false },
+    layout: 'journey',
+    group: 'g2-journey',
     onScreen: {
-      taskLabel: 'The human task',
-      roleLabel: 'Ori’s intended role',
       stages: [
-        { name: 'Feel it', task: 'Something interests or bothers you.', role: 'Capture the spark with the context you choose to share.' },
-        { name: 'Name it', task: 'Put that interest or need into words.', role: 'Ask a useful question; reflect possible meanings.' },
-        { name: 'Imagine it', task: 'Work out what an ideal outcome would feel like.', role: 'Explore several useful directions.' },
-        { name: 'Shape it', task: 'Turn the desired outcome into a concrete tool or workflow.', role: 'Propose a personal app or adapt an existing one.' },
-        { name: 'Build and iterate', task: 'Use it, learn, and change it.', role: 'Support useful actions and revisions while retaining progress.' }
+        { name: 'Feel it', fragment: 'A feeling', icon: 'heart' },
+        { name: 'Name it', fragment: 'A clearer need', icon: 'pen' },
+        { name: 'Imagine it', fragment: 'Possibilities', icon: 'lightbulb' },
+        { name: 'Shape it', fragment: 'Your tool', icon: 'brush' },
+        { name: 'Build and iterate', fragment: 'Use and evolve', icon: 'refresh' }
       ],
-      loop: 'Using something changes what you want.',
-      bottomLine: 'Start wherever you are. Keep growing from there.'
+      together: 'Ori helps you through all five.',
+      returnLine: 'And keeps growing with you.'
     },
-    footer: ['A product framework', 'Not a scientifically validated five-stage model.'],
-    spoken: 'We see five stages: feel a spark, name the need, imagine what would help, shape a solution, then build and iterate. You can stall between any two. Ori helps carry the middle, whether you arrive with a plan or just a feeling.',
-    cue: 'Arriving with Next reveals the stages one at a time: press Next (→ or Space) for each stage, or Show all five. Pause on the first transition when recalling the friend, then show gaps across the whole path and the return line from stage 5. Do not say most students stall between stages one and two, that Ori completes all five instantly, or that every spark needs an app.',
+    spoken: 'We see five stages between a spark and a habit: feel it, name it, imagine it, shape it, then build and iterate. You can stall at any of them. Ori helps you through all five, and keeps growing with you.',
+    cue: 'Arriving with Next (→ or Space) reveals the stages one at a time; each Next reveals the next stage, and the fifth draws one path through all five with Ori at its center, then the path returns from Build and iterate to Feel it (“And keeps growing with you.”). Any other arrival (a link, the overview, Previous) shows the complete slide. Pause on the first transition when recalling the friend. A product framework, not a validated behavioral model or a guarantee of habit formation; never say most students stall at one stage or that every spark needs an app. The human task and Ori’s role for each stage are in the appendix.',
     appendix: ['stages']
   },
   {
-    id: 'bring',
-    section: { number: 4, name: 'Solution and demo' },
-    headline: 'Bring the spark. We will shape what comes next.',
-    seconds: 10,
-    companion: { expression: 'Listening', size: 'large' },
-    layout: 'bring',
+    id: 'feeling',
+    aliases: ['bring'],
+    label: 'Feeling to app',
+    headline: 'A feeling can become an app.',
+    accent: 'become an app.',
+    seconds: 14,
+    companion: { expression: 'Listening', corner: false },
+    layout: 'feeling',
+    group: 'g2-journey',
     onScreen: {
-      intro: 'A reel. A sentence. A small frustration.',
-      scraps: [
-        { kind: 'reel', label: 'A reel' },
-        { kind: 'sentence', label: 'A sentence', text: 'Notice the light before it goes.' },
-        { kind: 'note', label: 'A small frustration', text: 'My walks all blur together.' }
+      structure: ['Feeling', 'Ori', 'Your app'],
+      inputs: [
+        { kind: 'thought', label: 'A thought', text: 'I keep stopping for long shadows.' },
+        { kind: 'photo', label: 'A photo', src: 'assets/g2-journey/shared-photo.webp', alt: 'A photo the person shares: low sun and long shadows on a brick street.' },
+        { kind: 'reel', label: 'Reel link', icon: 'link' },
+        { kind: 'summary', label: 'ChatGPT · Claude summary', icon: 'copy' }
       ],
-      clarify: { ask: 'Keep photos, or notice moments?', answer: 'Notice moments.' },
-      direction: { label: 'One direction', title: 'A photo-walk journal' },
-      lines: ['Keep the context.', 'Explore the possibility.', 'Shape the next step.'],
-      areas: ['Companion', 'Playground', 'Your apps'],
-      illustrative: 'Illustrative scenario'
+      exchange: { ask: 'What should it focus on?', answer: 'Shadows and reflections.' },
+      output: { app: 'light', name: 'Light', still: 'media/stills/light-open-shadows-reflections.webp', alt: 'Light, the app Ori made: its camera icon, “Notice the light.”, this week’s prompt “Focus on shadows and reflections” and the shared photo as the first entry.', stillLabel: 'Product screenshot · Sample mode' },
+      secondary: ['Companion', 'Playground', 'Apps']
     },
-    footer: ['Companion → Playground → Your apps', 'Sharing a link or screenshot does not give Ori account access.'],
-    spoken: 'Bring a reel, a sentence, or a frustration. Ori keeps the context, asks a useful question, and shapes a next step.',
-    cue: 'Give the mood board room to breathe. Three imperfect scraps become one coherent direction, not an instant polished app; one small clarification changes the proposal. Instagram or LinkedIn are places a person might share from; AI conversation context means user-selected, reviewed imports. Native share sheets and background automation are future capabilities.',
+    spoken: 'You don’t need a finished idea. Bring something that interests or bothers you: a summary from your AI, a reel, a photo, a thought. Ori helps you name it, then shapes your app.',
+    cue: 'You do not need a polished app specification. Everything on the left is something the person shares: a summary pasted from their own assistant, a reel link (saved as a link; Ori does not open or watch the reel), a photo they upload, a typed thought. ChatGPT and Claude are examples of where a summary comes from: Ori never reads anyone’s accounts, and nothing syncs. The exchange is the product’s own: the Make page asks “What should it focus on?”, and the words typed there became Light’s weekly prompt (“Focus on shadows and reflections”, Sample mode, the same words as the recordings on slides 5 and 6; the preview is the first frame of the slide-6 recording with its caption cropped); Ori asks at most one clarifying question, answered by typing. The thought is shortened from the real share in the stills; the photo is the CC0 demo photo. Companion → Playground → Apps is the product’s own structure.',
     appendix: ['demo']
   },
   {
     id: 'create',
-    section: { number: 4, name: 'Solution and demo' },
-    headline: 'A saved photo becomes somewhere to begin.',
-    seconds: 16,
-    companion: { expression: 'Found something', size: 'small' },
-    layout: 'demo',
+    label: 'Create Light',
+    headline: 'From a thought to Light.',
+    accent: 'Light.',
+    seconds: 26,
+    companion: { expression: 'Found something', corner: true },
+    layout: 'create',
+    group: 'g3-demos',
     onScreen: {
-      clip: 'create',
-      index: 'Light / 01',
-      image: 'assets/create.png',
-      alt: 'Concept reference: a generated target design of Ori making Light, with illustrative content. Not the product and not a recording.',
-      caption: 'A photo and a thought → one detail shaped → Light',
-      quote: '“I want to get better at noticing light on my walks.”',
-      lines: ['Meet Light: your own photo-walk journal.']
+      media: 'create',
+      mediaLabel: 'Recording · Sample mode',
+      steps: [
+        { title: 'Share the spark', detail: 'A photo, a thought', icon: 'image', still: 'media/stills/agent-share-composer-crop.webp', alt: 'Product screenshot: the composer with the person’s photo attached and the thought “I keep stopping for long shadows on brick walls in the late afternoon. I want to get better at noticing light on my walks.”' },
+        { title: 'Shape the idea', detail: 'Ori proposes Light', icon: 'sparkle', still: 'media/stills/agent-reply-light-card-crop.webp', alt: 'Product screenshot, Sample mode: Ori replies “Sample mode cannot read images, so I’m using your words. Want a place for the shots you notice?” above the Light card, “A photo journal shaped around you.”, with Preview Light and Keep inspiration.' },
+        { title: 'Open your app', detail: 'Your photo inside', app: 'light', still: 'media/stills/light-ready-card-crop.webp', alt: 'Product screenshot, Sample mode: Light’s card on its Ready screen, with its camera icon, “Notice the light.” and the person’s photo as its first entry.' }
+      ],
+      stillsLabel: 'Product screenshots · Sample mode'
     },
-    footer: ['Light / create', 'A real recording in Sample mode. Light is an illustrative scenario, not another interview.'],
-    spoken: 'Here’s a recording in Sample mode, with scripted responses. A photo and a thought become Light: Ori suggests a place for it, you shape one detail, and Light opens with your photo in it.',
-    cue: 'Press Space (or the play control) as you begin; the 12.8-second recording ends inside the 16 seconds. Say once that this is Sample mode with scripted responses, not live AI. The recording shows a photo and a thought, Ori’s suggestion, a preview with one detail shaped (“Focus on shadows and reflections”), Make mine, and Light opening with the photo. If the clip cannot load, the slot shows a concept reference image: say so and describe the intended experience. Light is an illustrative scenario, not another interview.',
+    spoken: 'Here’s the real product, recorded in Sample mode with scripted responses. I want to get better at noticing light on my walks. I share a photo and that thought. Ori suggests a place for it. I shape one detail: shadows and reflections. I tap Make mine, and Light opens, with my photo already in it.',
+    cue: 'Say the first two sentences over the poster, then press Space (or the play control) on “I share a photo”: the 12.8-second clip runs under the last four sentences (share 0–2 s, Ori’s suggestion 2–5 s, preview and focus 5–8 s, Make mine to Light 8–12.8 s) and holds Light’s last frame; Space or → then moves on. Say once that this is Sample mode with scripted responses, not live AI. The recording shows a photo and a thought, Ori’s suggestion, a preview with one detail shaped (“Focus on shadows and reflections”), Make mine, and Light opening with the photo. If the clip cannot load, the slot shows a product screenshot: say so. Light is an illustrative user scenario, not another interview. The three pictures beside it are crops of real Sample-mode screenshots of the same flow (a separate capture: its focus words read “golden-hour shadows”), so the steps stay readable while the clip is paused.',
     appendix: ['demo']
   },
   {
-    id: 'use-revise',
-    section: { number: 4, name: 'Solution and demo' },
-    headline: 'Make it useful. Make it yours.',
-    seconds: 16,
-    companion: { expression: 'Ready', size: 'small' },
-    layout: 'demo',
+    id: 'grow',
+    aliases: ['use-revise', 'reopen'],
+    label: 'Light grows with you',
+    headline: 'Your app grows with you.',
+    accent: 'grows with you.',
+    seconds: 26,
+    companion: { expression: 'Ready', corner: true },
+    layout: 'grow',
+    group: 'g3-demos',
     onScreen: {
-      clip: 'revise',
-      index: 'Light / 02',
-      image: 'assets/revise.png',
-      alt: 'Concept reference: a generated target design of revising Light, with illustrative content. Not the product and not a recording.',
-      caption: 'Ask → Review → Keep going',
-      lines: ['Save an observation.', 'Change what you need.', 'Keep what you have learned.']
+      media: 'grow',
+      mediaLabel: 'Recording · Sample mode',
+      // One recording on this slide: the return clip (03-reopen) plays in the appendix demo section for Q&A.
+      // The loop reads Use it → More context → Better fit → (use it) again: the arc back carries "again".
+      loop: ['Use it', 'More context', 'Better fit'],
+      loopReturn: 'again',
+      mechanism: ['Tell Ori', 'Review', 'Update'],
+      before: { label: 'Before', still: 'media/stills/light-entry-before.webp', alt: 'Product screenshot, Sample mode: a Light entry before the change: the photo, the observation “Low sun turns the brick wall gold”, and the fields Light, Where and Keeper.' },
+      after: { label: 'After', still: 'media/stills/light-entry-after.webp', alt: 'Product screenshot, Sample mode: the same Light entry after the change: the same photo and observation, with the new fields Camera (Fuji X100V), Shutter and Aperture above Light, Where and Keeper.' },
+      stillsLabel: 'Product screenshots · Sample mode',
+      takeaway: 'New context. Better fit. Still your app.'
     },
-    footer: ['Light / use and revise', 'The small loop inside stage 5: the same record before and after the change.'],
-    spoken: 'Now use it: save what you noticed. Then ask for a change, camera settings. Review it on your own photo, apply it, and keep going: the same entry, now with new fields.',
-    cue: 'Press Space to play (12.8 s). This is stage 5’s small loop, not a new framework: Ask (add camera settings) → Review (the change, shown on your own photo) → Keep going (the same photo and note, now with camera fields). The proof is the same record before and after the change; a new app with seeded data would not show it.',
+    spoken: 'Now I use it: I save an observation. I ask Ori for camera settings, review the change, and apply it. Same photo, same note, new fields. New context, better fit, still my app.',
+    cue: 'Press Space as you begin, with the first word (12.8 s): “review” lands on the review sheet, “apply it” on the Updated toast, “Same photo” as the entry opens. The clip holds its last frame, and Space or → then moves on. The change is user-led: tell Ori → review → update. Do not describe passive monitoring or automatic background redesign; the vision is apps that grow with you, and what ships today is a change you ask for, review and keep. The proof is the same photo and note before and after the change. The 5.2-second return clip (a fresh browser session opens Light by its own link) plays in the appendix (A → 4. The demo) for Q&A: a way back, not a home-screen launch and not a formed habit. Before and After are real Sample-mode screenshots of the same change, captured separately from the clip (the camera name was typed in by hand, as a person would).',
+    appendix: ['demo', 'foundation']
+  },
+  {
+    id: 'features',
+    label: 'Context and Playground',
+    headline: 'Bring your context. Explore what could be yours.',
+    accent: 'Explore what could be yours.',
+    seconds: 25,
+    companion: { expression: 'Found something', corner: false },
+    layout: 'features',
+    group: 'g3-demos',
+    onScreen: {
+      // One recording (the founder's, live AI) and three steps that follow its cue points in config.js.
+      media: 'context',
+      steps: [
+        { title: 'Bring your context', detail: 'Pasted from ChatGPT or Claude', icon: 'copy' },
+        { title: 'Ori connects the dots', detail: 'You review what it keeps', ori: true },
+        { title: 'Explore what fits you', icon: 'playground' }
+      ]
+    },
+    spoken: 'One more way in. I copy Ori’s prompt into my own AI, paste back what it wrote about me, and review it. Ori connects the dots: it reads the whole profile and organizes what it learned into my interests. Then my Playground suggests what could fit me next, shaped around what I shared.',
+    cue: 'Press Space (or the play control) as you begin: the founder’s 23.65-second recording on the live site (the UI shows Live AI) fills the 25 seconds. Start each sentence as its step lights up: Bring your context (0 s) → Ori connects the dots (9 s; results from about 12.6 s) → Explore what fits you (15.9 s); never run ahead of the clip. The clip ends on its last frame with the suggestions on screen. Never claim real-time speed: waiting may have been trimmed. Bring context from your AI: Ori gives you a prompt to copy; you paste it into ChatGPT, Claude, Gemini or any assistant you use, and paste or upload the answer back; you review what Ori keeps and can remove anything. Provider names are examples of where context comes from, never automatic account access. The Playground’s suggestions are based on what you shared; choosing one is the next step toward an app.',
     appendix: ['demo']
   },
   {
-    id: 'reopen',
-    section: { number: 4, name: 'Solution and demo' },
-    headline: 'Tomorrow, your progress is still here.',
-    seconds: 10,
-    companion: { expression: 'Ready', size: 'small' },
-    layout: 'demo',
-    onScreen: {
-      clip: 'reopen',
-      index: 'Light / 03',
-      image: 'assets/home.png',
-      alt: 'Concept reference: a generated target design of app icons on a phone, with illustrative content. Not the product, not a recording and not verified device behavior.',
-      caption: 'A fresh session opens Light’s own link → the same entry',
-      lines: ['Return directly to your app.', 'The same workspace. The same saved progress.']
-    },
-    footer: ['Light / return', 'A fresh browser session opens Light’s own link. Saved progress and a way back, not a formed habit.'],
-    spoken: 'Later, open Light directly by its own link: the same photo, note and settings. A spark you return to.',
-    cue: 'Press Space to play (5.2 s). A fresh browser session opens Light by its own link and finds the same photo, note and camera setting. Say “return directly to your app”. There is no home-screen claim: no phone recording shows a home-screen launch. This shows persistence and a way back, not that anyone formed a habit.',
-    appendix: ['demo']
-  },
-  {
-    id: 'why',
-    section: { number: 5, name: 'Why Ori' },
-    headline: 'An app store built around you.',
+    id: 'zones',
+    aliases: ['why', 'foundation'],
+    label: 'Interests and workflows',
+    headline: 'What you love. What you need to get done.',
+    accent: 'What you need to get done.',
     seconds: 13,
-    companion: { expression: 'Found something', size: 'small' },
-    layout: 'why',
+    companion: { expression: 'Found something', corner: false },
+    layout: 'zones',
+    group: 'g4-position',
     onScreen: {
-      flow: ['Your context', 'your workspace', 'your next step'],
-      benefits: [
-        { title: 'Begin before the brief.', text: 'A vague interest is enough to start exploring.' },
-        { title: 'Get an interface that fits.', text: 'A photo gallery, a practice session, a follow-up queue.' },
-        { title: 'Keep a growing collection.', text: 'Return to useful tools and adapt them with your progress intact.' }
+      // Real app screens from one Sample-mode account (media/stills/stills.json), cropped in CSS to the top of
+      // each screen. Course Assignments is a Sample-catalog app the product made (Playground → Make mine);
+      // its due-soon highlight is a date rule when the app opens. Nothing here sends, syncs or automates.
+      zones: [
+        {
+          title: 'Personal interests',
+          icon: 'app:heart',
+          apps: [
+            { app: 'light', name: 'Light', what: 'Photography', still: 'light-gallery-observation.webp', alt: 'Light: a photo with the saved note “Low sun turns the brick wall gold”' },
+            { app: 'riff', name: 'Riff', what: 'Music practice', still: 'riff-timer.webp', alt: 'Riff: a 15-minute practice timer' }
+          ]
+        },
+        {
+          title: 'Everyday workflows',
+          icon: 'app:checks',
+          apps: [
+            { app: 'people', name: 'People', what: 'Follow-ups', still: 'people-today.webp', alt: 'People: today’s follow-ups, Priya “Send the deck” and Lena' },
+            { app: 'assignments', icon: 'app:checklist', name: 'Assignments', what: 'Deadlines', still: 'assignments-card-crop.webp', alt: 'Course Assignments: Problem set 4 (Databases), in progress, highlighted as due in 2 days' }
+          ]
+        }
+      ],
+      mediaLabel: 'Product screenshots · Sample mode',
+      bottomLine: 'One companion. Personal apps. Both grow with you.'
+    },
+    spoken: 'Ori works for what you love, photography in Light, practice in Riff, and for what you need to get done, follow-ups in People. One companion. Personal apps. Both grow with you.',
+    cue: 'Interests and productivity in one platform, around one companion. People organizes and guides follow-ups; it does not send email, read a calendar or automate anything outside Ori, so never say “automate” here. The second workflow, Assignments, is the Sample catalog’s Course Assignments app, made in the product (Playground, then Make mine): when it opens it highlights anything due within three days. Live AI designs its own apps, so names vary. The four screens are real Sample-mode captures from one account; the follow-ups and assignments in them were typed by hand. The ring is one companion that knows which apps you have (not their entries); both kinds of app change only when you ask Ori and review. The old architecture slide (useful actions, durable records, careful revisions) is in the appendix.',
+    appendix: ['foundation', 'positioning']
+  },
+  {
+    id: 'position',
+    label: 'Competitor map',
+    headline: 'Personal context, turned into everyday apps.',
+    accent: 'turned into everyday apps.',
+    seconds: 16,
+    companion: { expression: 'Found something', corner: false },
+    layout: 'position',
+    group: 'g4-position',
+    onScreen: {
+      label: 'Product positioning',
+      axes: {
+        x: { title: 'Starting point', low: 'An app you already know you need', high: 'Your context, interests, and unclear ideas' },
+        y: { title: 'Everyday experience', low: 'A general workspace', high: 'Distinct personal apps you return to' }
+      },
+      // Qualitative regions on a 0–1 plot (x to the right, y upwards): editorial judgments about product
+      // focus, never scores. Competitors may overlap Ori's area.
+      // at: where the region's text label sits (tl top-left, bl bottom-left, mr middle-right); tone: its tint.
+      regions: [
+        { name: 'App stores & specialist apps', note: 'Choose a ready-made app', x: [0.03, 0.4], y: [0.56, 0.95], at: 'tl', tone: 'store' },
+        { name: 'AI app builders', example: 'Lovable', note: 'Create and revise software', x: [0.17, 0.56], y: [0.3, 0.66], at: 'bl', tone: 'builder' },
+        { name: 'General AI assistants & artifacts', example: 'Claude', note: 'Conversation, context, interactive apps and storage; overlaps Ori', x: [0.47, 0.93], y: [0.15, 0.7], at: 'mr', tone: 'assistant' },
+        { name: 'General workspaces', example: 'Notion', note: 'Organize work and context', x: [0.25, 0.75], y: [0.03, 0.27], at: 'bl', tone: 'workspace' }
+      ],
+      // Ori today: what the repository ships (shared notes, photos, links and pasted summaries → distinct apps
+      // with their own link and icon, changed only by the person). Ori vision: not shipped (verified phone
+      // home screens, share-menu capture, background adaptation), drawn outlined and joined by a dashed line.
+      ori: { name: 'Ori', note: 'Explore an unclear need, keep distinct daily apps', x: 0.74, y: 0.73 },
+      vision: { name: 'Ori vision', note: 'apps on your phone that keep growing with you', x: 0.93, y: 0.91 },
+      supporting: 'From an unclear spark to an app that keeps growing.'
+    },
+    spoken: 'App stores start from an app you already know you need. Builders are powerful. Assistants like Claude overlap with us. Ori starts earlier, from your context and unclear ideas, and ends in personal apps you return to.',
+    cue: 'A positioning map, not a benchmark: placements are qualitative judgments about product focus. Claude documents interactive apps, persistent storage and connected tools; Lovable builds, iterates and deploys apps with backends; Notion offers AI connectors and agent memories. Never say competitors only chat, forget everything, cannot store data or cannot build apps. Ori’s proposed advantage is the integrated, phone-first personal journey and lower friction for this user, not exclusive ownership of those capabilities. The solid Ori marks what ships today: shared notes, photos, links and pasted summaries become distinct apps with their own link and icon, changed only when the person asks Ori and reviews. The outlined “Ori vision” is not shipped: apps verified on phone home screens, sharing from other apps, apps that adapt in the background. Sources in the appendix.',
+    appendix: ['positioning', 'sources']
+  },
+  {
+    id: 'founder',
+    aliases: ['gtm'],
+    label: 'Founder and pilot',
+    headline: 'I’m building with the community I already know.',
+    accent: 'the community I already know.',
+    seconds: 19,
+    companion: { expression: 'Listening', corner: true },
+    layout: 'founder',
+    group: 'g5-growth',
+    onScreen: {
+      founder: { name: 'Zuyu Liu', line: 'UIUC · Engineering × business', initials: 'ZL' },
+      groups: [
+        { name: 'Founders — Illinois Entrepreneurs', role: 'President', kind: 'lead' },
+        { name: 'IBC', role: 'Project Manager', kind: 'member' },
+        { name: 'Hoeft T&M', role: 'Student', kind: 'member' },
+        { name: 'Friends in OTCR, CUBE, VCA, and business fraternities', kind: 'friends' }
+      ],
+      evidence: { yes: 21, total: 26, label: 'students I spoke with share this problem.' },
+      pipeline: ['Relationships', 'Personal onboarding', 'Observe', 'Product iteration', 'Referrals'],
+      goalsLabel: 'Pilot goals',
+      goals: [
+        { figure: '150', label: 'invitations', date: 'by Dec 1, 2026' },
+        { figure: '50', label: 'enrolled', date: 'by Dec 15, 2026' }
       ]
     },
-    footer: ['Positioning', 'Positioning, not a feature-by-feature comparison.'],
-    spoken: 'Our ambition is a personal app store built around you: begin before you have a brief, get an interface that fits, and keep a collection that grows with you.',
-    cue: 'Make “AI-native” concrete: less setup, help clarifying a need, a useful interface, retained progress, an easier return. App generation alone is common; our proposed advantage is continuity across the whole journey. Competitors can already build apps and may store data. If asked about a moat: we do not have a proven one (answer in the appendix).',
-    appendix: ['positioning']
+    spoken: 'I’m Zuyu. I lead Founders at UIUC and manage projects at IBC. Twenty-one of twenty-six students I spoke with share this problem. I’ll onboard, observe, iterate, and ask for referrals. Goals: 150 invitations by December 1st, 50 enrolled by the 15th.',
+    cue: 'Who I am, why I can reach these people, what I do next. Personal access, not partnerships: Founders, IBC and T&M are direct roles; OTCR, CUBE, VCA and business fraternities are friends to ask for introductions. No logos, member counts, endorsements or agreements. 21/26 links back to the discovery question, not product adoption. The pipeline is a proposed recruiting and feedback mechanism, not a measured funnel. Only the two dated goals are on the slide; the invitation allocation and the activation and week-four definitions are in the appendix for Q&A.',
+    appendix: ['gtm', 'discovery']
   },
   {
-    id: 'foundation',
-    section: { number: 5, name: 'Why Ori' },
-    headline: 'Personal experiences. A shared foundation.',
-    seconds: 9,
-    companion: { expression: 'Thinking', size: 'small' },
-    layout: 'foundation',
+    id: 'growth',
+    aliases: ['roadmap'],
+    label: 'Growth goal',
+    headline: 'Start at UIUC. Grow from there.',
+    accent: 'Grow from there.',
+    seconds: 12,
+    companion: { expression: 'Found something', corner: true },
+    layout: 'growth',
+    group: 'g5-growth',
     onScreen: {
-      line: 'Shared capabilities. Distinct personal apps.',
-      apps: [
-        { app: 'light', name: 'Light', interaction: 'A gallery of observations' },
-        { app: 'riff', name: 'Riff', interaction: 'A practice session' },
-        { app: 'people', name: 'People', interaction: 'A follow-up queue' }
-      ],
-      foundationLabel: 'One shared foundation',
-      capabilities: ['Useful actions', 'durable records', 'careful revisions']
-    },
-    footer: ['Architecture approach', 'What counts as implemented rests on current code and a working recording.'],
-    spoken: 'Light, Riff and People share one foundation of supported capabilities. The hard rule: a design change must keep your records.',
-    cue: 'Light, Riff and People have visibly different central interactions over one shared foundation. Explain feasibility at the level a judge needs; this slide describes the approach, not an audit of the build.',
-    appendix: ['demo']
-  },
-  {
-    id: 'gtm',
-    section: { number: 6, name: 'Go-to-market' },
-    headline: 'Our first distribution channel is a community I already help lead.',
-    seconds: 24,
-    companion: { expression: 'Listening', size: 'small' },
-    layout: 'gtm',
-    onScreen: {
-      founder: { name: 'Zuyu', role: 'Founder' },
-      relationsLabel: 'Founder relationships · proposed invitations',
-      relations: [
-        { role: 'President, Founders – Illinois Entrepreneurs', enables: 'Direct conversations with student founders and builders; invitations to try Ori in a real workflow.', invitations: 50 },
-        { role: 'Project Manager, IBC', enables: 'Access to peers managing projects, relationships and follow-ups.', invitations: 25 },
-        { role: 'Hoeft T&M student, bridging Grainger and Gies', enables: 'Relationships across engineering and business; a test of whether Ori works across technical backgrounds.', invitations: 25 },
-        { role: 'Friends in OTCR, CUBE, VCA and business fraternities', enables: 'Warm introductions beyond my immediate circles.', invitations: 50 }
-      ],
-      total: { invitations: 150, label: 'distinct people, deduplicated across organizations' },
-      chainLabel: 'How access becomes learning',
-      chain: [
-        { step: 'Relationships', note: 'make personal onboarding possible' },
-        { step: 'Personal onboarding', note: 'we sit beside the first ten sessions' },
-        { step: 'Observation', note: 'shows where people stall' },
-        { step: 'Product learning', note: 'improves what they use' },
-        { step: 'Referrals', note: 'may follow a useful experience' }
-      ],
-      pilotLabel: 'Proposed pilot targets',
-      pilot: [
-        { n: 150, label: 'invitations' },
-        { n: 50, label: 'enrolled' },
-        { n: 30, label: 'later-day useful actions' },
-        { n: 15, label: 'week-four active users' }
-      ]
-    },
-    footer: ['Founder-led UIUC pilot', 'Personal access and introductions. No partnerships, member counts or endorsements claimed.'],
-    spoken: 'I run Founders at UIUC, am a PM at IBC, and connect engineering and business through T&M. That gives us direct access to our first users. We’ll invite 150 students, onboard 50, and observe the first ten. Before expanding, we’re targeting 30 later-day actions and 15 active users in week four.',
-    cue: 'Founder at the centre of real relationships, then the chain: relationships allow personal onboarding; observing the first ten sessions shows where people stall; that learning improves the product; useful experiences may bring referrals. The allocations total 150 distinct people, deduplicated. No logos, member counts, mailing lists, ambassadors, endorsements or agreements. Count meaningful actions (editing or completing a real entry), never app generation or passive opening; all 50 enrolled stay the denominator for activation and week-four use; report trial expiry, paid access and prompted versus unprompted returns alongside week-four use. The first recurring use case is narrow on purpose (students with real follow-ups); discovery did not prove demand for it, and this pilot tests it. Optional context: Pew (2026) found 61% of U.S. adults ages 18–29 have ever used ChatGPT [R3], familiarity with conversational AI, not demand for Ori.',
-    appendix: ['gtm', 'sources']
-  },
-  {
-    id: 'roadmap',
-    section: { number: 6, name: 'Go-to-market' },
-    headline: 'Start at UIUC. Earn the right to expand.',
-    seconds: 23,
-    companion: { expression: 'Found something', size: 'small' },
-    layout: 'roadmap',
-    onScreen: {
-      sub: 'September 2027 stretch ambition: reach 100,000 people.',
       chart: {
-        title: 'Cumulative distinct registered users, month-end',
-        flag: 'Stretch targets — not traction',
+        title: 'Registered-user goal',
+        flag: 'Goal',
         max: 100000,
         ticks: [0, 25000, 50000, 75000, 100000],
         points: [
-          { month: 'January 2027', short: 'Jan 2027', value: 50, gate: 'Founder-led pilot complete; actual use observed' },
-          { month: 'March 2027', short: 'Mar 2027', value: 500, gate: 'Repeatable recruitment within UIUC' },
-          { month: 'May 2027', short: 'May 2027', value: 5000, gate: 'The playbook, via student leaders at more campuses' },
-          { month: 'July 2027', short: 'Jul 2027', value: 25000, gate: 'Wider campus reach; an early-career channel tested' },
-          { month: 'September 2027', short: 'Sep 2027', value: 100000, gate: 'Scale backed by retention, serving capacity and resources' }
-        ],
-        labelled: [3, 4]
+          { month: 'January 2027', short: 'Jan 2027', value: 50, caption: 'Pilot checkpoint' },
+          { month: 'March 2027', short: 'Mar 2027', value: 500 },
+          { month: 'May 2027', short: 'May 2027', value: 5000 },
+          { month: 'July 2027', short: 'Jul 2027', value: 25000 },
+          { month: 'September 2027', short: 'Sep 2027', value: 100000 }
+        ]
       },
-      channelsLabel: 'How the channels branch',
-      root: { title: 'UIUC', text: 'Founder-led onboarding' },
-      gate: 'Expand only after retention is shown',
-      branches: [
-        { title: 'Other colleges', text: 'Student hosts run a small trial cohort' },
-        { title: 'Young urban professionals', text: 'Starting with UIUC alumni in Chicago' }
-      ],
-      channelsNote: 'Proposed channels, not partnerships. Gates matter more than geography.',
-      yc: { logo: 'assets/yc-logo.png', text: 'Application ambition: YC Summer 2027.', note: 'An ambition only. No acceptance, backing or endorsement implied.' }
+      channels: ['UIUC', 'Other campuses', 'Young professionals'],
+      yc: { logo: 'assets/yc-logo.png', title: 'YC Summer 2027', label: 'Application goal' }
     },
-    footer: ['Growth roadmap', 'Proposed stretch milestones: not achieved users, a forecast or an approved budget.'],
-    spoken: 'After UIUC, we’ll test the playbook through student leaders at other colleges and alumni communities in Chicago. Our stretch ambition is to reach 100,000 people by September 2027, with a Summer YC application along the way. Expansion depends on useful returns, paid conversion, and channels that work beyond my personal network.',
-    cue: 'Stretch targets, not traction, a forecast or a budget. The measure is cumulative distinct registered users, not downloads: Ori is web-first, a registration is not a download, and page views, generated apps or extra devices are not people. Burden of proof: 50 in January to 100,000 in September is a 2,000-fold increase in eight months, about 159% compounded monthly growth; the last two months need 75,000 more registrations, about 1,230 a day. My current network cannot deliver that alone: expansion needs channels and resources beyond 150 warm invitations, gated on useful returns, paid conversion, acquisition effort and support cost. Start small at a second campus or alumni group; if behavior weakens outside my network, improve the offer first. YC is an application ambition, not acceptance, backing or endorsement. Summer 2027 is the proposed milestone because it gives time to produce meaningful operating evidence. Winter 2027 is January–March 2027; its regular deadline was November 2, 2026, although late applications were still accepted when checked on November 15, 2026. Winter 2027 does not follow Summer 2027, and no Summer 2027 deadline is stated.',
+    spoken: 'We start at UIUC, then other campuses and young professionals. Our 2027 goals: 100,000 registered users by September, and a YC application for Summer.',
+    cue: 'Goals, not traction, a forecast or a budget: cumulative distinct registered users, month-end, on an honest linear scale. The 50 people targeted for enrollment by December 15 are the initial cohort; January is the pilot and observation checkpoint, not a new start. Burden of proof if asked: 50 in January to 100,000 in September is a 2,000-fold increase in eight months, about 159% compounded monthly growth; the last two months need 75,000 more registrations, about 1,230 a day. YC Summer 2027 is an application goal: no acceptance, backing or endorsement, and no deadline is stated.',
     appendix: ['roadmap', 'sources']
   },
   {
-    id: 'business',
-    section: { number: 7, name: 'Business model' },
-    headline: 'Experience the value. Return to it. Choose to keep it.',
-    seconds: 22,
-    companion: { expression: 'Thinking', size: 'small' },
-    layout: 'business',
+    id: 'pricing',
+    aliases: ['business'],
+    label: 'Pricing',
+    headline: 'Try it. Make it yours. Keep it.',
+    accent: 'Keep it.',
+    seconds: 10,
+    companion: { expression: 'Thinking', corner: true },
+    layout: 'pricing',
+    group: 'g5-growth',
     onScreen: {
-      offerLabel: 'Proposed pricing experiment',
+      label: 'Proposed pricing',
       ladder: [
-        { label: 'Trial', figure: '14 days', rest: 'free' },
-        { label: 'Introductory', figure: '$7.50', unit: '/month', rest: 'for two months' },
-        { label: 'Then', figure: '$15', unit: '/month', rest: 'thereafter' }
+        { figure: '14 days', rest: 'free' },
+        { figure: '$7.50', unit: '/month', rest: 'for 2 months' },
+        { figure: '$15', unit: '/month', rest: 'thereafter' }
       ],
-      offerNote: 'A free trial, not a free tier.',
-      reasonsLabel: 'Why someone would return, and choose to keep it',
-      reasons: [
-        'A useful app already fits an interest or recurring task.',
-        'Personal records make the next visit more valuable.',
-        'The workspace can adapt when your needs change.'
-      ],
-      measureLabel: 'We measure',
-      measure: ['Useful return', 'actual paid conversion', 'renewal', 'cost to serve']
+      values: [
+        { label: 'Personal fit', icon: 'target' },
+        { label: 'Your progress', icon: 'bookmark' },
+        { label: 'Room to grow', icon: 'plant' }
+      ]
     },
-    footer: ['Pricing experiment', 'Proposed terms. Billing, conversion, renewal and margins are not yet established.'],
-    spoken: 'Every new user gets 14 days to make something useful and come back to it. Then we test seven-fifty a month for two months, followed by fifteen. The reason to pay is a collection that keeps fitting your life. We’ll measure actual conversion, renewal, and the cost of serving both free-trial and paying users.',
-    cue: 'The exact ladder: 14 days free, $7.50 a month for two months, then $15 a month. A free trial, not a free tier; proposed terms, not validated willingness to pay; no billing is implemented. The trial aims for one useful app, a real action and a later-day return; upgrading means choosing continued usefulness (“become part of their routine”, never “get users hooked”). No manipulative reminders, hidden charges or locking records to force payment. The measurement strip is a business funnel, not a sixth stage. The claim is “we have designed a measurable business experiment”, not “we already know people will pay”. Economics questions are in the appendix.',
+    spoken: 'Our proposed pricing: fourteen days free, then seven-fifty a month for two months, then fifteen. For personal fit, your progress, and room to grow.',
+    cue: 'Proposed terms: a free trial, not a free tier; no billing is implemented, and conversion, renewal and margins are not proven. If asked how we measure it: useful return → actual paid conversion → renewal → cost to serve, defined in the appendix. The eight-week pilot can test engagement and introductory payment; the two-month introductory price means it cannot by itself show a full-price renewal.',
     appendix: ['business']
   },
   {
     id: 'velocity',
-    section: { number: 8, name: 'How we used Velocity AI' },
-    headline: 'Better assumptions. Sharper behavioral tests.',
-    seconds: 30,
-    companion: { expression: 'Thinking', size: 'small' },
+    label: 'Velocity AI',
+    headline: 'Velocity helped us ask better questions.',
+    accent: 'ask better questions.',
+    seconds: 15,
+    companion: { expression: 'Thinking', corner: true },
     layout: 'velocity',
+    group: 'g6-close',
     onScreen: {
-      title: 'How we used Velocity AI',
-      inputs: 'Four research rounds + a revised hackathon canvas + a final commercial review.',
-      headers: ['Assumption we challenged', 'Decision the research shaped'],
-      rows: [
-        ['Every spark needs a new app.', 'Save, explore, reuse, revise, or create.'],
-        ['Generating a screen makes an app useful.', 'Give each activity a real action; distinguish targets from recorded behavior.'],
-        ['Changing an app is just changing its appearance.', 'Preserve records and field meaning through revisions and undo.'],
-        ['App creation proves demand.', 'Test meaningful return use, payment, and serving costs.']
+      cards: [
+        { concept: 'A branching path', question: 'Build something new?', decision: 'Save, reuse, revise, or create.' },
+        { concept: 'A cursor completing an action', question: 'What makes it useful?', decision: 'Real actions, not just screens.' },
+        { concept: 'A record carried between two app views', question: 'Can it change safely?', decision: 'Keep progress through revisions.' },
+        { concept: 'A return arrow and a payment symbol', question: 'Will people keep it?', decision: 'Test return use and payment.' }
       ],
-      closing: 'From an assumption to a test we can put in front of a person.'
+      supporting: ['Research', 'product decisions', 'pilot tests'],
+      chain: [
+        { step: 'Research', note: 'Velocity AI' },
+        { step: 'Product decisions', note: 'shipped' },
+        { step: 'Pilot tests', note: 'planned' }
+      ]
     },
-    footer: ['Documented research → product decisions', 'Velocity shaped decisions and tests. People and real use validate behavior.'],
-    spoken: 'We used Velocity across four research rounds and a revised hackathon canvas. It helped us choose when to save, reuse, or build; distinguish planned practice from actual practice; and specify revisions that preserve records. Our commercial review sharpened the return-use and payment tests. Velocity helps us get from an assumption to a concrete test, then do what doesn’t scale: sit beside students and observe real behavior.',
-    cue: 'Required main-pitch section: keep it on screen and spoken for its full 30 seconds. Say “shaped”, “specified”, “helped us test”; never “Velocity built and validated Ori”. The 12 adversarial cases were proposed, not 12 passed tests. No measured time savings. A next run (Prompt C) is pending and not counted.',
+    spoken: 'Velocity helped us ask better questions. Build something new? What makes it useful? Can it change safely? Will people keep it? Each answer became a product decision or a test for our pilot.',
+    cue: 'The hackathon’s Velocity AI section: keep it on screen for its full 15 seconds. Velocity shaped, specified and helped us test assumptions across four research rounds, a revised hackathon canvas and a commercial review. It did not build or validate Ori, establish demand or prove willingness to pay; its 12 adversarial cases are proposed acceptance cases, not passed tests; no time saving is measured. On the slide, “shipped” marks the three product decisions now in Ori (save, reuse, revise or create; real actions; records kept through revisions) and “planned” marks the pilot’s return-use and payment test. Rounds, canvas revisions and artifacts are in the appendix.',
     appendix: ['velocity']
   },
   {
     id: 'ask',
-    section: { number: 9, name: 'Ask and close' },
-    headline: 'Give the next spark somewhere to grow.',
-    seconds: 10,
-    companion: { expression: 'Ready', size: 'small' },
+    label: 'The ask',
+    headline: '$10,000. 0% equity.',
+    seconds: 12,
+    theme: 'ink',
+    companion: { expression: 'Ready', corner: false },
     layout: 'ask',
+    group: 'g6-close',
     onScreen: {
-      askLabel: 'Our ask · a proposal',
-      ask: '$10,000. An eight-week pilot. A reason to return.',
-      fundsLabel: 'It funds',
-      funds: ['A reliable first-user experience', 'Observed use', 'Introductory payment tests', 'Cost measurement'],
-      evidenceLabel: 'The next evidence',
-      evidence: ['50 enrolled students', 'Measured activation and week-four use', 'Observed introductory conversion', 'Known costs', 'A small test beyond my closest contacts'],
-      notFunded: 'It does not fund or guarantee the 100,000-person ambition.',
-      signature: 'Ori. Your phone, your story.'
+      hero: '$10,000. 0% equity.',
+      punchline: 'The perks of a hackathon.',
+      uses: [
+        { label: 'A reliable product', icon: 'check' },
+        { label: 'A 50-person pilot', icon: 'people' },
+        { label: 'Evidence to grow', icon: 'chart' }
+      ],
+      timeline: '8 weeks',
+      bottomLine: 'Help us build a phone that grows with you.',
+      bottomAccent: 'grows with you.'
     },
-    footer: ['A planning proposal', 'No investment terms or committed funding implied.'],
-    spoken: 'We’re asking for ten thousand dollars: an eight-week pilot with fifty students, observed use, payment tests, real costs. Ori: your phone, your story.',
-    cue: 'The $10,000 funds a reliable first-user experience, observed use, introductory payment tests and cost measurement; it does not fund or guarantee the 100,000 ambition. Next evidence: 50 enrolled students; measured activation and week-four use; observed introductory conversion; known costs; a small attempt to recruit beyond my closest contacts. The experiment decides what to improve or stop as well as what to expand. Planning allocation: $4,000 product reliability and device testing, $2,000 AI usage and hosting, $2,000 recruiting and research logistics, $2,000 contingency. For a prize, say “Ten thousand dollars would fund…”. Q&A, answered honestly with nothing invented: who maintains the product, who owns recruitment, what weekly capacity is available, and which commitments would change if YC admission or full-time company work becomes real. Leave this scene up for questions.',
+    spoken: 'Ten thousand dollars, zero percent equity: the perks of a hackathon. It funds a reliable product and a fifty-person pilot. Help us build a phone that grows with you.',
+    cue: 'A playful prize ask, not an investment round or an agreed award. The suggested allocation ($4,000 product reliability and device testing, $2,000 AI usage and hosting, $2,000 recruiting and research logistics, $2,000 contingency) and what the money does not fund are in the appendix. Then Next to the closing slide.',
     appendix: ['ask']
+  },
+  {
+    id: 'signature',
+    aliases: ['close', 'contact'],
+    label: 'Signature and Q&A',
+    headline: 'Ori. Your phone, your story.',
+    seconds: 7,
+    theme: 'ink',
+    companion: null,
+    layout: 'signature',
+    group: 'core',
+    onScreen: {
+      line: 'Ori. Your phone, your story.',
+      qr: { src: 'assets/qr-ori.png', href: 'https://ori-fjrx.onrender.com/', alt: 'QR code that opens Ori' },
+      contact: { name: 'Zuyu Liu', email: 'zliu2017@illinois.edu', phone: '847-962-2868', tel: '+18479622868' }
+    },
+    spoken: 'Ori. Your phone, your story. Scan the code, create your own account, and try Ori. Thank you.',
+    cue: 'Scan the code, create your own account, and try Ori. Say the invitation; it is not on the slide. Leave this slide up for the two minutes of Q&A: the code opens https://ori-fjrx.onrender.com/, where people sign up for their own account. Never show shared demo credentials. The appendix (A) holds sources and definitions for questions.',
+    appendix: ['ask', 'sources']
   }
 ];
 
 // Appendix sections the notes can link to (ids match the appendix in index.html).
 window.ORI_APPENDIX_SECTIONS = {
+  research: 'Research behind this',
   sources: 'Sources and evidence limits',
   discovery: 'Customer discovery, the longer story',
   stages: 'The five stages, complete',
-  demo: 'The demo: what the recordings show',
-  positioning: 'Positioning and defensibility',
+  demo: 'The demo: recordings, screenshots and media slots',
+  foundation: 'How a personal app keeps your progress',
+  positioning: 'Positioning: the map and its sources',
   gtm: 'Founder-led pilot: plan and definitions',
-  roadmap: 'Growth roadmap and YC ambition',
-  business: 'Business model and economics questions',
+  roadmap: 'Growth goal and the YC application goal',
+  business: 'Pricing and economics questions',
   velocity: 'How we used Velocity AI, expanded',
-  ask: 'The ask, next evidence and Q&A',
+  ask: 'The ask, the budget and Q&A',
   companion: 'About Ori’s expressions'
 };

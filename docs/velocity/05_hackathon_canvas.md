@@ -1,9 +1,9 @@
 # Hackathon Decision & Demo Canvas — actual Velocity output
 
 Date: November 14, 2026 (America/Chicago).
-Source: https://kearney-perlab.growthsignals.com/concept/32c37b9f-e0b8-4c35-a1c2-1a45bfe7c1a4/canvas/2800237e-d388-4420-a883-d1b204347149
+Source (Kearney Velocity; may require workspace access): https://kearney-perlab.growthsignals.com/concept/32c37b9f-e0b8-4c35-a1c2-1a45bfe7c1a4/canvas/2800237e-d388-4420-a883-d1b204347149
 
-Status: Created in Velocity, regenerated after attaching final corrections, then refined through Edit Configuration. Final visible content captured from the editor DOM after “Changes save automatically.” Native Markdown export was attempted; the download event timed out, so this package preserves the observed content directly. No app code or product tests were run.
+Status: Created in Velocity, regenerated after attaching final corrections, then refined through Edit Configuration. Final visible content captured from the editor DOM after “Changes save automatically.” Native Markdown export was attempted; the download event timed out, so this package preserves the observed content directly. No app code or product tests were run. The inline links below point into the same Kearney Velocity workspace and may require workspace access; they are kept as captured.
 
 ## Initial configuration
 

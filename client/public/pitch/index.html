@@ -3,16 +3,30 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="description" content="Ori: your phone, your story. A four-minute pitch: little sparks become personal apps that grow with you, starting on the phone you already own.">
+  <meta name="description" content="Ori: your phone, your story. A four-minute pitch: a feeling becomes a personal app that keeps growing with you, starting on the phone you already own.">
   <meta name="theme-color" content="#F7F8FC">
   <meta name="color-scheme" content="light">
   <title>Ori — Your phone, your story.</title>
   <link rel="icon" href="assets/ori/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="assets/fonts/manrope-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="style.css">
-  <script src="config.js" defer></script>
-  <script src="scenes.js" defer></script>
-  <script src="pitch.js" defer></script>
+  <!-- ?v= changes with each published revision, so a browser never mixes a cached engine with new scene data. -->
+  <link rel="stylesheet" href="style.css?v=16.2">
+  <link rel="stylesheet" href="slides/g1-evidence.css?v=16.2">
+  <link rel="stylesheet" href="slides/g2-journey.css?v=16.2">
+  <link rel="stylesheet" href="slides/g3-demos.css?v=16.2">
+  <link rel="stylesheet" href="slides/g4-position.css?v=16.2">
+  <link rel="stylesheet" href="slides/g5-growth.css?v=16.2">
+  <link rel="stylesheet" href="slides/g6-close.css?v=16.2">
+  <script src="config.js?v=16.2" defer></script>
+  <script src="scenes.js?v=16.2" defer></script>
+  <script src="assets/icons.js?v=16.2" defer></script>
+  <script src="slides/g1-evidence.js?v=16.2" defer></script>
+  <script src="slides/g2-journey.js?v=16.2" defer></script>
+  <script src="slides/g3-demos.js?v=16.2" defer></script>
+  <script src="slides/g4-position.js?v=16.2" defer></script>
+  <script src="slides/g5-growth.js?v=16.2" defer></script>
+  <script src="slides/g6-close.js?v=16.2" defer></script>
+  <script src="pitch.js?v=16.2" defer></script>
 </head>
 <body>
 <div class="app-shell">
@@ -22,7 +36,7 @@
     <nav class="top-actions" aria-label="Presentation">
       <button class="text-button" id="overview-btn" type="button" aria-haspopup="dialog" title="All fifteen scenes (O)">Overview</button>
       <button class="text-button" id="appendix-btn" type="button" aria-haspopup="dialog" title="Sources, definitions and the longer story (A)">Appendix</button>
-      <button class="text-button setup-top" id="setup-btn" type="button" aria-haspopup="dialog" title="Demo clips and links">Setup</button>
+      <button class="text-button setup-top" id="setup-btn" type="button" aria-haspopup="dialog" title="Media slots and links">Setup</button>
       <button class="present-button" id="present-btn" type="button" title="Full screen (F)"><span class="present-label">Present</span><span class="present-icon" aria-hidden="true">⛶</span></button>
     </nav>
   </header>
@@ -45,7 +59,7 @@
 
 <dialog id="overview" class="overview-dialog" aria-labelledby="overview-title">
   <div class="dialog-header">
-    <div><p class="eyebrow">The story · nine sections · 240 seconds</p><h2 id="overview-title">Fifteen scenes. Four minutes.</h2></div>
+    <div><p class="eyebrow">The story · 238 seconds · Q&amp;A on the last scene</p><h2 id="overview-title">Fifteen scenes. Under four minutes.</h2></div>
     <button class="icon-button" type="button" data-close aria-label="Close overview">✕</button>
   </div>
   <div id="overview-grid"></div>
@@ -61,7 +75,7 @@
     <button class="icon-button" type="button" data-close aria-label="Close notes">✕</button>
   </div>
   <div class="timer-bar" id="timer-bar">
-    <div class="timer-readout"><b id="timer-display">0:00</b><span id="timer-target">/ 4:00 target</span></div>
+    <div class="timer-readout"><b id="timer-display">0:00</b><span id="timer-target">/ 3:58 target</span></div>
     <button id="timer-toggle" class="pill-button" type="button" aria-pressed="false">Start timer</button>
     <button id="timer-reset" class="text-button" type="button">Reset</button>
   </div>
@@ -79,22 +93,14 @@
 
 <dialog id="setup" class="setup-dialog" aria-labelledby="setup-title">
   <div class="dialog-header">
-    <div><p class="eyebrow">Presentation setup</p><h2 id="setup-title">Links and demo clips</h2></div>
+    <div><p class="eyebrow">Presentation setup</p><h2 id="setup-title">Media slots and links</h2></div>
     <button class="icon-button" type="button" data-close aria-label="Close setup">✕</button>
   </div>
-  <p class="setup-intro">The published links and recordings come from <code>config.js</code>. Changes here stay in this browser and are not published.</p>
-  <form id="settings-form">
-    <label id="app-url-row">Ori app URL<input id="app-url" type="url" placeholder="https://" autocomplete="off"></label>
-    <label>GitHub repository URL<input id="github-url" type="url" placeholder="https://github.com/owner/repo" autocomplete="off"></label>
-    <button class="pill-button primary" type="submit">Save links in this browser</button>
-    <span id="save-status" role="status"></span>
-  </form>
-  <h3>Three silent recordings</h3>
-  <p class="small-text">The published recordings come from <code>config.js</code> (MP4 first, then WebM) and were made in Sample mode: scripted responses, not live AI. Choosing a file here previews it in this tab only; nothing is uploaded or published.</p>
-  <div class="upload-row"><div><b>01 / Create Light</b><span>A photo and a thought, one detail shaped, the Light app</span></div><label class="upload-button">Choose video<input type="file" accept="video/*" data-upload="create"></label><button class="remove-clip" type="button" data-remove="create" aria-label="Remove the local create preview" hidden>×</button></div>
-  <div class="upload-row"><div><b>02 / Use, then revise</b><span>Save an entry, Ask → Review → Keep going, the same entry stays</span></div><label class="upload-button">Choose video<input type="file" accept="video/*" data-upload="revise"></label><button class="remove-clip" type="button" data-remove="revise" aria-label="Remove the local revise preview" hidden>×</button></div>
-  <div class="upload-row"><div><b>03 / Return</b><span>A fresh session opens Light’s own link, the same saved entry</span></div><label class="upload-button">Choose video<input type="file" accept="video/*" data-upload="reopen"></label><button class="remove-clip" type="button" data-remove="reopen" aria-label="Remove the local return preview" hidden>×</button></div>
-  <div class="shortcut-list" aria-label="Keyboard shortcuts"><span><kbd>←</kbd> <kbd>→</kbd> Scenes</span><span><kbd>O</kbd> Overview</span><span><kbd>N</kbd> Notes</span><span><kbd>A</kbd> Appendix</span><span><kbd>F</kbd> Full screen</span><span><kbd>Space</kbd> Next, or play a clip</span><span><kbd>Esc</kbd> Close</span></div>
+  <p class="setup-intro">Every recording and screenshot in the deck comes from a media slot in <code>config.js</code>. To try a new recording before publishing it, preview it in its slot here: it plays in this tab only, and nothing is uploaded or published. To publish it, add the files to <code>media/</code> and list them in the slot (see <code>docs/ori-pitch-kit/PITCH_INTEGRATION.md</code>).</p>
+  <div id="setup-media" aria-label="Media slots"></div>
+  <h3>Links</h3>
+  <p class="setup-links" id="setup-links"></p>
+  <div class="shortcut-list" aria-label="Keyboard shortcuts"><span><kbd>←</kbd> <kbd>→</kbd> Scenes and reveals</span><span><kbd>O</kbd> Overview</span><span><kbd>N</kbd> Notes</span><span><kbd>A</kbd> Appendix</span><span><kbd>F</kbd> Full screen</span><span><kbd>Space</kbd> Play or pause a clip, or next</span><span><kbd>Esc</kbd> Close</span></div>
 </dialog>
 
 <dialog id="appendix" class="appendix-dialog" aria-labelledby="appendix-title">
@@ -104,110 +110,172 @@
   </div>
   <nav class="appendix-toc" aria-label="Appendix sections">
     <ol>
-      <li><a href="#appendix-sources" data-appendix-link="sources">Sources and evidence limits</a></li>
+      <li><a href="#appendix-sources" data-appendix-link="sources">Sources and evidence limits</a> · <a href="#appendix-research" data-appendix-link="research">Research behind this</a></li>
       <li><a href="#appendix-discovery" data-appendix-link="discovery">Customer discovery, the longer story</a></li>
       <li><a href="#appendix-stages" data-appendix-link="stages">The five stages, complete</a></li>
-      <li><a href="#appendix-demo" data-appendix-link="demo">The demo: what the recordings show</a></li>
-      <li><a href="#appendix-positioning" data-appendix-link="positioning">Positioning and defensibility</a></li>
+      <li><a href="#appendix-demo" data-appendix-link="demo">The demo: recordings, screenshots and media slots</a></li>
+      <li><a href="#appendix-foundation" data-appendix-link="foundation">How a personal app keeps your progress</a></li>
+      <li><a href="#appendix-positioning" data-appendix-link="positioning">Positioning: the map and its sources</a></li>
       <li><a href="#appendix-gtm" data-appendix-link="gtm">Founder-led pilot: plan and definitions</a></li>
-      <li><a href="#appendix-roadmap" data-appendix-link="roadmap">Growth roadmap and YC ambition</a></li>
-      <li><a href="#appendix-business" data-appendix-link="business">Business model and economics questions</a></li>
+      <li><a href="#appendix-roadmap" data-appendix-link="roadmap">Growth goal and the YC application goal</a></li>
+      <li><a href="#appendix-business" data-appendix-link="business">Pricing and economics questions</a></li>
       <li><a href="#appendix-velocity" data-appendix-link="velocity">How we used Velocity AI, expanded</a></li>
-      <li><a href="#appendix-ask" data-appendix-link="ask">The ask, next evidence and Q&amp;A</a></li>
+      <li><a href="#appendix-ask" data-appendix-link="ask">The ask, the budget and Q&amp;A</a></li>
       <li><a href="#appendix-companion" data-appendix-link="companion">About Ori’s expressions</a></li>
     </ol>
   </nav>
 
   <section class="appendix-section" id="appendix-sources" aria-labelledby="appendix-sources-title">
     <h3 id="appendix-sources-title">1. Sources and evidence limits</h3>
+    <div class="research-panel" id="appendix-research" role="region" aria-labelledby="appendix-research-title" data-g1-research>
+      <p class="research-eyebrow">Research behind this · not presented in the talk</p>
+      <h4 id="appendix-research-title">Wanting is only the beginning.</h4>
+      <div data-g1-research-slot>
+      <div class="research-grid">
+        <div class="research-findings">
+          <div class="research-finding">
+            <p class="research-display">47.6%</p>
+            <p class="research-label">Intended to exercise. Didn’t follow through.</p>
+            <p class="research-source"><a href="https://pubmed.ncbi.nlm.nih.gov/37460164/" target="_blank" rel="noopener noreferrer">Feil et al., 2023</a></p>
+          </div>
+          <div class="research-finding">
+            <p class="research-display">≈½</p>
+            <p class="research-label">Behavior changed about half as much as intention.</p>
+            <div class="research-bars" role="img" aria-label="Standardized effects: intention 0.66, behavior 0.36">
+              <div class="research-bar"><span class="research-bar-name">Intention 0.66</span><span class="research-bar-track"><span class="research-bar-fill" style="width:100%"></span></span></div>
+              <div class="research-bar"><span class="research-bar-name">Behavior 0.36</span><span class="research-bar-track"><span class="research-bar-fill is-behavior" style="width:54.5%"></span></span></div>
+            </div>
+            <p class="research-caption">Standardized effects: 0.36 vs. 0.66.</p>
+            <p class="research-source"><a href="https://pubmed.ncbi.nlm.nih.gov/16536643/" target="_blank" rel="noopener noreferrer">Webb &amp; Sheeran, 2006</a></p>
+          </div>
+        </div>
+        <p class="research-takeaway">Wanting needs a bridge to doing.</p>
+      </div>
+      </div>
+      <ul class="research-notes">
+        <li>Physical activity only: 47.6% is the intention–behavior gap among people who intended to be physically active (25 samples, 29,600 participants overall, which is not the denominator of every subgroup percentage). Not all ambitions, all students or demand for Ori.</li>
+        <li>≈½ is an approximate comparison of standardized effects (d = 0.36 vs. d = 0.66; ratio 0.36 ÷ 0.66 ≈ 0.55): not a success rate, not the share of intentions that became actions and not a percentage-point change.</li>
+        <li>Neither study measures Ori. Full citations: <a href="#appendix-r1" data-appendix-link="r1">R1</a> and <a href="#appendix-r2" data-appendix-link="r2">R2</a> below.</li>
+      </ul>
+    </div>
     <p>Research supports the problem’s plausibility. Local discovery supports a focused pilot. A working recording supports product feasibility. Repeated real use and payment would support the business. We keep those four kinds of evidence distinct.</p>
     <div class="table-wrap"><table>
       <thead><tr><th scope="col">ID</th><th scope="col">Source and usable finding</th><th scope="col">Limits</th></tr></thead>
       <tbody>
-        <tr id="appendix-r1"><th scope="row">R1</th><td>Feil, Fritsch &amp; Rhodes (2023), <a href="https://pubmed.ncbi.nlm.nih.gov/37460164/" target="_blank" rel="noopener noreferrer">The intention-behaviour gap in physical activity</a>. 25 independent samples from 22 articles, 29,600 participants overall; pooled gap of 47.6% among intenders. DOI: 10.1136/bjsports-2022-106640.</td><td>Physical activity only: not all life goals, college students, or demand for Ori. 29,600 is the overall study population, not the denominator of the 47.6% subset.</td></tr>
-        <tr id="appendix-r2"><th scope="row">R2</th><td>Webb &amp; Sheeran (2006), <a href="https://pubmed.ncbi.nlm.nih.gov/16536643/" target="_blank" rel="noopener noreferrer">Does changing behavioral intentions engender behavior change?</a> 47 experimental tests; effect on intention d = 0.66, effect on behavior d = 0.36. DOI: 10.1037/0033-2909.132.2.249.</td><td>Effect sizes are not percentages, a completion rate, or an estimate of people who need Ori. Historical evidence about the mechanism, labeled with its year.</td></tr>
+        <tr id="appendix-r1"><th scope="row">R1</th><td>Feil, Fritsch &amp; Rhodes (2023), <a href="https://pubmed.ncbi.nlm.nih.gov/37460164/" target="_blank" rel="noopener noreferrer">The intention-behaviour gap in physical activity</a>. 25 independent samples from 22 articles, 29,600 participants overall; pooled gap of 47.6% among people who intended to be physically active (Research behind this, above: “Intended to exercise. Didn’t follow through.”). DOI: 10.1136/bjsports-2022-106640.</td><td>Physical activity only: not all ambitions, college students, or demand for Ori. 29,600 is the overall study population, not the denominator of every subgroup percentage.</td></tr>
+        <tr id="appendix-r2"><th scope="row">R2</th><td>Webb &amp; Sheeran (2006), <a href="https://pubmed.ncbi.nlm.nih.gov/16536643/" target="_blank" rel="noopener noreferrer">Does changing behavioral intentions engender behavior change?</a> 47 experimental tests; the reported changes in intention and behavior had standardized effects of d = 0.66 and d = 0.36. The research panel’s “≈½” compares those effects: 0.36 ÷ 0.66 ≈ 0.55, so behavior changed about half as much as intention. DOI: 10.1037/0033-2909.132.2.249.</td><td>An approximate comparison of effect sizes: not a success rate, not the share of intentions that became actions, and not a percentage-point change. Historical evidence about the mechanism, labeled with its year.</td></tr>
         <tr id="appendix-r3"><th scope="row">R3</th><td>Pew Research Center (June 17, 2026), <a href="https://www.pewresearch.org/internet/2026/06/17/americans-and-ai-appendix-detailed-chart-and-tables/" target="_blank" rel="noopener noreferrer">Americans and AI: detailed chart and tables</a>. 61% of U.S. adults ages 18–29 say they have ever used ChatGPT; survey conducted February 17–23, 2026. Optional context only.</td><td>An age group, not students specifically. Ever-use, not daily use or willingness to pay. The question wording changed in 2026, so it is not an unqualified growth comparison.</td></tr>
-        <tr id="appendix-r4"><th scope="row">R4</th><td>Anthropic, <a href="https://support.claude.com/en/articles/17153992-what-are-artifacts-and-how-do-i-use-them" target="_blank" rel="noopener noreferrer">What are artifacts and how do I use them?</a>, accessed November 15, 2026. Describes interactive tools, persistence and connected apps.</td><td>Acknowledges competing capabilities. It does not establish that Ori is better.</td></tr>
+        <tr id="appendix-c1"><th scope="row">C1</th><td>Anthropic, <a href="https://support.claude.com/en/articles/17153992-what-are-artifacts-and-how-do-i-use-them" target="_blank" rel="noopener noreferrer">What are artifacts and how do I use them?</a>: interactive tools, AI-powered apps, persistent storage and connected apps.</td><td>Competing capabilities, acknowledged. It does not establish that Ori is better.</td></tr>
+        <tr id="appendix-c2"><th scope="row">C2</th><td>Lovable, <a href="https://docs.lovable.dev/introduction/welcome" target="_blank" rel="noopener noreferrer">Introduction</a>: building, iterating and deploying applications, including backend and database capabilities.</td><td>A capable app builder, not a static mockup tool.</td></tr>
+        <tr id="appendix-c3"><th scope="row">C3</th><td>Notion, <a href="https://www.notion.com/help/notion-ai-connectors" target="_blank" rel="noopener noreferrer">Notion AI connectors</a>: connected context from other tools.</td><td>A broad workspace with context, not a context-free tool.</td></tr>
+        <tr id="appendix-c4"><th scope="row">C4</th><td>Notion, <a href="https://www.notion.com/help/view-your-notion-agent-memories" target="_blank" rel="noopener noreferrer">View your Notion Agent memories</a>: agent memories.</td><td>Memory exists elsewhere too; Ori does not claim it alone.</td></tr>
         <tr id="appendix-y1"><th scope="row">Y1</th><td>Y Combinator, <a href="https://www.ycombinator.com/apply" target="_blank" rel="noopener noreferrer">Apply to Y Combinator</a>, checked November 15, 2026: Winter 2027 timing, late applications and applications for future batches.</td><td>Timing facts only. No application decision, acceptance, backing or endorsement is implied.</td></tr>
         <tr id="appendix-y2"><th scope="row">Y2</th><td>Y Combinator, <a href="https://www.ycombinator.com/early-decision" target="_blank" rel="noopener noreferrer">Early Decision</a>, checked November 15, 2026: student applications for future batches.</td><td>Eligibility to apply implies no admission.</td></tr>
-        <tr><th scope="row">Local</th><td>Founder-reported informal discovery: 21 yes responses among 26 UIUC students to the question on scene 3; one friend’s paraphrased insight about putting an idea into words.</td><td>A convenience sample. No representative prevalence estimate, stage-by-stage measurement, paid-demand validation or quote transcript.</td></tr>
+        <tr><th scope="row">Local</th><td>Founder-reported informal discovery: 21 yes responses among 26 UIUC students to the question on slide 2; one friend’s paraphrased insight about pinpointing what an idea is.</td><td>A convenience sample. No representative prevalence estimate, stage-by-stage measurement, paid-demand validation or quote transcript.</td></tr>
       </tbody>
     </table></div>
-    <p class="appendix-note">Source details as recorded in the storytelling brief and the commercial addendum, which note they were checked on November 15, 2026. The external studies use different questions and populations: they are context, not numerical confirmation of 21/26. The growth milestones, channel plan, invitation allocations, price and behavioral thresholds are founder goals or proposed experiments, not external research findings. The YC logo is the official mark from ycombinator.com, shown only beside the application ambition.</p>
+    <p class="appendix-note">Neither study in the research panel measures Ori’s effectiveness, and the external studies use different questions and populations from the discovery question: they are context, not numerical confirmation of 21/26. The competitor capabilities (C1–C4) are as documented when the revision brief checked them on November 15, 2026; recheck them before relying on them later. The growth goal, the pilot goals, the price and the behavioral thresholds are founder goals or proposed experiments, not research findings. The YC logo is the official mark from ycombinator.com, shown only beside the application goal.</p>
   </section>
 
   <section class="appendix-section" id="appendix-discovery" aria-labelledby="appendix-discovery-title">
     <h3 id="appendix-discovery-title">2. Customer discovery, the longer story</h3>
-    <p class="appendix-note">Expanded narration for a longer telling or for questions. The friend’s words are paraphrased; the reel, the sentence and the frustration are illustrative.</p>
+    <p class="appendix-note">Expanded narration for a longer telling or for questions. The friend’s words are paraphrased; the reel and the note are illustrative.</p>
     <div class="appendix-story">
       <p>We asked people whether they struggle to turn their ideas into something consistent. Twenty-one of twenty-six said yes.</p>
       <p>But one response made us rethink where the problem begins.</p>
       <p>A friend explained that she sometimes struggles to pinpoint what the idea even is.</p>
-      <p>Maybe it starts with an Instagram reel you saved because you wanted to try something. A sentence you read that stayed with you. Or a frustration you haven’t quite put into words.</p>
+      <p>Maybe it starts with an Instagram reel you saved because you wanted to try something. Or a note that starts, “Why do I never…” and stops there.</p>
       <p>You can bring that to Ori.</p>
       <p>Ori is your companion for holding onto those sparks, connecting them with what you’ve shared, and helping you explore what they could become. As you react, clarify, and change your mind, Ori helps shape a next step around you.</p>
       <p>You don’t need a fully formed idea to begin. You just need somewhere to bring it.</p>
     </div>
     <p><strong>What changed because of discovery.</strong> Our design starts before a precise prompt or app specification. The friend gave us a reason to look closely at the first transition. We have not measured how many people stall at each stage.</p>
-    <p><strong>The number.</strong> 21 of 26 said yes (21/26 = 80.8%). Founder-reported, informal, a convenience sample of UIUC students: an early local signal, not a campus-wide estimate and not a figure for college students in general.</p>
+    <p><strong>The number.</strong> 21 of 26 said yes (21/26 = 80.8%; the slide shows the count, not the percentage). Informal conversations with 26 UIUC students, founder-reported: a convenience sample of people the founder could reach, not a random or representative one. An early local signal, not a campus-wide estimate, not a figure for college students in general, and not 21 users, paying customers or product-market fit.</p>
   </section>
 
   <section class="appendix-section" id="appendix-stages" aria-labelledby="appendix-stages-title">
     <h3 id="appendix-stages-title">3. The five stages, complete</h3>
+    <p>Slide 3 shows the five stage names, joined by one path with Ori at its center. The full framework:</p>
     <div class="table-wrap"><table>
-      <thead><tr><th scope="col">Stage</th><th scope="col">The human task</th><th scope="col">Ori’s intended role</th></tr></thead>
+      <thead><tr><th scope="col">Stage</th><th scope="col">In short</th><th scope="col">The human task</th><th scope="col">Ori’s intended role</th></tr></thead>
       <tbody>
-        <tr><th scope="row">1. Feel it</th><td>Something interests or bothers you.</td><td>Capture the spark with the context you choose to share.</td></tr>
-        <tr><th scope="row">2. Name it</th><td>Put that interest or need into words.</td><td>Ask a useful question; reflect possible meanings.</td></tr>
-        <tr><th scope="row">3. Imagine it</th><td>Work out what an ideal outcome would feel like.</td><td>Explore several useful directions.</td></tr>
-        <tr><th scope="row">4. Shape it</th><td>Turn the desired outcome into a concrete tool or workflow.</td><td>Propose a personal app or adapt an existing one.</td></tr>
-        <tr><th scope="row">5. Build and iterate</th><td>Use it, learn, and change it.</td><td>Support useful actions and revisions while retaining progress.</td></tr>
+        <tr><th scope="row">1. Feel it</th><td>A feeling</td><td>Something interests or bothers you.</td><td>Capture the spark with the context you choose to share.</td></tr>
+        <tr><th scope="row">2. Name it</th><td>A clearer need</td><td>Put that interest or need into words.</td><td>Ask a useful question; reflect possible meanings.</td></tr>
+        <tr><th scope="row">3. Imagine it</th><td>Possibilities</td><td>Work out what an ideal outcome would feel like.</td><td>Explore several useful directions.</td></tr>
+        <tr><th scope="row">4. Shape it</th><td>Your tool</td><td>Turn the desired outcome into a concrete tool or workflow.</td><td>Propose a personal app or adapt an existing one.</td></tr>
+        <tr><th scope="row">5. Build and iterate</th><td>Use and evolve</td><td>Use it, learn, and change it.</td><td>Support useful actions and revisions while retaining progress.</td></tr>
       </tbody>
     </table></div>
-    <p>Stage five loops back: using something changes what you want. Inside stage five, the demo shows a small iteration loop: <strong>Ask → Review → Keep going</strong>. <strong>Start wherever you are. Keep growing from there.</strong></p>
+    <p><strong>“Ori helps you through all five.”</strong> The connected path on the slide is the product journey: one companion from the first feeling to an app you keep using. Stage five loops back (“And keeps growing with you”): using something changes what you want. Inside stage five, the demo shows the small loop of a change you ask for: <strong>Tell Ori → Review → Update</strong>.</p>
     <p><strong>The ideal solution.</strong> You should be able to arrive uncertain, explore without committing, turn useful context into something actionable, and keep changing the result without starting over. Ori reduces the work around acting; the person still chooses, practices, explores, and does the real-world work.</p>
     <p><strong>Not every spark needs an app.</strong> Sometimes the right outcome is saving a thought, asking a question, or using a tool that already exists. That choice is part of Ori’s intelligence.</p>
-    <p class="appendix-note">A product framework, not a scientifically validated five-stage model.</p>
+    <p class="appendix-note">A product framework, not a scientifically validated behavioral model and not a guarantee of habit formation.</p>
   </section>
 
   <section class="appendix-section" id="appendix-demo" aria-labelledby="appendix-demo-title">
-    <h3 id="appendix-demo-title">4. The demo: what the recordings show</h3>
-    <p>One example, Light, carries the proof: the same personal app and the same saved photo through creation, use, a revision and a return. Light is an illustrative user scenario, not an additional customer interview. Riff and People appear only as other possibilities.</p>
+    <h3 id="appendix-demo-title">4. The demo: recordings, screenshots and media slots</h3>
+    <p>One example, Light, carries the proof: the same personal app and the same saved photo through creation, use, a revision and a return. Light is an illustrative user scenario, not an additional customer interview.</p>
     <div class="table-wrap"><table>
-      <thead><tr><th scope="col">Scene</th><th scope="col">Recording</th><th scope="col">What it shows</th><th scope="col" class="num">Length</th></tr></thead>
+      <thead><tr><th scope="col">Slide</th><th scope="col">Media</th><th scope="col">What it shows</th><th scope="col" class="num">Length</th></tr></thead>
       <tbody>
-        <tr><th scope="row">6</th><td>01 · Create</td><td>A photo and a thought; Ori suggests a place for it; a preview with one detail shaped (“Focus on shadows and reflections”); Make mine; Light opens with the photo in it.</td><td class="num">12.8 s</td></tr>
-        <tr><th scope="row">7</th><td>02 · Use and revise</td><td>Save an observation (“Low sun turns the brick wall gold”). Ask: “Add camera settings to my photo notes.” Review the change on the same photo. Apply it and keep going: the same photo and note, now with camera fields.</td><td class="num">12.8 s</td></tr>
-        <tr><th scope="row">8</th><td>03 · Return</td><td>A fresh browser session opens Light by its own link and finds the same photo, note and camera setting.</td><td class="num">5.2 s</td></tr>
+        <tr><th scope="row">5</th><td>Recording 01 · Create</td><td>A photo and a thought; Ori suggests a place for it; a preview with one detail shaped (“Focus on shadows and reflections”); Make mine; Light opens with the photo in it.</td><td class="num">12.8 s</td></tr>
+        <tr><th scope="row">6</th><td>Recording 02 · Use and revise</td><td>Save an observation (“Low sun turns the brick wall gold”). Tell Ori: “Add camera settings to my photo notes.” Review the change on the same photo. Apply it: the same photo and note, now with camera fields.</td><td class="num">12.8 s</td></tr>
+        <tr><th scope="row">Here</th><td>Recording 03 · Return</td><td>A fresh browser session opens Light by its own link and finds the same photo, note and camera setting. It plays below, for questions (it is no longer on slide 6).</td><td class="num">5.2 s</td></tr>
+        <tr><th scope="row">7</th><td>The founder’s recording · Bring your context → Playground</td><td>Filmed by the founder on a phone against the live site; the screen shows Live AI. Copy Ori’s prompt, paste the profile an AI wrote and add it; Ori reads it and organizes what it learned (“Added 25 things we learned”), each fact editable or removable; the Playground then suggests directions that fit. Waiting may have been trimmed, so no real-time speed is claimed.</td><td class="num">23.65 s</td></tr>
       </tbody>
     </table></div>
-    <p><strong>Status.</strong> Real recordings of the working product, made in <strong>Sample mode: scripted responses, not live AI</strong>. Each slot and each clip says so. They are recordings, not a live demo, and they show no live AI output. Ask → Review → Keep going is the small iteration loop inside stage five, not a separate framework.</p>
-    <p><strong>Return, not a home-screen claim.</strong> Scene 8 says “Return directly to your app”: the recording opens Light’s own link in a fresh browser session. It does not show a launch from a phone’s home screen, so the pitch makes no home-screen claim. It shows persistence and a way back, not that anyone formed a habit.</p>
-    <p><strong>Files.</strong> H.264 MP4 (for Safari and iPhones) and WebM versions of the same three recordings, each 390 × 844 at 25 frames a second: the phone-sized app area of the original captures, which held the same frames inside a larger, empty gray canvas. That padding was cropped away; nothing was trimmed, sped up or retimed. Before a clip plays, its slot shows the recording’s first frame with the app on screen.</p>
-    <p><strong>Fallback.</strong> If no version of a recording can play, its slot shows a concept reference image instead, labelled as a generated design, not the product.</p>
-    <p><strong>Scope.</strong> Sharing text, a screenshot or a link does not give Ori access to anyone’s account. AI conversation context means imports the person selects and reviews. If a link’s content cannot be read, Ori should say so and use the person’s explanation. Native share-sheet integration and broad background automation are future capabilities.</p>
-    <p><strong>Technical approach (scene 10).</strong> A shared set of supported app capabilities, shaped into different experiences. The hard requirement is continuity: a design change must preserve the records that make an app useful. Current code and a working recording determine what can be called implemented.</p>
+    <figure class="appendix-clip" id="appendix-return-clip">
+      <video controls playsinline preload="none" width="195" height="422" data-poster="media/03-reopen-poster.jpg" aria-describedby="appendix-return-caption">
+        <source src="media/03-reopen.mp4" type="video/mp4">
+        <source src="media/03-reopen.webm" type="video/webm">
+      </video>
+      <figcaption id="appendix-return-caption"><strong>Recording 03 · Return · Sample mode.</strong> Light opens again from its own link in a fresh browser session (5.2 s): a way back, not a home-screen launch.</figcaption>
+    </figure>
+    <p><strong>Status.</strong> All four are real recordings of the working product, not a live demo. Recordings 01–03 (slides 5 and 6, and the return clip above) were made in <strong>Sample mode: scripted responses, not live AI</strong>, and each says so. The founder’s recording on slide 7 shows <strong>live AI</strong> on the hosted site, and its slot says “Recorded product demo · Live AI”. Screenshots are labeled “Product screenshot”, with “Sample mode” where the screen shows Sample-mode content.</p>
+    <p><strong>A change you ask for, not background adaptation.</strong> Light changes because the person tells Ori what they need, reviews the change and applies it. Passive monitoring, automatic redesign in the background and external automation are not shipped capabilities; “apps that grow with you” is the vision this loop starts.</p>
+    <p><strong>Return, not a home-screen claim.</strong> The return recording opens Light’s own link in a fresh browser session. It does not show a launch from a phone’s home screen, so the pitch makes no home-screen claim. It shows saved progress and a way back, not that anyone formed a habit.</p>
+    <p><strong>Files.</strong> H.264 MP4 (for Safari and iPhones) and WebM versions of each recording. Recordings 01–03 are 390 × 844 at 25 frames a second: the phone-sized app area of the original captures, cropped from a larger, empty gray canvas; nothing in them was trimmed, sped up or retimed. The founder’s recording is 464 × 832 at 60 frames a second, 23.65 s, with no audio, filmed on a phone; its waiting may have been trimmed. Before a clip plays, its slot shows the recording’s first frame with the app on screen.</p>
+    <p><strong>Fallback.</strong> If no version of a recording can play, its slot shows a real product screenshot instead, labeled as one. Nothing on a slide is a generated image of the product.</p>
+    <p><strong>New recordings.</strong> The founder’s recording on slide 7 covers C (bring context from my AI) and D (the Playground). A (thought to Light), B (Light grows with me) and E (one tap back to Light) remain optional replacements; each drops into its media slot without a layout change.</p>
+    <p><strong>Scope.</strong> Pasting a summary, uploading a file or sharing a link does not give Ori access to anyone’s ChatGPT, Claude, Gemini or Instagram account: a shared link is saved as a link, and Ori does not open or watch the reel. Native share-sheet integration and background automation are future capabilities.</p>
+  </section>
+
+  <section class="appendix-section" id="appendix-foundation" aria-labelledby="appendix-foundation-title">
+    <h3 id="appendix-foundation-title">5. How a personal app keeps your progress</h3>
+    <p>Light, Riff and People look and work differently (a gallery of observations, a practice session, a follow-up queue), but they share one foundation of supported capabilities:</p>
+    <ul>
+      <li><strong>Useful actions.</strong> Each app does something real for its activity, such as saving an observation, timing a practice session or completing a follow-up, rather than only showing a generated screen.</li>
+      <li><strong>Durable records.</strong> What a person saves belongs to their app and stays when they come back.</li>
+      <li><strong>Careful revisions.</strong> A change to an app’s design must keep the records that make it useful: the same photo and note before and after the change on slide 6.</li>
+    </ul>
+    <p class="appendix-note">Implementation foundations, not the pitch’s story. What counts as implemented rests on current code and a working recording.</p>
   </section>
 
   <section class="appendix-section" id="appendix-positioning" aria-labelledby="appendix-positioning-title">
-    <h3 id="appendix-positioning-title">5. Positioning and defensibility</h3>
-    <p>Our proposed advantage is continuity across the whole journey, plus a focused way to learn from users. App generation alone is easy to demonstrate and increasingly common. The valuable outcome is less work between an uncertain spark and a tool someone uses again and again.</p>
+    <h3 id="appendix-positioning-title">6. Positioning: the map and its sources</h3>
+    <p>Slide 9 is a positioning map, not a benchmark. Its axes describe product emphasis, not intelligence, quality, revenue or market potential:</p>
+    <ul>
+      <li><strong>Starting point</strong> (left to right): from an app you already know you need, to your context, interests and unclear ideas.</li>
+      <li><strong>Everyday experience</strong> (bottom to top): from a general workspace, to distinct personal apps you return to.</li>
+    </ul>
     <div class="table-wrap"><table>
-      <thead><tr><th scope="col">Alternative</th><th scope="col">What a person can already get</th><th scope="col">What Ori must earn</th></tr></thead>
+      <thead><tr><th scope="col">Alternative</th><th scope="col">Its region on the map</th><th scope="col">Documented capability</th></tr></thead>
       <tbody>
-        <tr><th scope="row">General AI assistants and artifact tools</th><td>Help thinking, generating content and building interactive tools; some already offer storage and integrations.</td><td>Less setup across repeated capture, clarification, personal use and revision.</td></tr>
-        <tr><th scope="row">AI app builders</th><td>A path from an app request to software.</td><td>A useful beginning before the person knows which app to request.</td></tr>
-        <tr><th scope="row">Notes, saved posts, bookmarks</th><td>A familiar, easy place to keep a spark.</td><td>A worthwhile next action without making capture burdensome.</td></tr>
-        <tr><th scope="row">Existing specialist apps</th><td>Polished, established workflows.</td><td>Personal fit strong enough to justify a new tool, or the judgment to reuse an existing Ori app.</td></tr>
+        <tr><th scope="row">App stores and specialist apps</th><td>Ready-made apps; the person chooses from existing products.</td><td>Polished, established workflows.</td></tr>
+        <tr><th scope="row">AI app builders (e.g. Lovable)</th><td>Creating and revising software, with a product or project as the destination.</td><td>Builds, iterates and deploys applications with backends [C2].</td></tr>
+        <tr><th scope="row">General AI assistants and artifacts (e.g. Claude)</th><td>Rich conversation and context, increasingly with interactive apps and storage: meaningful overlap with Ori.</td><td>Interactive tools, AI-powered apps, persistent storage, connected apps [C1].</td></tr>
+        <tr><th scope="row">General workspaces (e.g. Notion)</th><td>Organizing work and context in a broad workspace, with AI.</td><td>AI connectors and agent memories [C3, C4].</td></tr>
+        <tr><th scope="row">Ori</th><td>Explore an unclear personal need, then keep distinct daily-use apps together around the person.</td><td>The product’s own claims rest on current code and the recordings.</td></tr>
       </tbody>
     </table></div>
-    <p class="appendix-note">Positioning, not a verified feature-by-feature comparison. Competitors can chat, save data and build personal apps: Claude’s own artifact documentation describes persistent storage and connected apps [R4].</p>
+    <p><strong>Ori today, and the Ori vision.</strong> The solid Ori marks what ships today: notes, photos, links and pasted summaries a person shares become distinct apps with their own link and icon, changed only when the person asks Ori and reviews the change. The outlined “Ori vision”, joined by a dashed line, is not shipped: apps verified on phone home screens, sharing from other apps’ share menus, and apps that adapt in the background.</p>
+    <p class="appendix-note">Placements are qualitative editorial judgments about product focus, not published scores. Competitors can chat, save data, remember context and build apps; Ori’s proposed advantage is the integrated, phone-first personal journey and lower friction for its target user, not exclusive ownership of those capabilities.</p>
     <p><strong>Defensibility, if asked.</strong> “We do not have a proven moat. Our starting advantage is access to users we can observe closely. We want to build a better understanding of which interventions turn different sparks into useful repeat behavior, and encode that learning into the product. We have to prove that it improves outcomes and becomes difficult to reproduce.” Stored context and a friendly companion alone are not defensibility. People should keep control of their own records; trapped data is not the story.</p>
   </section>
 
   <section class="appendix-section" id="appendix-gtm" aria-labelledby="appendix-gtm-title">
-    <h3 id="appendix-gtm-title">6. Founder-led pilot: plan and definitions</h3>
-    <p><strong>Our first distribution channel is a community I already help lead.</strong> The founder’s own relationships, with a proposed invitation allocation:</p>
+    <h3 id="appendix-gtm-title">7. Founder-led pilot: plan and definitions</h3>
+    <p><strong>Zuyu Liu, UIUC, engineering and business.</strong> The first distribution channel is the founder’s own community. Slide 10 shows the roles; this is the proposed invitation allocation behind them:</p>
     <div class="table-wrap"><table>
       <caption>Founder relationships: proposed invitation allocation</caption>
       <thead><tr><th scope="col">Role or relationship</th><th scope="col">What it makes possible</th><th scope="col" class="num">Invitations</th></tr></thead>
@@ -215,13 +283,13 @@
         <tr><th scope="row">President, Founders – Illinois Entrepreneurs</th><td>Direct conversations with student founders and builders; invitations to try Ori in a real workflow.</td><td class="num">50</td></tr>
         <tr><th scope="row">Project Manager, IBC</th><td>Access to peers managing projects, relationships and follow-ups.</td><td class="num">25</td></tr>
         <tr><th scope="row">Hoeft T&amp;M student, bridging Grainger and Gies</th><td>Relationships across engineering and business; a useful test of whether Ori works across technical backgrounds.</td><td class="num">25</td></tr>
-        <tr><th scope="row">Friends in OTCR, CUBE, Venture Capital Association and business fraternities</th><td>Warm introductions beyond the founder’s immediate circles.</td><td class="num">50</td></tr>
+        <tr><th scope="row">Friends in OTCR, CUBE, the Venture Capital Association and business fraternities</th><td>Warm introductions beyond the founder’s immediate circles.</td><td class="num">50</td></tr>
         <tr class="total"><th scope="row">Total</th><td>Distinct people, deduplicated across organizations.</td><td class="num">150</td></tr>
       </tbody>
     </table></div>
-    <p><strong>Personal access, not partnerships.</strong> Founders, IBC and T&amp;M are direct relationships; OTCR, CUBE, VCA and business fraternities are introductions to request. No institutional partnership, logo, member count, mailing-list permission, ambassador, endorsement or agreement is claimed, and personal access is not guaranteed distribution.</p>
-    <p><strong>Why access matters.</strong> Founder relationships allow personal onboarding; observing people exposes where they stall; that learning improves the product; useful experiences may generate referrals. A list of club names alone is not the argument.</p>
-    <p><strong>The pilot, proposed targets.</strong> 150 invitations → 50 enrolled → 30 later-day useful actions → 15 week-four active users. We observe the first ten sessions (20–30 minutes each: about 3.3–5 hours of observation plus preparation and follow-up). 150 is an outreach capacity target, not a measured reachable audience; 50 enrollments assumes roughly one in three accept, which we must measure. Founder time is a real acquisition cost.</p>
+    <p><strong>Personal access, not partnerships.</strong> Founders, IBC and T&amp;M are direct roles; OTCR, CUBE, VCA and business fraternities are friends to ask for introductions. No institutional partnership, logo, member count, mailing-list permission, ambassador, endorsement or agreement is claimed, and personal access is not guaranteed distribution.</p>
+    <p><strong>The mechanism (proposed).</strong> Relationships → personal onboarding → observe → product iteration → referrals. Relationships allow personal onboarding; observing people shows where they stall; that drives product iteration; a useful experience may lead to referrals. A proposed recruiting and feedback mechanism, not a measured conversion funnel.</p>
+    <p><strong>Pilot goals (on the slide).</strong> 150 invitations by December 1, 2026, and 50 enrolled by December 15, 2026: the initial cohort. We observe the first ten sessions (20–30 minutes each: about 3.3–5 hours of observation plus preparation and follow-up). 150 is an outreach capacity goal, not a measured reachable audience; 50 enrollments assumes roughly one in three accept, which we must measure. Founder time is a real acquisition cost.</p>
     <dl class="definitions">
       <dt>Enrolled</dt><dd>50 distinct consenting pilot users who begin onboarding.</dd>
       <dt>Later-day useful action</dt><dd>Activation: a meaningful action on a later day within the first 14 days, such as editing or completing a real entry. Generating an app or passively opening a page does not count. Target: 30/50.</dd>
@@ -235,13 +303,13 @@
   </section>
 
   <section class="appendix-section" id="appendix-roadmap" aria-labelledby="appendix-roadmap-title">
-    <h3 id="appendix-roadmap-title">7. Growth roadmap and YC ambition</h3>
-    <p><strong>Start at UIUC. Earn the right to expand.</strong> September 2027 stretch ambition: reach 100,000 people. These are proposed stretch milestones: not achieved users, a forecast or an approved operating budget. There is no verified current user count, and the 26 discovery participants are not product users.</p>
+    <h3 id="appendix-roadmap-title">8. Growth goal and the YC application goal</h3>
+    <p><strong>Start at UIUC. Grow from there.</strong> The chart is labeled “Goal”: founder goals, not achieved users, a forecast or an approved operating budget. There is no verified current user count, and the 26 discovery participants are not product users.</p>
     <div class="table-wrap"><table>
-      <caption>Proposed stretch milestones (cumulative distinct registered users)</caption>
-      <thead><tr><th scope="col">Month-end</th><th scope="col" class="num">Target</th><th scope="col">What would need to be true</th></tr></thead>
+      <caption>Registered-user goal (cumulative distinct registered users, month-end)</caption>
+      <thead><tr><th scope="col">Month-end</th><th scope="col" class="num">Goal</th><th scope="col">What would need to be true</th></tr></thead>
       <tbody>
-        <tr><th scope="row">January 2027</th><td class="num">50</td><td>Complete the initial founder-led pilot and observe actual use.</td></tr>
+        <tr><th scope="row">January 2027</th><td class="num">50</td><td>The pilot checkpoint: the initial cohort (50 enrolled by December 15) observed in actual use.</td></tr>
         <tr><th scope="row">March 2027</th><td class="num">500</td><td>Test repeatable recruitment within UIUC, beyond personal onboarding alone.</td></tr>
         <tr><th scope="row">May 2027</th><td class="num">5,000</td><td>Test the same playbook through student leaders at additional campuses.</td></tr>
         <tr><th scope="row">July 2027</th><td class="num">25,000</td><td>Expand campus reach and test an early-career professional channel.</td></tr>
@@ -251,26 +319,26 @@
     <h4>What is counted</h4>
     <p>The founder’s original ambition was 100,000 downloads by September 2027. The scale and the date stay; the measured quantity matches how Ori is distributed. While Ori is web-first, the chart counts <strong>cumulative distinct registered users</strong>. A website registration is not a download; if a native download or install channel exists, verified downloads are shown separately. Page views, generated personal apps and multiple devices are not counted as distinct people.</p>
     <h4>The burden of proof</h4>
-    <p>From 50 at the end of January to 100,000 at the end of September is a 2,000-fold increase in eight months: about 159% compounded monthly growth. The last two months alone would need 75,000 more registrations, about 1,230 a day. That is what the targets require, not a claim that the current network can deliver it.</p>
+    <p>From 50 at the end of January to 100,000 at the end of September is a 2,000-fold increase in eight months: about 159% compounded monthly growth. The last two months alone would need 75,000 more registrations, about 1,230 a day. That is what the goals require, not a claim that the current network can deliver it.</p>
     <h4>How the channels branch</h4>
     <p>UIUC first, with founder-led onboarding. After retention is demonstrated, two possible paths:</p>
     <ul>
-      <li><strong>Other colleges.</strong> Recruit student hosts through founder and club-leader introductions; run a small trial cohort; compare activation, retention and founder time against UIUC.</li>
-      <li><strong>Young urban professionals.</strong> Begin with UIUC alumni and relevant professional communities in Chicago, then consider other cities where comparable access develops: busy people who want room for interests, relationships and personal projects. A proposed channel, not an existing partnership or a proven market.</li>
+      <li><strong>Other campuses.</strong> Recruit student hosts through founder and club-leader introductions; run a small trial cohort; compare activation, retention and founder time against UIUC.</li>
+      <li><strong>Young professionals.</strong> Begin with UIUC alumni and relevant professional communities in Chicago, then consider other cities where comparable access develops: busy people who want room for interests, relationships and personal projects. A proposed channel, not an existing partnership or a proven market.</li>
     </ul>
     <p>Each path needs a concrete invitation: bring one recurring need or interest and leave with something useful. Referrals and shared app blueprints, with personal records excluded from sharing, are acquisition mechanisms to test. No viral loop or referral rate is claimed.</p>
     <h4>Expansion gates</h4>
     <p>Gates weigh more than geography. Start small at a second campus or alumni group and compare useful returns, conversion, acquisition effort and support costs. If behavior weakens outside the founder’s network, improve the offer before expanding broadly. Large-scale acquisition needs channels and resources beyond 150 warm invitations, and YC acceptance is not assumed to supply them.</p>
-    <h4>YC ambition</h4>
-    <p>“Application ambition: YC Summer 2027.” An ambition, kept apart from customers and partners: no application decision, acceptance, backing or endorsement is implied. YC is a possible accelerator for the business, not the customer outcome or the reason the growth target becomes possible. Summer 2027 is the proposed primary milestone because it gives time to produce meaningful operating evidence. Winter 2027 is January–March 2027; its regular deadline was November 2, 2026, although late applications were still accepted when checked on November 15, 2026. Winter 2027 does not follow Summer 2027, and no Summer 2027 application deadline is stated here [Y1, Y2].</p>
+    <h4>YC Summer 2027: an application goal</h4>
+    <p>An ambition, kept apart from customers and partners: no application decision, acceptance, backing or endorsement is implied. YC is a possible accelerator for the business, not the customer outcome or the reason the growth goal becomes possible. Summer 2027 is the proposed milestone because it gives time to produce meaningful operating evidence. Winter 2027 is January–March 2027; its regular deadline was November 2, 2026, although late applications were still accepted when checked on November 15, 2026. Winter 2027 does not follow Summer 2027, and no Summer 2027 application deadline is stated here [Y1, Y2].</p>
   </section>
 
   <section class="appendix-section" id="appendix-business" aria-labelledby="appendix-business-title">
-    <h3 id="appendix-business-title">8. Business model and economics questions</h3>
-    <p><strong>The offer.</strong> 14 days free → $7.50/month for two months → $15/month thereafter. A proposed pricing experiment: a free trial, not a permanent free tier. No other price, unlimited AI usage or automatic billing flow is proposed, and this pitch implements no billing. Normal subscription access rules will be stated clearly when billing is actually implemented.</p>
+    <h3 id="appendix-business-title">9. Pricing and economics questions</h3>
+    <p><strong>Proposed pricing.</strong> 14 days free → $7.50/month for 2 months → $15/month thereafter. A proposed pricing experiment: a free trial, not a permanent free tier. No other price, unlimited AI usage or automatic billing flow is proposed, and this pitch implements no billing. Normal subscription access rules will be stated clearly when billing is actually implemented.</p>
+    <p><strong>Why someone would keep it.</strong> <em>Personal fit</em>: a useful app already fits an interest or recurring task. <em>Your progress</em>: personal records make the next visit more valuable. <em>Room to grow</em>: the app can change when the person’s needs change. That is the hypothesis, not validated willingness to pay.</p>
     <p><strong>The intended trial.</strong> One useful app, a real action and a later-day return. Upgrading means choosing continued usefulness: the hope is that Ori becomes part of someone’s routine. No manipulative reminders, hidden charges, or making records inaccessible to force payment.</p>
-    <p><strong>Why someone would return, and pay.</strong> A useful app already fits an interest or recurring task. Personal records make the next visit more valuable. The workspace can adapt when the person’s needs change. That is the hypothesis, not validated willingness to pay.</p>
-    <p><strong>What we measure.</strong> Useful return → actual paid conversion → renewal → cost to serve. A business funnel, not a replacement for the five stages.</p>
+    <p><strong>What we measure.</strong> Useful return → actual paid conversion → renewal → cost to serve. A business funnel, not a sixth stage.</p>
     <h4>Economics questions</h4>
     <ul>
       <li><strong>Trial conversion:</strong> actual first payments divided by trial starters whose trial window has finished. Incomplete cohorts are reported separately.</li>
@@ -285,7 +353,8 @@
   </section>
 
   <section class="appendix-section" id="appendix-velocity" aria-labelledby="appendix-velocity-title">
-    <h3 id="appendix-velocity-title">9. How we used Velocity AI, expanded</h3>
+    <h3 id="appendix-velocity-title">10. How we used Velocity AI, expanded</h3>
+    <p>Slide 13 shows four questions Velocity helped us ask and the decision each one led to: <strong>Build something new?</strong> → save, reuse, revise, or create. <strong>What makes it useful?</strong> → real actions, not just screens. <strong>Can it change safely?</strong> → keep progress through revisions. <strong>Will people keep it?</strong> → test return use and payment. Research → product decisions → pilot tests.</p>
     <p>The earlier working name in the records is “Personal AI Playground”; these are Ori’s research artifacts. The handoff documents a saved Build Plan source, a concept in the Kearney workspace, attached research, four research rounds, and a generated then revised Hackathon Decision &amp; Demo Canvas. A later commercial review examined the first-user experiment, competitors, pricing and costs.</p>
     <div class="table-wrap"><table>
       <thead><tr><th scope="col">Documented activity</th><th scope="col">What it produced</th><th scope="col">Why it matters to the customer</th><th scope="col">Evidence status</th></tr></thead>
@@ -304,7 +373,7 @@
       <li><strong>Preserve the person’s progress.</strong> Changing an app should never lose an observation, a session or a task. Planned duration and measured activity stay distinct.</li>
       <li><strong>Make the experiment behavioral.</strong> Ask whether someone returns on a later day and completes a real action, then whether they pay and renew. Generated apps and enthusiastic reactions are weaker evidence.</li>
     </ol>
-    <p><strong>What we attribute to Velocity.</strong> It informed the decision workflow, capability mapping, failure cases, data-preservation requirements and the demo and validation plan: it shaped, specified and helped us test assumptions. It did not build or validate Ori. The original research handoff did not edit or test the product repository; current implementation needs its own evidence. We have not measured a time saving. AI-generated research and fictional fixtures do not validate customer behavior; human observation and actual use do.</p>
+    <p><strong>What we attribute to Velocity.</strong> It informed the decision workflow, capability mapping, failure cases, data-preservation requirements and the demo and validation plan: it shaped, specified and helped us test assumptions. It did not build or validate Ori, establish demand or prove willingness to pay, and its proposed tests are not passed tests. The original research handoff did not edit or test the product repository; current implementation needs its own evidence. We have not measured a time saving. AI-generated research and fictional fixtures do not validate customer behavior; human observation and actual use do.</p>
     <p><strong>A useful next run.</strong> Take real prototype recordings and observed pilot sessions, compare them against the existing criteria, and revise one important assumption. The handoff identifies this as a pending Prompt C; it is not counted as completed.</p>
     <p><strong>Evidence references.</strong></p>
     <ul>
@@ -316,9 +385,9 @@
   </section>
 
   <section class="appendix-section" id="appendix-ask" aria-labelledby="appendix-ask-title">
-    <h3 id="appendix-ask-title">10. The ask, next evidence and Q&amp;A</h3>
-    <p>$10,000 for an eight-week pilot with 50 students. A proposal: no investment terms or committed funding are implied. For a prize, “Ten thousand dollars would fund…”.</p>
-    <p><strong>It funds</strong> a reliable first-user experience, observed use, introductory payment tests and cost measurement. <strong>It does not fund or guarantee</strong> the 100,000-user ambition.</p>
+    <h3 id="appendix-ask-title">11. The ask, the budget and Q&amp;A</h3>
+    <p><strong>$10,000. 0% equity. The perks of a hackathon.</strong> The founder’s playful prize ask, not an investment round, investment terms or an agreed award. Over about eight weeks it funds a reliable product, a 50-person pilot and evidence to grow: a reliable first-user experience, observed use, introductory payment tests and cost measurement.</p>
+    <p><strong>It does not fund or guarantee</strong> the 100,000-user goal.</p>
     <p><strong>The next evidence.</strong> 50 enrolled students; measured activation and week-four use; observed introductory conversion; known costs; and a small attempt to recruit beyond the founder’s closest contacts. The first experiment should show what to improve or stop, as well as what to expand.</p>
     <div class="table-wrap"><table class="compact">
       <caption>Suggested allocation, a planning proposal</caption>
@@ -332,12 +401,13 @@
       </tbody>
     </table></div>
     <p>Revised against actual costs. Research compensation, if used, will be disclosed and kept separate from evidence of organic payment.</p>
+    <p><strong>After the ask.</strong> The closing slide stays up for Q&amp;A: “Ori. Your phone, your story.”, the QR code (it opens the live product, where each person creates their own account) and the founder’s contact details. No shared demo credentials are shown.</p>
     <p><strong>Questions to prepare for in Q&amp;A.</strong> Who maintains the product; who owns recruitment; what weekly capacity is available; and which commitments would change if YC admission or full-time company work becomes real. These are answered honestly on the day: this deck names no team members, hires or commitments.</p>
   </section>
 
   <section class="appendix-section" id="appendix-companion" aria-labelledby="appendix-companion-title">
-    <h3 id="appendix-companion-title">11. About Ori’s expressions</h3>
-    <p>One small companion sits in the same upper corner of every scene, larger only at the opening (scene 1) and the spark reveal (scene 5). It uses the four expressions of Ori’s identity board, drawn from the product’s canonical art: <strong>Listening</strong> (scenes 3, 5 and 11), <strong>Thinking</strong> (scenes 2, 4, 10, 13 and 14), <strong>Found something</strong> (scenes 6, 9 and 12) and <strong>Ready</strong> (scenes 1, 7, 8 and 15). It crossfades gently between expressions and stays still under reduced motion.</p>
+    <h3 id="appendix-companion-title">12. About Ori’s expressions</h3>
+    <p>The companion uses the four expressions of Ori’s identity board, drawn from the product’s canonical art: <strong>Listening</strong> (scenes 2, 4 and 10), <strong>Thinking</strong> (scenes 12 and 13), <strong>Found something</strong> (scenes 5, 7, 8, 9 and 11) and <strong>Ready</strong> (scenes 1, 3, 6 and 14). It sits in the same upper corner of most scenes, larger at the opening, and becomes part of the composition where the story centers on it (scenes 3, 4, 7, 8, 9 and 14; on scene 7 it marks the “Ori connects the dots” step). The closing scene (15) has no companion. It crossfades gently between expressions and stays still under reduced motion.</p>
     <p>These expressions are storytelling cues. They do not imply that Ori detects or senses anyone’s emotions. In the product, the companion’s mood follows what the app is doing, such as thinking while a request is pending, never a reading of the person.</p>
   </section>
 </dialog>

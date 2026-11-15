@@ -1,17 +1,29 @@
 'use strict';
-// Ori pitch engine. Renders the scenes in scenes.js (the single scene data source) and runs navigation,
-// the overview, speaker notes, the timer, the appendix, the three demo recordings, the corner companion,
-// full screen and keyboard control. No dependencies, no build step, no network calls: it works from any
-// static host (the Ori server at /pitch/, or the standalone export in deploy/pitch/).
+// Ori pitch engine. Renders the scenes in scenes.js (the single scene data source) through the slide
+// registry (window.ORI_SLIDES, filled by slides/*.js) or a built-in renderer, fits every scene to one
+// 1600 x 900 design stage, and runs navigation, step reveals, the overview, speaker notes, the timer, the
+// appendix, the media slots (config.js), the companion, presentation mode and keyboard control.
+// No dependencies, no build step and no calls to any server: it works from any static host (the Ori
+// server at /pitch/, or `python -m http.server`). The contract for slide authors is in
+// docs/ori-pitch-kit/PITCH_INTEGRATION.md ("16-slide revision").
 (() => {
   const config = window.ORI_PITCH || {};
   const scenes = Array.isArray(window.ORI_SCENES) ? window.ORI_SCENES : [];
   const appendixNames = window.ORI_APPENDIX_SECTIONS || {};
-  const TARGET_SECONDS = 240;
+  const registry = window.ORI_SLIDES && typeof window.ORI_SLIDES === 'object' ? window.ORI_SLIDES : {};
+  const ICONS = window.ORI_ICONS || { app: {}, ui: {} };
+  // 15 presented scenes, 238 s (3:58): the brief's slide 2 moved to the appendix and slide 8 runs 25 s.
+  const TARGET_SECONDS = 238;
   const EXPECTED_SCENES = 15;
   const WORDS_PER_SECOND = 2.5; // about 150 spoken words a minute
+  // The design stage: every scene is laid out at 1600 x 900 and scaled to fit (stage mode). Narrow and
+  // portrait screens use flow mode instead: no scaling, the scene scrolls.
+  const STAGE = Object.freeze({ width: 1600, height: 900 });
+  const FLOW_QUERY = '(max-width: 767px), (max-height: 499px), (max-width: 1100px) and (orientation: portrait)';
+  const flowMedia = window.matchMedia(FLOW_QUERY);
+  const motionMedia = window.matchMedia('(prefers-reduced-motion: reduce)');
   // The four expressions of the identity board, each drawn by a canonical shared/oriArt.ts mood.
-  const EXPRESSION_ART = { Listening: 'attentive', Thinking: 'thinking', 'Found something': 'discovery', Ready: 'success' };
+  const EXPRESSION_ART = Object.freeze({ Listening: 'attentive', Thinking: 'thinking', 'Found something': 'discovery', Ready: 'success' });
   const presenter = typeof config.presenter === 'string' && config.presenter.trim() ? config.presenter.trim() : 'Zuyu Liu';
 
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -40,6 +52,7 @@
   const h = (tag, attrs, ...children) => fill(document.createElement(tag), attrs, children);
   const svg = (tag, attrs, ...children) => fill(document.createElementNS(SVG_NS, tag), attrs, children);
   const sr = (text) => h('span', { class: 'sr-only' }, text);
+  const cls = (...names) => names.filter(Boolean).join(' ');
 
   const pad2 = (n) => String(n).padStart(2, '0');
   const clock = (total) => {
@@ -47,6 +60,14 @@
     return `${Math.floor(s / 60)}:${pad2(s % 60)}`;
   };
   const formatNumber = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+$)/g, ',');
+  let idCounter = 0;
+  const uid = (prefix) => `${prefix}-${(idCounter += 1)}`;
+  const warned = new Set();
+  const warnOnce = (message) => {
+    if (warned.has(message)) return;
+    warned.add(message);
+    console.warn(`[ori-pitch] ${message}`);
+  };
 
   /* ---------------------------------------------------------------------------------------- */
   /* Spoken-word estimate (the same rule as the rehearsal in docs/ori-pitch-kit/REHEARSAL.md)   */
@@ -93,7 +114,7 @@
   const speechSeconds = (words) => Math.round((words / WORDS_PER_SECOND) * 10) / 10;
 
   /* ---------------------------------------------------------------------------------------- */
-  /* Scene data: timing and a consistency check                                                */
+  /* Scene data: timing                                                                         */
   /* ---------------------------------------------------------------------------------------- */
 
   const starts = [];
@@ -108,14 +129,579 @@
   });
   // Read-only, for rehearsal tooling: budgets and spoken-track estimates as the notes show them.
   window.ORI_PITCH_TIMING = Object.freeze(timing);
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* Icons: the project's own set (assets/icons.js, generated from shared/icons.ts and ui.tsx)  */
+  /* ---------------------------------------------------------------------------------------- */
+
+  // Two glyphs the product's set lacks, drawn in the same 24 x 24 stroke style (Lucide maximize-2 / minimize-2).
+  const EXTRA_ICONS = {
+    expand: { body: '<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/>' },
+    collapse: { body: '<path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/>' },
+  };
+  function glyphFor(name) {
+    const text = String(name || '');
+    const at = text.indexOf(':');
+    if (at > 0) {
+      const set = text.slice(0, at);
+      const key = text.slice(at + 1);
+      return (set === 'extra' ? EXTRA_ICONS : ICONS[set] || {})[key] || null;
+    }
+    return (ICONS.ui && ICONS.ui[text]) || (ICONS.app && ICONS.app[text]) || EXTRA_ICONS[text] || null;
+  }
+  // kit.icon('camera') → an inline 24 x 24 SVG in currentColor (decorative unless options.title is given).
+  function icon(name, options = {}) {
+    const glyph = glyphFor(name);
+    const size = options.size || 24;
+    if (!glyph) {
+      warnOnce(`unknown icon "${name}"`);
+      return h('span', { class: cls('kit-icon', 'is-missing', options.className), 'aria-hidden': 'true', style: { width: `${size}px`, height: `${size}px` } });
+    }
+    const el = svg('svg', {
+      class: cls('kit-icon', options.className),
+      viewBox: '0 0 24 24',
+      width: String(size),
+      height: String(size),
+      fill: glyph.fill ? 'currentColor' : 'none',
+      stroke: 'currentColor',
+      'stroke-width': String(options.strokeWidth || glyph.strokeWidth || 2),
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round',
+      focusable: 'false',
+      'aria-hidden': options.title ? null : 'true',
+      role: options.title ? 'img' : null,
+    });
+    el.innerHTML = glyph.body;
+    if (options.title) el.prepend(svg('title', null, options.title));
+    return el;
+  }
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* The kit: shared building blocks for slide renderers (window.ORI_KIT)                        */
+  /* ---------------------------------------------------------------------------------------- */
+
+  // The headline, with the scene's accent words in the accent colour (blue on light scenes, lime on ink).
+  // A new sentence before the accent starts a new line (options.break === false keeps one line).
+  function headline(scene, options = {}) {
+    const tag = options.tag || 'h2';
+    const text = String(scene.headline || '');
+    const part = typeof scene.accent === 'string' ? scene.accent : '';
+    const at = part ? text.lastIndexOf(part) : -1;
+    const className = cls('headline', options.className);
+    if (at < 0) return h(tag, { class: className }, text);
+    const before = text.slice(0, at);
+    const after = text.slice(at + part.length);
+    const breakLine = options.break !== false && /[.!?]\s$/.test(before);
+    return h(tag, { class: className }, before, breakLine ? h('br') : null, h('span', { class: 'accent' }, part), after);
+  }
+  const head = (scene, ...extra) => h('header', { class: 'scene-head' }, headline(scene), ...extra);
+  // A small, unobtrusive label (the scene's short name). Optional: slides carry no section eyebrows by default.
+  const sectionLabel = (scene, className) => h('p', { class: cls('kit-label', className) }, scene.label || '');
+  // A compact qualifier that changes how a judge reads what they see: "Goal", "Proposed pricing",
+  // "Product positioning", "Illustration". tone: 'quiet' (default), 'strong' (ink on lime), 'outline'.
+  const tag = (text, options = {}) => h('span', { class: cls('kit-tag', options.tone ? `tone-${options.tone}` : '', options.className) }, text);
+  const appendixLink = (id, text, label) => h('a', { class: 'ref-link', href: `#appendix-${id}`, 'data-appendix-link': id, 'aria-label': label || null }, text);
+  const sourceLink = (href, text, className) => h('a', { class: className || 'source-link', href, target: '_blank', rel: 'noopener noreferrer' }, text, sr(' (opens a new tab)'));
+  const arrowJoin = (items, render, options = {}) => items.flatMap((item, i) => [
+    i ? h('span', { class: 'flow-arrow', 'aria-hidden': 'true' }, icon(options.arrow || 'arrowRight')) : null,
+    i ? sr(options.joiner || ', then ') : null,
+    render(item, i),
+  ]);
+  const flow = (items, options = {}) => h(options.tag || 'p', { class: cls('kit-flow', options.className) },
+    arrowJoin(items, (item, i) => (options.render ? options.render(item, i) : h('span', { class: 'kit-flow-step' }, item)), options));
+  const appIcon = (app, options = {}) => {
+    const size = options.size || 64;
+    return h('img', { class: cls('kit-app-icon', options.className), src: `assets/ori/app-${app}.svg`, alt: options.alt || '', width: String(size), height: String(size), decoding: 'async' });
+  };
+  // Ori inside a composition (the corner companion is separate): the canonical art for one of the four
+  // expressions, on its lilac disc unless options.disc === false.
+  function ori(expression, options = {}) {
+    const art = EXPRESSION_ART[expression] || 'success';
+    if (!EXPRESSION_ART[expression]) warnOnce(`unknown expression "${expression}" (use Listening, Thinking, Found something or Ready)`);
+    const size = options.size || 160;
+    return h('span', {
+      class: cls('kit-ori', options.disc === false ? 'no-disc' : '', options.className),
+      style: { '--ori-size': `${size}px` },
+      role: options.label ? 'img' : null,
+      'aria-label': options.label || null,
+      'aria-hidden': options.label ? null : 'true',
+      'data-expression': EXPRESSION_ART[expression] ? expression : 'Ready',
+    },
+    options.disc === false ? null : h('span', { class: 'kit-ori-disc' }),
+    h('img', { class: 'kit-ori-art', src: `assets/ori/companion-${art}.svg`, alt: '', width: String(size), height: String(size), decoding: 'async' }));
+  }
+  // An image that downloads only when its scene (or the one before it) is shown.
+  const lazyImage = (src, attrs = {}) => h('img', { decoding: 'async', ...attrs, 'data-src': src });
+  // A real product screenshot outside a media slot, with its compact label (default "Product screenshot").
+  const still = (src, options = {}) => h('figure', { class: cls('kit-still', options.className) },
+    lazyImage(src, { alt: options.alt || '', width: options.width ? String(options.width) : null, height: options.height ? String(options.height) : null }),
+    options.label === false ? null : h('figcaption', { class: 'kit-still-label' }, options.label || 'Product screenshot'));
+  // Step reveals: mark an element to appear at step n (1-based) of a building slide. With ghost, it shows
+  // dimmed until then instead of hidden.
+  const reveal = (el, step, options = {}) => {
+    el.setAttribute('data-reveal', String(step));
+    if (options.ghost) el.classList.add('reveal-ghost');
+    return el;
+  };
+  function placeholder(scene, note) {
+    const index = scenes.indexOf(scene);
+    return h('div', { class: 'kit-placeholder', 'data-placeholder': scene.layout },
+      h('p', { class: 'kit-placeholder-tag' }, `Slide ${index + 1} · ${scene.group || 'core'} · layout “${scene.layout}”`),
+      note ? h('p', { class: 'kit-placeholder-note' }, note) : null);
+  }
+
+  const kit = {
+    version: 1,
+    stage: STAGE,
+    config,
+    scenes,
+    h,
+    svg,
+    sr,
+    cls,
+    pad2,
+    clock,
+    formatNumber,
+    headline,
+    head,
+    sectionLabel,
+    tag,
+    label: tag,
+    appendixLink,
+    sourceLink,
+    arrowJoin,
+    flow,
+    icon,
+    hasIcon: (name) => Boolean(glyphFor(name)),
+    appIcon,
+    ori,
+    expressions: Object.keys(EXPRESSION_ART),
+    lazyImage,
+    still,
+    reveal,
+    placeholder,
+    reducedMotion: () => motionMedia.matches,
+    isFlow: () => flowMedia.matches,
+    // Filled in below: media slots, the step controls and the current scale.
+    media: null,
+    mediaControl: null,
+    setStep: null,
+    showAll: null,
+    scale: () => 1,
+  };
+  window.ORI_KIT = kit;
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* Media slots (config.js "media"): recordings, posters, stills, labels, cues, expand          */
+  /* ---------------------------------------------------------------------------------------- */
+
+  const VIDEO_TYPES = { mp4: 'video/mp4', m4v: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', ogv: 'video/ogg' };
+  const videoType = (src) => {
+    const m = /\.([a-z0-9]+)(?:[?#].*)?$/i.exec(src);
+    return m ? VIDEO_TYPES[m[1].toLowerCase()] || '' : '';
+  };
+  function playableUrl(value) {
+    const text = typeof value === 'string' ? value.trim() : '';
+    if (!text) return '';
+    try {
+      const url = new URL(text, location.href);
+      return ['http:', 'https:', 'file:', 'blob:'].includes(url.protocol) ? text : '';
+    } catch {
+      return '';
+    }
+  }
+  const MEDIA = config.media && typeof config.media === 'object' ? config.media : {};
+  function slotSpec(key, overrides) {
+    const base = MEDIA[key] || {};
+    const pick = (name) => (overrides && overrides[name] !== undefined ? overrides[name] : base[name]);
+    const list = (value) => (Array.isArray(value) ? value : value ? [value] : []);
+    return {
+      key,
+      title: pick('title') || key,
+      sources: list(pick('sources')).map(playableUrl).filter(Boolean).map((src) => ({ src, type: videoType(src) })),
+      poster: playableUrl(pick('poster') || ''),
+      still: playableUrl(pick('still') || ''),
+      label: pick('label') || 'Recorded product demo',
+      stillLabel: pick('stillLabel') || 'Product screenshot',
+      aspect: pick('aspect') || '390 / 844',
+      cues: list(pick('cues')).map(Number).filter((n) => Number.isFinite(n) && n >= 0).sort((a, b) => a - b),
+      describe: pick('describe') || '',
+      alt: pick('alt') || '',
+    };
+  }
+
+  const slotRecords = [];
+  const slotsByKey = new Map();
+  let expandedSlot = null;
+
+  function setSlotState(record, state) {
+    record.state = state;
+    record.el.dataset.state = state;
+    record.frame.dataset.state = state;
+    const showVideo = state === 'video' || state === 'local';
+    const showStill = state === 'still' || state === 'failed';
+    record.video.hidden = !showVideo;
+    record.still.hidden = !showStill;
+    record.empty.hidden = state !== 'empty';
+    record.playButton.hidden = !showVideo;
+    record.replayButton.hidden = !showVideo;
+    record.expandButton.hidden = !(showVideo || showStill);
+    let text;
+    if (state === 'local') text = 'Local preview · this tab only, not published';
+    else if (showVideo) text = record.spec.label;
+    else if (showStill) text = record.spec.stillLabel;
+    else if (state === 'empty') text = 'Media unavailable';
+    else text = record.spec.sources.length ? record.spec.label : record.spec.stillLabel;
+    const [main, ...rest] = String(text).split(' · ');
+    record.labelMain.textContent = main;
+    record.labelRest.textContent = rest.length ? ` · ${rest.join(' · ')}` : '';
+    syncPlayButton(record);
+    record.el.dispatchEvent(new CustomEvent('ori:media', { bubbles: true, detail: { key: record.key, state } }));
+  }
+
+  function syncPlayButton(record) {
+    const v = record.video;
+    const playing = !v.paused && !v.ended;
+    record.playButton.replaceChildren(icon(playing ? 'pause' : 'play'));
+    record.playButton.setAttribute('aria-label', playing ? 'Pause' : v.ended ? 'Play again' : 'Play');
+    record.playButton.title = playing ? 'Pause (Space)' : v.ended ? 'Play again' : 'Play (Space)';
+    record.el.classList.toggle('is-playing', playing);
+  }
+
+  function showStill(record, failed) {
+    if (!record.spec.still) {
+      setSlotState(record, 'empty');
+      return;
+    }
+    // A still downloads only here: when the slot has no recording, or its recording failed.
+    if (record.still.getAttribute('src') !== record.spec.still) record.still.src = record.spec.still;
+    setSlotState(record, failed ? 'failed' : 'still');
+  }
+
+  function failSlot(record) {
+    if (record.state === 'failed' || record.state === 'empty' || record.state === 'still') return;
+    record.video.pause();
+    showStill(record, true);
+    if (record.slideIndex === current) notify(record.state === 'failed'
+      ? 'That recording could not load here, so the slot shows a product screenshot instead.'
+      : 'That recording could not load here, and there is no screenshot to show.');
+  }
+
+  function loadSources(record, sources, mode, eager) {
+    const video = record.video;
+    video.pause();
+    for (const old of $$('source', video)) old.remove();
+    video.removeAttribute('src');
+    video.removeAttribute('poster');
+    record.generation += 1;
+    const generation = record.generation;
+    record.cueIndex = -1;
+    setSlotState(record, mode);
+    if (mode === 'video' && record.spec.poster) video.poster = record.spec.poster;
+    let failures = 0;
+    for (const { src, type } of sources) {
+      const source = h('source', { src, type: type || null });
+      // A source the browser cannot play fires 'error' on the <source>, not on the video; the next source is
+      // tried. Only when every source has failed does the slot fall back to its still.
+      source.addEventListener('error', () => {
+        if (generation !== record.generation) return;
+        failures += 1;
+        if (failures >= sources.length) failSlot(record);
+      });
+      video.append(source);
+    }
+    video.preload = eager ? 'auto' : 'metadata';
+    video.load();
+  }
+
+  // Nothing downloads before a slot's scene is current (eager: the whole clip) or next (warm: metadata,
+  // the poster, or a still that is the slot's own content).
+  function prepareSlot(record, eager) {
+    if (record.prepared) {
+      if (eager && record.state === 'video' && record.video.preload !== 'auto') record.video.preload = 'auto';
+      return;
+    }
+    record.prepared = true;
+    if (record.local) loadSources(record, [record.local], 'local', true);
+    else if (record.spec.sources.length) loadSources(record, record.spec.sources, 'video', eager);
+    else showStill(record, false);
+  }
+
+  function resetSlot(record) {
+    record.video.pause();
+    for (const old of $$('source', record.video)) old.remove();
+    record.video.removeAttribute('src');
+    record.video.removeAttribute('poster');
+    record.generation += 1;
+    record.prepared = false;
+    setSlotState(record, 'idle');
+  }
+
+  function playRecord(record) {
+    const v = record.video;
+    if (v.hidden) return;
+    if (v.ended) v.currentTime = 0;
+    const promise = v.play();
+    if (promise) promise.catch(() => notify('Use the play button to start this clip.'));
+  }
+  function toggleRecord(record) {
+    const v = record.video;
+    if (v.hidden) return;
+    if (v.paused || v.ended) playRecord(record);
+    else v.pause();
+  }
+  function replayRecord(record) {
+    const v = record.video;
+    if (v.hidden) return;
+    v.currentTime = 0;
+    playRecord(record);
+  }
+
+  function updateCue(record) {
+    const cues = record.spec.cues;
+    if (!cues.length) return;
+    const t = record.video.currentTime;
+    let index = -1;
+    cues.forEach((cue, i) => {
+      if (t >= cue) index = i;
+    });
+    if (index === record.cueIndex) return;
+    record.cueIndex = index;
+    record.el.dispatchEvent(new CustomEvent('ori:cue', { bubbles: true, detail: { key: record.key, index, time: t, cues } }));
+  }
+
+  // Expand moves the frame (recording, label and controls) into a lightbox over the whole stage, so it
+  // never depends on the slide's own layout; the slot keeps its size meanwhile. Collapse moves it back.
+  function lightboxFor(stage) {
+    let box = Array.from(stage.children).find((el) => el.classList.contains('media-lightbox'));
+    if (!box) {
+      const close = h('button', { type: 'button', class: 'media-lightbox-close', 'aria-label': 'Close the expanded view' }, icon('close'));
+      close.addEventListener('click', () => collapseMedia());
+      box = h('div', { class: 'media-lightbox', hidden: true }, h('div', { class: 'media-lightbox-inner' }), close);
+      box.addEventListener('click', (e) => {
+        if (e.target === box) collapseMedia();
+      });
+      stage.append(box);
+    }
+    return box;
+  }
+  function expandSlot(record, byKeyboard = false) {
+    collapseMedia();
+    record.returnFocus = byKeyboard;
+    const stage = record.el.closest('.stage');
+    if (!stage) return;
+    const box = lightboxFor(stage);
+    record.el.style.width = `${record.frame.offsetWidth}px`;
+    record.el.style.height = `${record.frame.offsetHeight}px`;
+    $('.media-lightbox-inner', box).append(record.frame);
+    box.hidden = false;
+    expandedSlot = record;
+    record.frame.classList.add('is-expanded');
+    record.expandButton.replaceChildren(icon('collapse'));
+    record.expandButton.setAttribute('aria-expanded', 'true');
+    record.expandButton.setAttribute('aria-label', 'Close the expanded view');
+    document.body.classList.add('media-expanded');
+    // From the keyboard, focus follows the frame; after a click the deck keeps the keys, so Space plays the clip.
+    if (byKeyboard) record.expandButton.focus({ preventScroll: true });
+    else deck.focus({ preventScroll: true });
+  }
+  function collapseMedia() {
+    const record = expandedSlot;
+    if (!record) return false;
+    expandedSlot = null;
+    const box = record.frame.closest('.media-lightbox');
+    const restore = Boolean(record.returnFocus && box && box.contains(document.activeElement));
+    record.returnFocus = false;
+    record.el.append(record.frame);
+    record.el.style.removeProperty('width');
+    record.el.style.removeProperty('height');
+    if (box) box.hidden = true;
+    record.frame.classList.remove('is-expanded');
+    record.expandButton.replaceChildren(icon('expand'));
+    record.expandButton.setAttribute('aria-expanded', 'false');
+    record.expandButton.setAttribute('aria-label', 'Expand');
+    document.body.classList.remove('media-expanded');
+    if (restore) record.expandButton.focus({ preventScroll: true });
+    return true;
+  }
+
+  // kit.media('create', { height: 640 }) → a <figure class="media-slot"> for the config.js slot "create".
+  // options: height or width (design px of the visible media), fit ('contain' | 'cover'), className, and any
+  // config field to override for this placement (still, stillLabel, label, alt, cues …).
+  function createSlot(key, options = {}) {
+    if (!MEDIA[key]) warnOnce(`media slot "${key}" is not listed in config.js`);
+    const spec = slotSpec(key, options);
+    const id = uid(`media-${key}`);
+    const video = h('video', { playsinline: true, muted: true, preload: 'none', hidden: true, 'aria-label': `Recording: ${spec.describe || spec.title}` });
+    video.muted = true;
+    video.defaultMuted = true;
+    video.setAttribute('webkit-playsinline', '');
+    const stillImage = h('img', { class: 'media-still', alt: spec.alt || `Product screenshot: ${spec.describe || spec.title}`, hidden: true, decoding: 'async' });
+    const empty = h('div', { class: 'media-empty', hidden: true }, icon('image', { size: 40 }));
+    const viewport = h('div', { class: cls('media-viewport', options.fit === 'cover' ? 'fit-cover' : 'fit-contain') }, stillImage, video, empty);
+    const labelMain = h('b', { class: 'label-main' });
+    const labelRest = h('span', { class: 'label-rest' });
+    const label = h('p', { class: 'media-label', id: `${id}-label` }, h('span', { class: 'status-dot', 'aria-hidden': 'true' }), h('span', { class: 'label-text' }, labelMain, labelRest));
+    const playButton = h('button', { type: 'button', class: 'media-button media-play', 'aria-label': 'Play', title: 'Play (Space)', hidden: true });
+    const replayButton = h('button', { type: 'button', class: 'media-button media-replay', 'aria-label': 'Replay from the start', title: 'Replay', hidden: true }, icon('reset'));
+    const expandButton = h('button', { type: 'button', class: 'media-button media-expand', 'aria-label': 'Expand', 'aria-expanded': 'false', 'aria-controls': `${id}-frame`, title: 'Expand', hidden: true }, icon('expand'));
+    // Size and state live on the frame, which moves into the lightbox when expanded.
+    const sizeClass = options.height ? 'size-height' : options.width ? 'size-width' : 'size-fill';
+    const style = { '--slot-aspect': spec.aspect };
+    if (options.height) style['--slot-h'] = `${options.height}px`;
+    if (options.width) style['--slot-w'] = `${options.width}px`;
+    const frame = h('div', { class: cls('media-frame', sizeClass), id: `${id}-frame`, 'data-state': 'idle', style }, viewport, h('div', { class: 'media-bar' }, label, h('div', { class: 'media-controls' }, playButton, replayButton, expandButton)));
+    const el = h('figure', { class: cls('media-slot', sizeClass, options.className), id, 'data-slot': key, 'data-state': 'idle', 'aria-labelledby': `${id}-label` }, frame);
+    const record = { key, spec, el, frame, viewport, video, still: stillImage, empty, labelMain, labelRest, playButton, replayButton, expandButton, state: 'idle', prepared: false, generation: 0, cueIndex: -1, slideIndex: -1, local: null };
+
+    // A mouse click on Play or Replay hands the keys back to the deck (as the toolbar does): the next Space then
+    // pauses the clip, or moves on once it has ended, instead of pressing Play again and rewinding it.
+    playButton.addEventListener('click', (e) => { toggleRecord(record); deckAfterPointer(e); });
+    replayButton.addEventListener('click', (e) => { replayRecord(record); deckAfterPointer(e); });
+    expandButton.addEventListener('click', (e) => (expandedSlot === record ? collapseMedia() : expandSlot(record, e.detail === 0)));
+    video.addEventListener('click', () => toggleRecord(record));
+    for (const type of ['play', 'pause', 'ended']) {
+      video.addEventListener(type, () => {
+        syncPlayButton(record);
+        record.el.dispatchEvent(new CustomEvent('ori:playback', { bubbles: true, detail: { key, type, time: video.currentTime } }));
+      });
+    }
+    // One clip at a time on a slide: starting one pauses any other that is playing there.
+    video.addEventListener('play', () => {
+      for (const other of slotRecords) if (other !== record && other.slideIndex === record.slideIndex && !other.video.paused) other.video.pause();
+    });
+    video.addEventListener('timeupdate', () => updateCue(record));
+    video.addEventListener('seeked', () => updateCue(record));
+    // A selected source that cannot be decoded fails on the video element itself.
+    video.addEventListener('error', () => {
+      if (video.error && (record.state === 'video' || record.state === 'local')) failSlot(record);
+    });
+    stillImage.addEventListener('error', () => {
+      const recordingFailed = record.state === 'failed';
+      if (record.state === 'still' || record.state === 'failed') setSlotState(record, 'empty');
+      if (recordingFailed && record.slideIndex === current) notify('That recording and its screenshot could not load here.');
+    });
+    setSlotState(record, 'idle');
+    slotRecords.push(record);
+    if (!slotsByKey.has(key)) slotsByKey.set(key, record);
+    return el;
+  }
+
+  function mediaControl(key) {
+    const record = slotsByKey.get(key);
+    if (!record) return null;
+    return {
+      key,
+      el: record.el,
+      video: record.video,
+      get state() {
+        return record.state;
+      },
+      get cues() {
+        return record.spec.cues.slice();
+      },
+      get activeCue() {
+        return record.cueIndex;
+      },
+      play: () => playRecord(record),
+      pause: () => record.video.pause(),
+      toggle: () => toggleRecord(record),
+      replay: () => replayRecord(record),
+      seek: (seconds) => {
+        if (!record.video.hidden) record.video.currentTime = Math.max(0, Number(seconds) || 0);
+      },
+      expand: () => expandSlot(record),
+      collapse: () => collapseMedia(),
+    };
+  }
+  kit.media = createSlot;
+  kit.mediaControl = mediaControl;
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* Built-in scene compositions (slide 1 and the final slide); the rest come from slides/*.js   */
+  /* ---------------------------------------------------------------------------------------- */
+
+  const R = {};
+
+  R.promise = (scene) => {
+    const o = scene.onScreen || {};
+    const title = scene.headline === 'Your phone, your story.'
+      ? h('h1', { class: 'headline hero-title' }, 'Your phone,', h('br'), ' your ',
+        h('span', { class: 'accent-word' }, 'story',
+          svg('svg', { viewBox: '0 0 340 25', preserveAspectRatio: 'none', 'aria-hidden': 'true', focusable: 'false' }, svg('path', { d: 'M4 15Q170 0 334 12' }))), '.')
+      : h('h1', { class: 'headline hero-title' }, scene.headline);
+    const collection = o.collection || [];
+    const apps = collection.map((a) => h('div', { class: `phone-app app-${a.app}` }, appIcon(a.app, { className: 'phone-icon', size: 64 }), h('b', null, a.name), h('span', null, a.note)));
+    const spark = h('div', { class: 'phone-app is-spark' }, h('span', { class: 'spark-slot' }, h('span', { class: 'spark-dot' })), h('b', null, 'Spark'), h('span', null, o.spark));
+    const description = `Illustration: Ori beside a personal collection on a phone: ${collection.map((a) => `${a.name} for ${a.note}`).join(', ')}, and ${String(o.spark || '').replace(/…$/, '')}.`;
+    const chips = o.chips || [];
+    return {
+      head: null,
+      bodyClass: 'hero-body',
+      body: [
+        h('div', { class: 'hero-copy' },
+          title,
+          h('p', { class: 'lead' }, (String(o.lead || '').match(/[^.!?]+[.!?]+/g) || [o.lead]).flatMap((sentence, i) => [i ? ' ' : null, h('span', { class: 'lead-line' }, String(sentence).trim())])),
+          h('div', { class: 'hero-meta' }, h('span', { class: 'pill' }, o.support), h('span', { class: 'byline' }, presenter))),
+        h('div', { class: 'hero-world', role: 'img', 'aria-label': description },
+          h('div', { class: 'world-ring ring-one' }), h('div', { class: 'world-ring ring-two' }),
+          h('div', { class: 'phone-glimpse' }, h('div', { class: 'phone-notch' }), h('div', { class: 'phone-grid' }, apps, spark)),
+          chips[0] ? h('div', { class: 'world-chip chip-one' }, chips[0]) : null,
+          chips[1] ? h('div', { class: 'world-chip chip-two' }, chips[1]) : null,
+          h('div', { class: 'world-caption' }, h('span', null, o.caption), o.illustration ? tag(o.illustration, { className: 'world-tag' }) : null)),
+      ],
+    };
+  };
+
+  // The close: only the signature line, the QR code (linking to the product) and the contact details.
+  R.signature = (scene) => {
+    const o = scene.onScreen || {};
+    const line = String(o.line || scene.headline);
+    const qr = o.qr || {};
+    const c = o.contact || {};
+    // "Ori." / "Your phone," / "your story." on three lines, as a callback to the opening; the text stays
+    // exactly the one line (the spaces between the blocks are part of it).
+    const m = /^(Ori\.)\s+(Your phone,)\s+(your )(story)(\.)$/.exec(line);
+    const lineEl = m
+      ? h('h2', { class: 'signature-line' }, h('span', { class: 'sig-row' }, m[1]), ' ', h('span', { class: 'sig-row' }, m[2]), ' ', h('span', { class: 'sig-row' }, m[3], h('span', { class: 'accent' }, m[4]), m[5]))
+      : h('h2', { class: 'signature-line' }, line);
+    const qrHref = /^https:\/\//.test(String(qr.href || '')) ? qr.href : '';
+    const qrImage = h('img', { src: qr.src, alt: qr.alt || 'QR code', width: '384', height: '384', decoding: 'async' });
+    return {
+      head: null,
+      bodyClass: 'signature-body',
+      companion: false,
+      body: [h('div', { class: 'signature' },
+        h('div', { class: 'signature-text' },
+          lineEl,
+          h('address', { class: 'signature-contact' },
+            h('span', { class: 'contact-name' }, c.name),
+            h('a', { class: 'contact-link', href: `mailto:${c.email}` }, c.email),
+            h('a', { class: 'contact-link', href: `tel:${c.tel}` }, c.phone))),
+        qrHref
+          ? h('a', { class: 'signature-qr', href: qrHref, target: '_blank', rel: 'noopener noreferrer', 'aria-label': `${qr.alt || 'QR code'} (opens a new tab)` }, qrImage)
+          : h('span', { class: 'signature-qr' }, qrImage))],
+    };
+  };
+
+  const fallbackRender = (scene) => ({ body: [placeholder(scene, `No renderer is registered for the layout “${scene.layout}”.`)] });
+  const rendererFor = (scene) => (typeof registry[scene.layout] === 'function' ? registry[scene.layout] : R[scene.layout]) || null;
+
+  /* ---------------------------------------------------------------------------------------- */
+  /* Scene data: a consistency check (console warnings only)                                    */
+  /* ---------------------------------------------------------------------------------------- */
+
   (() => {
     const problems = [];
-    const ids = new Set();
+    const names = new Set();
     scenes.forEach((scene, i) => {
-      if (!scene.id || ids.has(scene.id)) problems.push(`missing or duplicate id "${scene.id}"`);
-      ids.add(scene.id);
-      if (!EXPRESSION_ART[scene.companion && scene.companion.expression]) problems.push(`${scene.id}: unknown expression`);
+      for (const name of [scene.id, ...(scene.aliases || [])]) {
+        if (!name || names.has(name) || /^\d+$/.test(name)) problems.push(`scene ${i + 1}: missing, numeric or duplicate id or alias "${name}"`);
+        names.add(name);
+      }
+      if (scene.companion && !EXPRESSION_ART[scene.companion.expression]) problems.push(`${scene.id}: unknown expression "${scene.companion.expression}"`);
       if (timing[i].estimate > scene.seconds) problems.push(`${scene.id}: spoken track ≈ ${timing[i].estimate}s exceeds its ${scene.seconds}s budget`);
+      if (!rendererFor(scene)) problems.push(`${scene.id}: no renderer for layout "${scene.layout}"`);
     });
     if (scenes.length !== EXPECTED_SCENES) problems.push(`expected ${EXPECTED_SCENES} scenes, found ${scenes.length}`);
     if (totalSeconds !== TARGET_SECONDS) problems.push(`scene budgets total ${totalSeconds}s, expected ${TARGET_SECONDS}s`);
@@ -123,448 +709,104 @@
   })();
 
   /* ---------------------------------------------------------------------------------------- */
-  /* Shared slide parts                                                                         */
+  /* Fit: one 1600 x 900 stage, scaled to the space between the bars (or the whole screen)       */
   /* ---------------------------------------------------------------------------------------- */
 
-  // The part of each headline drawn in cobalt (styling only; the words come from scenes.js).
-  const ACCENT = {
-    research: 'only the beginning.',
-    stages: 'between a spark and a habit.',
-    bring: 'We will shape what comes next.',
-    create: 'somewhere to begin.',
-    'use-revise': 'Make it yours.',
-    reopen: 'still here.',
-    why: 'built around you.',
-    foundation: 'A shared foundation.',
-    gtm: 'a community I already help lead.',
-    roadmap: 'Earn the right to expand.',
-    business: 'Choose to keep it.',
-    velocity: 'Sharper behavioral tests.',
-    ask: 'somewhere to grow.',
-  };
-
-  function headline(scene, tag = 'h2') {
-    const text = scene.headline;
-    const part = ACCENT[scene.id];
-    const at = part ? text.lastIndexOf(part) : -1;
-    if (at < 0) return h(tag, { class: 'headline' }, text);
-    const before = text.slice(0, at);
-    const newSentence = /[.!?]\s$/.test(before);
-    return h(tag, { class: 'headline' }, before, newSentence ? h('br') : null, h('span', { class: 'accent' }, part));
+  const deck = $('#deck');
+  // A mouse click or tap on a control hands the keys back to the deck (e.detail > 0): otherwise the next Space or
+  // Enter would press that control again, and its :focus-visible ring would pin a presentation bar over the scenes.
+  const pointerOpener = (e) => (e.detail > 0 ? deck : e.currentTarget);
+  const deckAfterPointer = (e) => { if (e && e.detail > 0) deck.focus({ preventScroll: true }); };
+  let stageScale = 1;
+  function fit() {
+    const flowMode = flowMedia.matches;
+    const root = document.documentElement;
+    root.classList.toggle('is-flow', flowMode);
+    root.classList.toggle('is-stage', !flowMode);
+    if (flowMode) {
+      stageScale = 1;
+      deck.style.removeProperty('--stage-scale');
+      return;
+    }
+    const width = deck.clientWidth;
+    const height = deck.clientHeight;
+    if (!width || !height) return;
+    stageScale = Math.min(width / STAGE.width, height / STAGE.height);
+    deck.style.setProperty('--stage-scale', stageScale.toFixed(4));
   }
-
-  const sectionLabel = (scene, cls = 'eyebrow') => h('p', { class: `${cls} section-label` },
-    h('span', { class: 'section-num' }, `Section ${scene.section.number}`),
-    h('span', { class: 'section-sep', 'aria-hidden': 'true' }, ' · '),
-    sr(': '),
-    h('span', { class: 'section-name' }, scene.section.name));
-
-  // Extra lines go between the section label and the headline (the discovery question); headThen puts
-  // them after the headline (the roadmap's subheading).
-  const headOf = (scene, ...extra) => h('header', { class: 'scene-head' }, sectionLabel(scene), ...extra, headline(scene));
-  const headThen = (scene, ...after) => h('header', { class: 'scene-head' }, sectionLabel(scene), headline(scene), ...after);
-
-  const slideBottom = (scene) => h('footer', { class: 'slide-bottom' },
-    h('span', { class: 'slide-bottom-label' }, (scene.footer && scene.footer[0]) || ''),
-    h('span', { class: 'slide-bottom-note' }, (scene.footer && scene.footer[1]) || ''));
-
-  const appendixLink = (id, text, label) => h('a', { class: 'ref-link', href: `#appendix-${id}`, 'data-appendix-link': id, 'aria-label': label || null }, text);
-
-  const appIcon = (app, cls, size) => h('img', { class: cls, src: `assets/ori/app-${app}.svg`, alt: '', width: size, height: size, decoding: 'async' });
-
-  const arrowJoin = (items, render) => items.flatMap((item, i) => [
-    i ? h('span', { class: 'flow-arrow', 'aria-hidden': 'true' }, '→') : null,
-    i ? sr(', then ') : null,
-    render(item, i),
-  ]);
-
-  function sparkCard(spark) {
-    const label = h('span', { class: 'spark-label' }, spark.label);
-    if (spark.kind === 'reel') {
-      return h('div', { class: 'spark spark-reel' }, h('span', { class: 'reel-frame', 'aria-hidden': 'true' }, h('span', { class: 'reel-play' })), label);
-    }
-    const text = spark.kind === 'sentence' ? `“${spark.text}”` : spark.text;
-    return h('div', { class: `spark spark-${spark.kind}` }, h('p', { class: 'spark-text' }, text), label);
-  }
-
-  /* ---------------------------------------------------------------------------------------- */
-  /* Scene compositions                                                                         */
-  /* ---------------------------------------------------------------------------------------- */
-
-  const R = {};
-
-  R.promise = (scene) => {
-    const o = scene.onScreen;
-    const title = scene.headline === 'Your phone, your story.'
-      ? h('h1', { class: 'headline hero-title' }, 'Your phone,', h('br'), ' your ',
-        h('span', { class: 'accent-word' }, 'story',
-          svg('svg', { viewBox: '0 0 340 25', preserveAspectRatio: 'none', 'aria-hidden': 'true', focusable: 'false' }, svg('path', { d: 'M4 15Q170 0 334 12' }))), '.')
-      : h('h1', { class: 'headline hero-title' }, scene.headline);
-    const apps = o.collection.map((a) => h('div', { class: `phone-app app-${a.app}` }, appIcon(a.app, 'phone-icon', 64), h('b', null, a.name), h('span', null, a.note)));
-    const spark = h('div', { class: 'phone-app is-spark' }, h('span', { class: 'spark-slot' }, h('span', { class: 'spark-dot' })), h('b', null, 'Spark'), h('span', null, o.spark));
-    const description = `Illustration: Ori beside a personal collection on a phone: ${o.collection.map((a) => `${a.name} for ${a.note}`).join(', ')}, and ${o.spark.replace(/…$/, '')}.`;
-    return {
-      head: null,
-      bodyClass: 'hero-body',
-      body: [
-        h('div', { class: 'hero-copy' },
-          sectionLabel(scene),
-          title,
-          h('p', { class: 'lead' }, (o.lead.match(/[^.!?]+[.!?]+/g) || [o.lead]).flatMap((sentence, i) => [i ? ' ' : null, h('span', { class: 'lead-line' }, sentence.trim())])),
-          h('div', { class: 'hero-meta' }, h('span', { class: 'pill' }, o.support), h('span', { class: 'byline' }, presenter))),
-        h('div', { class: 'hero-world', role: 'img', 'aria-label': description },
-          h('div', { class: 'world-ring ring-one' }), h('div', { class: 'world-ring ring-two' }),
-          h('div', { class: 'phone-glimpse' }, h('div', { class: 'phone-notch' }), h('div', { class: 'phone-grid' }, apps, spark)),
-          h('div', { class: 'world-chip chip-one' }, 'a new interest'),
-          h('div', { class: 'world-chip chip-two' }, 'a little more you'),
-          h('div', { class: 'world-caption' }, h('span', null, o.caption), h('span', { class: 'world-star' }, '✦'))),
-      ],
-    };
-  };
-
-  R.research = (scene) => ({
-    head: headOf(scene),
-    body: [h('div', { class: 'research-cards' }, scene.onScreen.cards.map((card, i) => h('article', { class: `research-card card-${i + 1}`, 'aria-label': `${card.ref}, ${card.source.label}` },
-      h('p', { class: 'card-tag' }, h('span', { class: 'ref-chip' }, card.ref), h('span', null, card.tag)),
-      h('p', { class: 'card-figure' }, card.figure, card.unit ? h('span', { class: 'card-unit' }, ` ${card.unit}`) : null),
-      h('p', { class: 'card-text' }, card.text),
-      h('p', { class: 'card-source' },
-        h('a', { href: card.source.href, target: '_blank', rel: 'noopener noreferrer' }, card.source.label, sr(' (opens a new tab)')),
-        ' · ', card.detail, ' ',
-        appendixLink('sources', `[${card.ref}]`, `${card.ref}: full source and limits in the appendix`)))))],
-  });
-
-  R.discovery = (scene) => {
-    const o = scene.onScreen;
-    const dots = Array.from({ length: o.total }, (_, i) => h('span', { class: i < o.yes ? 'dot is-yes' : 'dot' }));
-    return {
-      head: headOf(scene, h('p', { class: 'discovery-question' }, o.question)),
-      body: [h('div', { class: 'discovery-layout' },
-        h('div', { class: 'discovery-count' },
-          h('div', { class: 'dot-grid', role: 'img', 'aria-label': `${o.yes} of ${o.total} students said yes` }, dots),
-          h('p', { class: 'dot-legend', 'aria-hidden': 'true' },
-            h('span', { class: 'dot is-yes' }), `${o.yes} said yes`,
-            h('span', { class: 'dot' }), `${o.total - o.yes} others`,
-            h('span', { class: 'legend-note' }, 'one dot per student asked')),
-          h('p', { class: 'footnote' }, o.footnote, ' ', appendixLink('discovery', 'More', 'More about this discovery in the appendix'))),
-        h('div', { class: 'discovery-turn' },
-          h('p', { class: 'turn-line' }, o.turn),
-          h('div', { class: 'insight' }, h('p', { class: 'insight-label' }, o.insightLabel), h('p', { class: 'insight-text' }, o.insight)),
-          h('div', { class: 'spark-row' }, o.sparks.map(sparkCard)),
-          h('p', { class: 'illustrative-label' }, o.sparksLabel)))],
-    };
-  };
-
-  R.stages = (scene) => {
-    const o = scene.onScreen;
-    const list = h('ol', { class: 'stage-list' }, o.stages.map((stage, i) => h('li', { class: 'stage is-revealed', style: { '--i': String(i) } },
-      h('span', { class: 'stage-num', 'aria-hidden': 'true' }, pad2(i + 1)),
-      h('h3', { class: 'stage-name' }, sr(`Stage ${i + 1}: `), stage.name),
-      h('p', { class: 'stage-task' }, sr(`${o.taskLabel}: `), stage.task),
-      h('p', { class: 'stage-role' }, sr(`${o.roleLabel}: `), stage.role))));
-    const showAll = h('button', { class: 'quiet-button build-all', type: 'button' }, 'Show all five');
-    showAll.addEventListener('click', () => setStageStep(o.stages.length, true));
-    return {
-      head: headOf(scene),
-      body: [h('div', { class: 'stages' },
-        h('p', { class: 'stage-legend', 'aria-hidden': 'true' }, h('span', { class: 'key key-task' }, o.taskLabel), h('span', { class: 'key key-role' }, o.roleLabel)),
-        list,
-        h('div', { class: 'stage-loop' }, h('span', { class: 'loop-line', 'aria-hidden': 'true' }), h('p', { class: 'loop-label' }, h('span', { class: 'loop-icon', 'aria-hidden': 'true' }, '↺'), o.loop)),
-        h('p', { class: 'stage-bottom' }, h('span', null, o.bottomLine)),
-        h('div', { class: 'build-controls' }, h('span', { class: 'build-status' }), showAll))],
-    };
-  };
-
-  R.bring = (scene) => {
-    const o = scene.onScreen;
-    const label = `${o.illustrative}: ${o.scraps.map((s) => s.label.toLowerCase()).join(', ')} become one direction, ${o.direction.title.toLowerCase()}, after one clarifying question.`;
-    return {
-      head: headOf(scene),
-      body: [h('div', { class: 'bring-layout' },
-        h('div', { class: 'moodboard', role: 'img', 'aria-label': label },
-          h('span', { class: 'illustrative-tag' }, o.illustrative),
-          h('div', { class: 'scrap-pile' }, o.scraps.map(sparkCard)),
-          h('div', { class: 'converge' }, h('span')),
-          h('div', { class: 'shape-col' },
-            h('p', { class: 'bubble bubble-ori' }, h('span', { class: 'who' }, 'Ori'), o.clarify.ask),
-            h('p', { class: 'bubble bubble-you' }, h('span', { class: 'who' }, 'You'), o.clarify.answer),
-            h('div', { class: 'direction-card' }, appIcon('light', 'direction-icon', 52), h('span', { class: 'direction-label' }, o.direction.label), h('b', null, o.direction.title)))),
-        h('div', { class: 'bring-copy' },
-          h('p', { class: 'bring-intro' }, o.intro),
-          h('ul', { class: 'bring-lines' }, o.lines.map((line) => h('li', null, line))),
-          h('p', { class: 'area-flow' }, arrowJoin(o.areas, (area) => h('span', { class: 'area' }, area)))))],
-    };
-  };
-
-  // Demo slots (scenes 6–8): a portrait phone recording beside the story. The label above the recording
-  // says what it is; the concept image only appears when no recording can play, labelled as a concept.
-  R.demo = (scene) => {
-    const o = scene.onScreen;
-    const statusId = `media-status-${o.clip}`;
-    const frameId = `media-frame-${o.clip}`;
-    const video = h('video', {
-      controls: true, playsinline: true, muted: true, preload: 'metadata', hidden: true,
-      'aria-label': `Demo recording: ${o.caption.split(/\s*→\s*/).join(', then ')}`, 'aria-describedby': statusId,
-    });
-    video.muted = true;
-    video.setAttribute('webkit-playsinline', '');
-    return {
-      head: null,
-      bodyClass: 'demo-body',
-      body: [h('div', { class: 'demo-grid', 'data-clip': o.clip, 'data-state': 'none' },
-        h('div', { class: 'demo-head' }, sectionLabel(scene), h('span', { class: 'demo-index' }, o.index)),
-        h('p', { class: 'media-status', id: statusId }, h('span', { class: 'status-dot', 'aria-hidden': 'true' }), h('span', { class: 'media-label' })),
-        h('div', { class: 'media-frame', id: frameId },
-          h('p', { class: 'media-frame-label', 'aria-hidden': 'true' }),
-          h('div', { class: 'media-viewport' },
-            h('img', { class: 'media-fallback', src: o.image, alt: o.alt, decoding: 'async', loading: 'lazy' }),
-            video)),
-        h('div', { class: 'demo-copy' },
-          headline(scene),
-          o.quote ? h('p', { class: 'demo-quote' }, o.quote) : null,
-          h('ul', { class: 'demo-lines' }, o.lines.map((line) => h('li', null, line)))),
-        h('div', { class: 'demo-foot' },
-          h('p', { class: 'demo-caption' }, arrowJoin(o.caption.split(/\s*→\s*/), (part) => h('span', { class: 'caption-step' }, part))),
-          h('button', { class: 'quiet-button media-expand', type: 'button', 'aria-expanded': 'false', 'aria-controls': frameId }, 'Expand ↗')))],
-    };
-  };
-
-  R.why = (scene) => {
-    const o = scene.onScreen;
-    return {
-      head: headOf(scene),
-      body: [
-        h('p', { class: 'flow-line' }, arrowJoin(o.flow, (step, i) => h('span', { class: 'flow-step' }, i === o.flow.length - 1 ? `${step}.` : step))),
-        h('div', { class: 'benefits' }, o.benefits.map((b, i) => h('article', { class: 'benefit' },
-          h('span', { class: 'benefit-num', 'aria-hidden': 'true' }, pad2(i + 1)),
-          h('h3', null, b.title),
-          h('p', null, b.text)))),
-      ],
-    };
-  };
-
-  R.foundation = (scene) => {
-    const o = scene.onScreen;
-    const minis = {
-      light: () => h('div', { class: 'mini mini-gallery', 'aria-hidden': 'true' }, [1, 2, 3, 4].map(() => h('span'))),
-      riff: () => h('div', { class: 'mini mini-session', 'aria-hidden': 'true' }, h('span', { class: 'session-ring' }, h('b', null, '12:00')), h('span', { class: 'session-bars' }, [1, 2, 3, 4, 5, 6].map(() => h('i')))),
-      people: () => h('div', { class: 'mini mini-queue', 'aria-hidden': 'true' }, [1, 2, 3].map(() => h('span', null, h('i'), h('b')))),
-    };
-    return {
-      head: headOf(scene),
-      body: [
-        h('p', { class: 'lead foundation-line' }, o.line),
-        h('div', { class: 'foundation-stack' },
-          h('div', { class: 'foundation-apps' }, o.apps.map((a) => h('article', { class: `foundation-app app-${a.app}` },
-            h('div', { class: 'foundation-app-top' }, appIcon(a.app, 'foundation-icon', 44), h('h3', null, a.name)),
-            minis[a.app] ? minis[a.app]() : null,
-            h('p', null, a.interaction)))),
-          h('div', { class: 'foundation-base' },
-            h('span', { class: 'base-label' }, o.foundationLabel),
-            h('p', null, o.capabilities.flatMap((c, i) => [i ? h('span', { class: 'bullet', 'aria-hidden': 'true' }, ' • ') : null, i ? sr(', ') : null, c])))),
-      ],
-    };
-  };
-
-  // Founder-led GTM: the founder at the centre of four relationships, how access becomes learning, and the
-  // proposed pilot targets. Personal access only: no logos, member counts or endorsements.
-  R.gtm = (scene) => {
-    const o = scene.onScreen;
-    const hub = h('div', { class: 'founder-hub' },
-      svg('svg', { class: 'hub-spokes', viewBox: '0 0 100 100', preserveAspectRatio: 'none', 'aria-hidden': 'true', focusable: 'false' },
-        // Spokes to the four relationships; the last (friend introductions, still to be requested) is dashed.
-        [[0, 24], [100, 24], [0, 76], [100, 76]].map(([x, y], i) => svg('line', { class: i === 3 ? 'is-intro' : null, x1: 50, y1: 50, x2: x, y2: y, 'vector-effect': 'non-scaling-stroke' }))),
-      h('p', { class: 'founder-node' }, h('b', null, o.founder.name), h('span', null, o.founder.role)));
-    const cards = o.relations.map((r, i) => h('article', { class: `relation relation-${i + 1}` },
-      h('h3', { class: 'relation-role' }, r.role),
-      h('p', { class: 'relation-enables' }, r.enables),
-      h('p', { class: 'relation-count' }, h('b', null, String(r.invitations)), h('span', null, ' invitations'))));
-    return {
-      head: headOf(scene),
-      body: [h('div', { class: 'gtm-grid' },
-        h('section', { class: 'relations', 'aria-label': o.relationsLabel },
-          h('p', { class: 'strip-label', 'aria-hidden': 'true' }, o.relationsLabel),
-          h('div', { class: 'relations-map' }, hub, cards),
-          h('p', { class: 'relations-total' }, h('b', null, String(o.total.invitations)), ` ${o.total.label}`)),
-        h('section', { class: 'gtm-chain', 'aria-label': o.chainLabel },
-          h('p', { class: 'strip-label', 'aria-hidden': 'true' }, o.chainLabel),
-          h('ol', { class: 'chain' }, o.chain.map((c) => h('li', null, h('b', null, c.step), sr(': '), h('span', null, c.note))))),
-        h('section', { class: 'pilot', 'aria-label': o.pilotLabel },
-          h('p', { class: 'plan-label' }, o.pilotLabel),
-          h('ol', { class: 'pilot-steps' }, o.pilot.map((p, i) => h('li', null,
-            i ? h('span', { class: 'flow-arrow', 'aria-hidden': 'true' }, '→') : null,
-            h('b', null, String(p.n)), h('span', { class: 'pilot-label' }, ` ${p.label}`))))))],
-    };
-  };
-
-  // Growth roadmap: a dashed target trajectory on a true linear scale, a milestone strip that keeps the
-  // early targets legible, the channel branches with their gate, and the YC ambition kept apart.
-  R.roadmap = (scene) => {
-    const o = scene.onScreen;
-    const c = o.chart;
-    const n = c.points.length;
-    const xPct = (i) => ((i + 0.5) * 100) / n; // centre of the i-th of n equal columns: aligns with the strip
-    const yPct = (v) => Math.max(0, Math.min(100, (v / c.max) * 100));
-    const tickText = (v) => (v === 0 ? '0' : v >= 1000 ? `${formatNumber(v / 1000)}K` : formatNumber(v));
-    const description = `${c.flag}. ${c.title}, on a linear scale from 0 to ${formatNumber(c.max)}: ${c.points.map((p) => `${p.month}, ${formatNumber(p.value)}`).join('; ')}.`;
-    const labelled = new Set(c.labelled || []);
-    const tip = h('div', { class: 'chart-tip', hidden: true }, h('b', { class: 'tip-value' }), h('span', { class: 'tip-month' }), h('span', { class: 'tip-gate' }));
-    const crosshair = h('span', { class: 'chart-crosshair', hidden: true });
-    const plot = h('div', { class: 'chart-plot', 'aria-hidden': 'true' },
-      c.ticks.map((t) => h('span', { class: `chart-grid${t === 0 ? ' is-base' : ''}`, style: { '--y': `${yPct(t)}%` } }, h('span', { class: 'chart-tick' }, tickText(t)))),
-      svg('svg', { class: 'chart-line', viewBox: '0 0 100 100', preserveAspectRatio: 'none', focusable: 'false' },
-        svg('polyline', { points: c.points.map((p, i) => `${xPct(i)},${100 - yPct(p.value)}`).join(' '), 'vector-effect': 'non-scaling-stroke' })),
-      crosshair,
-      c.points.map((p, i) => h('span', { class: 'chart-point', 'data-i': String(i), style: { '--x': `${xPct(i)}%`, '--y': `${yPct(p.value)}%` } })),
-      c.points.map((p, i) => (labelled.has(i) ? h('span', { class: `chart-label${i === n - 1 ? ' is-end' : ''}`, style: { '--x': `${xPct(i)}%`, '--y': `${yPct(p.value)}%` } }, formatNumber(p.value)) : null)),
-      tip);
-    const strip = h('ol', { class: 'milestones' }, c.points.map((p, i) => h('li', { class: 'milestone', 'data-i': String(i) },
-      h('span', { class: 'ms-month' }, p.short), sr(': '),
-      h('b', { class: 'ms-value' }, formatNumber(p.value)), sr(' registered users. '),
-      h('span', { class: 'ms-gate' }, p.gate))));
-
-    function highlight(i) {
-      const show = i !== null && i >= 0 && i < n;
-      tip.hidden = !show;
-      crosshair.hidden = !show;
-      $$('.chart-point', plot).forEach((el, k) => el.classList.toggle('is-hot', k === i));
-      $$('.milestone', strip).forEach((el, k) => el.classList.toggle('is-hot', k === i));
-      if (!show) return;
-      const p = c.points[i];
-      $('.tip-value', tip).textContent = formatNumber(p.value);
-      $('.tip-month', tip).textContent = `${p.month} · stretch target`;
-      $('.tip-gate', tip).textContent = p.gate;
-      tip.style.setProperty('--x', `${xPct(i)}%`);
-      tip.style.setProperty('--y', `${yPct(p.value)}%`);
-      tip.classList.toggle('is-left', xPct(i) > 60);
-      tip.classList.toggle('is-below', yPct(p.value) > 60);
-      crosshair.style.setProperty('--x', `${xPct(i)}%`);
-    }
-    plot.addEventListener('pointermove', (e) => {
-      const r = plot.getBoundingClientRect();
-      if (!r.width) return;
-      const at = ((e.clientX - r.left) / r.width) * n - 0.5;
-      highlight(Math.max(0, Math.min(n - 1, Math.round(at))));
-    });
-    plot.addEventListener('pointerleave', () => highlight(null));
-    for (const item of $$('.milestone', strip)) {
-      item.addEventListener('pointerenter', () => highlight(Number(item.dataset.i)));
-      item.addEventListener('pointerleave', () => highlight(null));
-    }
-
-    return {
-      head: headThen(scene, h('p', { class: 'lead roadmap-sub' }, o.sub)),
-      body: [h('div', { class: 'roadmap-grid' },
-        h('figure', { class: 'growth-chart' },
-          h('figcaption', { class: 'chart-head' }, h('span', { class: 'chart-title' }, c.title), h('span', { class: 'target-flag' }, c.flag)),
-          h('p', { class: 'sr-only' }, description),
-          h('div', { class: 'chart-body' }, plot, strip)),
-        h('div', { class: 'roadmap-side' },
-          h('section', { class: 'channels', 'aria-label': o.channelsLabel },
-            h('p', { class: 'strip-label', 'aria-hidden': 'true' }, o.channelsLabel),
-            h('div', { class: 'channel-tree' },
-              h('div', { class: 'channel-node is-root' }, h('b', null, o.root.title), sr(': '), h('span', null, o.root.text)),
-              h('p', { class: 'channel-gate' }, h('span', null, o.gate)),
-              h('div', { class: 'channel-branches' }, o.branches.map((b) => h('div', { class: 'channel-node' }, h('b', null, b.title), sr(': '), h('span', null, b.text))))),
-            h('p', { class: 'channels-note' }, o.channelsNote)),
-          h('aside', { class: 'yc-ambition', 'aria-label': 'Application ambition' },
-            h('img', { class: 'yc-logo', src: o.yc.logo, alt: 'Y Combinator logo', width: '40', height: '40', decoding: 'async' }),
-            h('p', null, h('b', null, o.yc.text), ' ', h('span', null, o.yc.note)))))],
-    };
-  };
-
-  R.business = (scene) => {
-    const o = scene.onScreen;
-    return {
-      head: headOf(scene),
-      body: [h('div', { class: 'business-grid' },
-        h('div', { class: 'offer' },
-          h('div', { class: 'offer-head' }, h('p', { class: 'plan-label' }, o.offerLabel), h('p', { class: 'offer-note' }, o.offerNote)),
-          h('ol', { class: 'price-strip' }, o.ladder.map((step, i) => h('li', { class: 'price-step' },
-            i ? h('span', { class: 'price-arrow', 'aria-hidden': 'true' }, '→') : null,
-            h('span', { class: 'price-label' }, step.label), sr(': '),
-            h('p', { class: 'price' }, h('b', null, step.figure), step.unit ? h('span', { class: 'price-unit' }, step.unit) : null, ' ', h('span', { class: 'price-rest' }, step.rest)))))),
-        h('div', { class: 'reasons' },
-          h('p', { class: 'strip-label' }, o.reasonsLabel),
-          h('ol', { class: 'reason-list' }, o.reasons.map((reason, i) => h('li', { class: 'reason' }, h('span', { class: 'reason-num', 'aria-hidden': 'true' }, pad2(i + 1)), h('p', null, reason))))),
-        h('p', { class: 'measure-strip' }, h('span', { class: 'measure-label' }, o.measureLabel), sr(': '), arrowJoin(o.measure, (m) => h('span', { class: 'measure-step' }, m))))],
-    };
-  };
-
-  R.velocity = (scene) => {
-    const o = scene.onScreen;
-    return {
-      head: h('header', { class: 'scene-head velocity-head' },
-        h('p', { class: 'velocity-kicker' }, h('span', { class: 'section-chip' }, `Section ${scene.section.number}`), sr(': '), h('span', { class: 'velocity-title' }, o.title)),
-        headline(scene)),
-      body: [
-        h('p', { class: 'velocity-inputs' }, o.inputs),
-        h('table', { class: 'velocity-table' },
-          h('thead', null, h('tr', null, h('th', { scope: 'col' }, o.headers[0]), h('th', { scope: 'col' }, o.headers[1]))),
-          h('tbody', null, o.rows.map(([assumption, decision]) => h('tr', null, h('td', null, assumption), h('td', null, h('strong', null, decision)))))),
-        h('p', { class: 'velocity-closing' }, h('span', null, o.closing), ' ', appendixLink('velocity', 'How we used it, expanded', 'How we used Velocity AI, expanded, in the appendix')),
-      ],
-    };
-  };
-
-  R.ask = (scene) => {
-    const o = scene.onScreen;
-    const column = (title, items) => h('section', { class: 'ask-col' }, h('h3', null, title), h('ul', null, items.map((item) => h('li', null, item))));
-    return {
-      head: null,
-      bodyClass: 'ask-body',
-      body: [h('div', { class: 'ask-content' },
-        sectionLabel(scene),
-        headline(scene),
-        h('div', { class: 'ask-box' }, h('p', { class: 'ask-label' }, o.askLabel), h('p', { class: 'ask-line' }, o.ask)),
-        h('div', { class: 'ask-columns' }, column(o.fundsLabel, o.funds), column(o.evidenceLabel, o.evidence)),
-        h('p', { class: 'ask-not' }, o.notFunded),
-        h('div', { class: 'ask-close' },
-          h('div', { class: 'ask-callback', 'aria-hidden': 'true' },
-            h('span', { class: 'callback-spark' }, h('span', { class: 'spark-dot' }), 'a spark'),
-            h('span', { class: 'flow-arrow' }, '→'),
-            appIcon('light', 'callback-icon', 40),
-            h('span', { class: 'callback-name' }, 'Light, still growing')),
-          h('p', { class: 'ask-signature' }, o.signature),
-          h('div', { class: 'closing-links', id: 'closing-links' })))],
-    };
-  };
+  kit.scale = () => stageScale;
+  fit();
 
   /* ---------------------------------------------------------------------------------------- */
   /* Build the deck                                                                             */
   /* ---------------------------------------------------------------------------------------- */
 
-  const deck = $('#deck');
   deck.setAttribute('aria-label', `Ori pitch, ${scenes.length} scenes`);
-  const slides = scenes.map((scene, i) => {
-    const render = R[scene.layout] || ((sc) => ({ head: headOf(sc), body: [] }));
-    const { head, body, bodyClass } = render(scene, i);
-    const large = scene.companion && scene.companion.size === 'large';
+  const slides = [];
+  const slideState = [];
+  const asFunction = (value) => (typeof value === 'function' ? value : null);
+  scenes.forEach((scene, i) => {
+    const render = rendererFor(scene) || fallbackRender;
+    let result;
+    try {
+      result = render(scene, kit);
+    } catch (error) {
+      console.error(`[ori-pitch] the "${scene.layout}" renderer failed on scene ${i + 1}; showing its placeholder.`, error);
+      result = fallbackRender(scene);
+    }
+    if (result instanceof Node || Array.isArray(result)) result = { body: result };
+    if (!result || typeof result !== 'object') result = fallbackRender(scene);
+    const headEl = result.head === undefined ? head(scene) : result.head;
+    const corner = Boolean(scene.companion && scene.companion.corner !== false && result.companion !== false);
+    const large = Boolean(scene.companion && scene.companion.size === 'large');
     const slide = h('section', {
-      class: `slide layout-${scene.layout} scene-${scene.id}${large ? ' companion-large' : ''}`,
+      class: cls('slide', `layout-${scene.layout}`, `scene-${scene.id}`, scene.theme === 'ink' ? 'theme-ink' : 'theme-light', corner ? 'has-companion' : '', corner && large ? 'companion-large' : '', result.className),
       id: `scene-${scene.id}`,
       role: 'group',
       'aria-roledescription': 'slide',
       'aria-label': `Scene ${i + 1} of ${scenes.length}: ${scene.headline}`,
       'data-index': String(i),
+      'data-layout': scene.layout,
       hidden: true,
-    }, h('div', { class: 'scene' }, head, h('div', { class: `scene-body${bodyClass ? ` ${bodyClass}` : ''}` }, body), slideBottom(scene)));
+    }, h('div', { class: 'stage' }, h('div', { class: 'scene' }, headEl, h('div', { class: cls('scene-body', result.bodyClass) }, result.body))));
     deck.append(slide);
-    return slide;
+    slides.push(slide);
+    const steps = Math.max(1, Math.floor(Number(result.steps) || 1));
+    // Every slide exposes its build (complete until the presenter arrives with Next).
+    slide.dataset.steps = String(steps);
+    slide.dataset.step = String(steps);
+    slideState.push({
+      steps,
+      step: steps,
+      stepLabels: Array.isArray(result.stepLabels) ? result.stepLabels : [],
+      onStep: asFunction(result.onStep),
+      onEnter: asFunction(result.onEnter),
+      onLeave: asFunction(result.onLeave),
+      corner,
+    });
   });
   if (!slides.length) deck.append(h('p', { class: 'noscript' }, 'The scene data (scenes.js) did not load.'));
+  for (const record of slotRecords) record.slideIndex = slides.findIndex((slide) => slide.contains(record.el));
 
-  // One companion for the whole deck, in the same upper corner of every scene. It moves into the active
-  // scene (so it scrolls with that scene on small screens and never covers content) and crossfades
-  // between the four expressions; under reduced motion the change is instant.
-  const companion = h('div', { class: 'companion', 'aria-hidden': 'true', 'data-size': 'small' },
+  // One companion for the whole deck, in the same upper corner of every scene that shows it. It moves into
+  // the active stage (so it scales with the scene and scrolls with it on phones) and crossfades between
+  // the four expressions; under reduced motion the change is instant.
+  const companion = h('div', { class: 'companion', 'aria-hidden': 'true', hidden: true },
     h('span', { class: 'companion-disc' }),
     Object.entries(EXPRESSION_ART).map(([expression, art]) => h('img', { class: 'companion-art', src: `assets/ori/companion-${art}.svg`, alt: '', width: '100', height: '100', 'data-expression': expression, decoding: 'async' })));
 
-  function placeCompanion(scene, slide) {
+  function placeCompanion(index) {
+    const scene = scenes[index];
+    const state = slideState[index];
+    const stage = $('.stage', slides[index]);
+    if (!state.corner) {
+      companion.hidden = true;
+      return;
+    }
     const c = scene.companion || {};
     const expression = EXPRESSION_ART[c.expression] ? c.expression : 'Listening';
-    if (companion.parentNode !== slide) slide.append(companion);
+    if (companion.parentNode !== stage) stage.append(companion);
+    companion.hidden = false;
     companion.dataset.size = c.size === 'large' ? 'large' : 'small';
     const previous = companion.dataset.expression || '';
     if (previous === expression) {
@@ -592,16 +834,17 @@
   const dotsHolder = $('#progress-dots');
   const overviewGrid = $('#overview-grid');
   scenes.forEach((scene, i) => {
-    dotsHolder.append(h('button', { type: 'button', class: 'dot-button', 'aria-label': `Scene ${i + 1}: ${scene.headline}`, title: `${i + 1}. ${scene.headline}`, onclick: () => go(i) }));
+    dotsHolder.append(h('button', { type: 'button', class: 'dot-button', 'aria-label': `Scene ${i + 1}: ${scene.label || scene.headline}`, title: `${i + 1}. ${scene.label || scene.headline}`, onclick: (e) => { go(i); deckAfterPointer(e); } }));
     const tile = h('button', {
       type: 'button',
-      class: `overview-tile${scene.section.number === 8 ? ' is-velocity' : ''}`,
-      'aria-label': `Scene ${i + 1}: ${scene.headline}. Section ${scene.section.number}, ${scene.section.name}. ${scene.seconds} seconds.`,
+      class: cls('overview-tile', scene.id === 'velocity' ? 'is-velocity' : '', scene.theme === 'ink' ? 'is-ink' : ''),
+      'aria-label': `Scene ${i + 1}: ${scene.label}. ${scene.headline} ${scene.seconds} seconds.`,
     },
-      h('span', { class: 'tile-meta' }, h('span', null, `Scene ${pad2(i + 1)}`), h('span', null, `${scene.seconds}s · ${clock(starts[i])}`)),
-      h('span', { class: 'tile-section' }, `Section ${scene.section.number} · ${scene.section.name}`),
-      h('b', { class: 'tile-title' }, scene.headline));
-    tile.addEventListener('click', () => {
+    h('span', { class: 'tile-meta' }, h('span', null, `Scene ${pad2(i + 1)}`), h('span', null, `${scene.seconds}s · ${clock(starts[i])}`)),
+    h('span', { class: 'tile-section' }, scene.label),
+    h('b', { class: 'tile-title' }, scene.headline));
+    tile.addEventListener('click', (e) => {
+      if (e.detail > 0) openers.set(dialogs.overview, deck);
       dialogs.overview.close();
       go(i);
     });
@@ -609,13 +852,10 @@
   });
 
   /* ---------------------------------------------------------------------------------------- */
-  /* Navigation                                                                                 */
+  /* Navigation and step reveals                                                                */
   /* ---------------------------------------------------------------------------------------- */
 
   let current = -1;
-  const stagesIndex = scenes.findIndex((scene) => scene.layout === 'stages');
-  const stageCount = stagesIndex >= 0 ? scenes[stagesIndex].onScreen.stages.length : 0;
-  let stageStep = stageCount;
 
   const announce = (text) => {
     $('#slide-announcement').textContent = text;
@@ -634,37 +874,64 @@
     for (const video of $$('video', root)) video.pause();
   }
 
-  function collapseMedia() {
-    let collapsed = false;
-    for (const frame of $$('.media-frame.expanded')) {
-      frame.classList.remove('expanded');
-      const button = $(`[aria-controls="${frame.id}"]`);
-      if (button) {
-        button.textContent = 'Expand ↗';
-        button.setAttribute('aria-expanded', 'false');
-      }
-      collapsed = true;
+  const contextFor = (index, via) => ({
+    scene: scenes[index],
+    index,
+    slide: slides[index],
+    stage: $('.stage', slides[index]),
+    step: slideState[index].step,
+    steps: slideState[index].steps,
+    via: via || null,
+    reducedMotion: motionMedia.matches,
+    flow: flowMedia.matches,
+    kit,
+  });
+  function callHook(index, name, via) {
+    const state = slideState[index];
+    const hook = state && state[name];
+    if (!hook) return;
+    try {
+      if (name === 'onStep') hook(state.step, contextFor(index, via));
+      else hook(contextFor(index, via));
+    } catch (error) {
+      console.error(`[ori-pitch] ${name} failed on scene ${index + 1}`, error);
     }
-    document.body.classList.toggle('media-expanded', false);
-    return collapsed;
   }
 
-  // The five stages build one at a time when the presenter arrives with Next; any other arrival
-  // (a hash, the overview, a dot, Previous, a refresh) shows the complete static version.
-  function setStageStep(step, fromButton = false) {
-    if (stagesIndex < 0) return;
-    const wrap = $('.stages', slides[stagesIndex]);
-    stageStep = Math.max(1, Math.min(stageCount, step));
-    const building = stageStep < stageCount;
-    wrap.classList.toggle('is-building', building);
-    wrap.dataset.step = String(stageStep);
-    $$('.stage', wrap).forEach((el, i) => el.classList.toggle('is-revealed', i < stageStep));
-    $('.build-status', wrap).textContent = building ? `Stage ${stageStep} of ${stageCount} · Next reveals the next stage` : '';
-    const names = scenes[stagesIndex].onScreen.stages;
-    if (current === stagesIndex) announce(building ? `Stage ${stageStep} of ${stageCount}: ${names[stageStep - 1].name}` : `All ${stageCount} stages shown.`);
-    if (fromButton && !building) $('.stage-list', wrap).setAttribute('tabindex', '-1');
-    if (fromButton && !building) $('.stage-list', wrap).focus({ preventScroll: true });
+  // A building slide reveals one step per Next when the presenter arrives with Next from the scene before;
+  // any other arrival (a hash, the overview, a dot, Previous, a refresh) shows its complete state.
+  function applyStep(index, via) {
+    const state = slideState[index];
+    const slide = slides[index];
+    const building = state.steps > 1 && state.step < state.steps;
+    slide.dataset.step = String(state.step);
+    slide.dataset.steps = String(state.steps);
+    slide.classList.toggle('is-building', building);
+    for (const el of $$('[data-reveal]', slide)) el.classList.toggle('is-revealed', Number(el.getAttribute('data-reveal')) <= state.step);
+    callHook(index, 'onStep', via);
+  }
+  function setStep(step, via = 'step') {
+    if (current < 0) return;
+    const state = slideState[current];
+    if (state.steps < 2) return;
+    state.step = Math.max(1, Math.min(state.steps, Math.floor(Number(step) || 1)));
+    applyStep(current, via);
+    const label = state.stepLabels[state.step - 1];
+    announce(state.step < state.steps ? `Step ${state.step} of ${state.steps}${label ? `: ${label}` : ''}` : `All ${state.steps} steps shown${label ? `: ${label}` : ''}.`);
     updateChrome(false);
+  }
+  kit.setStep = setStep;
+  kit.showAll = () => {
+    if (current >= 0) setStep(slideState[current].steps, 'show-all');
+  };
+
+  function prepareScene(index, eager) {
+    const slide = slides[index];
+    if (!slide) return;
+    for (const img of $$('img[data-src]', slide)) {
+      if (!img.getAttribute('src')) img.src = img.dataset.src;
+    }
+    for (const record of slotRecords) if (record.slideIndex === index) prepareSlot(record, eager);
   }
 
   function go(index, options = {}) {
@@ -682,19 +949,22 @@
     });
     const slide = slides[current];
     slide.scrollTop = 0;
-    if (current === stagesIndex) {
-      stageStep = via === 'next' && previous === current - 1 ? 1 : stageCount;
-      setStageStep(stageStep);
-    }
-    placeCompanion(scenes[current], slide);
-    warmClips(current);
+    const state = slideState[current];
+    state.step = state.steps > 1 && via === 'next' && previous === current - 1 ? 1 : state.steps;
+    prepareScene(current, true);
+    prepareScene(current + 1, false);
+    placeCompanion(current);
+    if (previous !== current && previous >= 0) callHook(previous, 'onLeave', via);
+    if (previous !== current) callHook(current, 'onEnter', via);
+    applyStep(current, via);
     updateChrome(true);
     if (options.updateHash !== false) replaceHash(`#${current + 1}`);
   }
 
   function next() {
-    if (current === stagesIndex && stageStep < stageCount) {
-      setStageStep(stageStep + 1);
+    const state = slideState[current];
+    if (state && state.steps > 1 && state.step < state.steps) {
+      setStep(state.step + 1, 'next');
       return;
     }
     if (current < slides.length - 1) go(current + 1, { via: 'next' });
@@ -707,17 +977,20 @@
   function updateChrome(announceScene) {
     if (current < 0) return;
     const scene = scenes[current];
-    const building = current === stagesIndex && stageStep < stageCount;
+    const state = slideState[current];
+    const building = state.steps > 1 && state.step < state.steps;
     $('#slide-count').replaceChildren(sr('Scene '), `${pad2(current + 1)} / ${scenes.length}`);
-    $('#slide-name').textContent = `Section ${scene.section.number} · ${scene.section.name}`;
+    $('#slide-name').textContent = scene.label || '';
     $$('#progress-dots button').forEach((b, i) => b.setAttribute('aria-current', String(i === current)));
     $$('#overview-grid button').forEach((b, i) => b.setAttribute('aria-current', String(i === current)));
     $('#deck-progress-fill').style.width = `${((current + 1) / scenes.length) * 100}%`;
     $('#prev-btn').disabled = current === 0;
     $('#next-btn').disabled = current === scenes.length - 1 && !building;
-    $('#next-btn').setAttribute('aria-label', building ? 'Reveal the next stage' : 'Next scene');
+    $('#next-btn').setAttribute('aria-label', building ? 'Reveal the next step' : 'Next scene');
+    document.body.dataset.scene = scene.id;
+    document.body.classList.toggle('on-ink', scene.theme === 'ink');
     document.title = `Ori — ${scene.headline}`;
-    if (announceScene) announce(`Scene ${current + 1} of ${scenes.length}. Section ${scene.section.number}, ${scene.section.name}: ${scene.headline}`);
+    if (announceScene) announce(`Scene ${current + 1} of ${scenes.length}. ${scene.label}: ${scene.headline}${building ? ` Step ${state.step} of ${state.steps}.` : ''}`);
     syncNotes();
   }
 
@@ -790,6 +1063,8 @@
 
   function openAppendix(section, opener) {
     const dialog = dialogs.appendix;
+    // The appendix's return clip gets its poster only when the appendix opens: nothing downloads before it is needed.
+    for (const v of dialog.querySelectorAll('video[data-poster]:not([poster])')) v.poster = v.dataset.poster;
     openDialog(dialog, opener);
     const target = section ? document.getElementById(`appendix-${section}`) : null;
     if (target && dialog.contains(target)) {
@@ -810,13 +1085,13 @@
     const link = e.target instanceof Element ? e.target.closest('[data-appendix-link]') : null;
     if (!link) return;
     e.preventDefault();
-    openAppendix(link.getAttribute('data-appendix-link'), link);
+    openAppendix(link.getAttribute('data-appendix-link'), e.detail > 0 && !link.closest('dialog') ? deck : link);
   });
 
-  $('#overview-btn').addEventListener('click', (e) => openDialog(dialogs.overview, e.currentTarget));
-  $('#appendix-btn').addEventListener('click', (e) => openAppendix(null, e.currentTarget));
-  $('#setup-btn').addEventListener('click', (e) => openDialog(dialogs.setup, e.currentTarget));
-  $('#notes-btn').addEventListener('click', (e) => openDialog(dialogs.notes, e.currentTarget));
+  $('#overview-btn').addEventListener('click', (e) => openDialog(dialogs.overview, pointerOpener(e)));
+  $('#appendix-btn').addEventListener('click', (e) => openAppendix(null, pointerOpener(e)));
+  $('#setup-btn').addEventListener('click', (e) => openDialog(dialogs.setup, pointerOpener(e)));
+  $('#notes-btn').addEventListener('click', (e) => openDialog(dialogs.notes, pointerOpener(e)));
   $('#overview-appendix').addEventListener('click', (e) => openAppendix(null, e.currentTarget));
   $('#overview-setup').addEventListener('click', (e) => openDialog(dialogs.setup, e.currentTarget));
 
@@ -828,22 +1103,26 @@
     const scene = scenes[current];
     if (!scene) return;
     const t = timing[current];
+    const state = slideState[current];
     $('#notes-title').textContent = scene.headline;
-    $('#slide-timing').textContent = `Scene ${current + 1} / ${scenes.length} · Section ${scene.section.number} · ${scene.section.name} · ${scene.seconds} s · planned ${clock(starts[current])}–${clock(starts[current] + scene.seconds)} · spoken track ${t.words} words ≈ ${t.estimate} s at 150 words a minute`;
+    $('#slide-timing').textContent = `Scene ${current + 1} / ${scenes.length} · ${scene.label} · ${scene.seconds} s · planned ${clock(starts[current])}–${clock(starts[current] + scene.seconds)} · spoken track ${t.words} words ≈ ${t.estimate} s at 150 words a minute${state.steps > 1 ? ` · ${state.steps} steps (Next reveals each)` : ''}`;
     $('#notes-body').textContent = scene.spoken;
     $('#notes-cue').textContent = scene.cue;
-    $('#notes-companion').textContent = `Ori’s expression: ${scene.companion.expression}. A story cue only; Ori does not sense emotions.`;
+    $('#notes-companion').textContent = scene.companion
+      ? `Ori’s expression: ${scene.companion.expression}${scene.companion.corner === false ? ', inside the slide' : ''}. A story cue only; Ori does not sense emotions.`
+      : 'No companion on this slide.';
     const related = (scene.appendix || []).filter((id) => appendixNames[id]);
     $('#notes-appendix').replaceChildren(...(related.length
       ? [h('span', { class: 'notes-label' }, 'In the appendix'), ...related.map((id) => appendixLink(id, appendixNames[id]))]
       : []));
     $('#notes-prev').disabled = current === 0;
-    $('#notes-next').disabled = current === scenes.length - 1;
+    const building = state.steps > 1 && state.step < state.steps;
+    $('#notes-next').disabled = current === scenes.length - 1 && !building;
+    $('#notes-next').textContent = building ? 'Next step →' : 'Next scene →';
   }
   $('#notes-prev').addEventListener('click', () => previous());
-  $('#notes-next').addEventListener('click', () => {
-    if (current < slides.length - 1) go(current + 1, { via: 'next' });
-  });
+  // Like the main Next button: it reveals the next step while a scene builds, then moves on.
+  $('#notes-next').addEventListener('click', () => next());
 
   let elapsed = 0;
   let startedAt = null;
@@ -875,7 +1154,7 @@
   renderTimer();
 
   /* ---------------------------------------------------------------------------------------- */
-  /* Links (config.js, optionally overridden in this browser through Setup)                     */
+  /* Toast                                                                                       */
   /* ---------------------------------------------------------------------------------------- */
 
   const notify = (() => {
@@ -891,6 +1170,10 @@
     };
   })();
 
+  /* ---------------------------------------------------------------------------------------- */
+  /* Setup: links, and a local preview of a new recording for any media slot                    */
+  /* ---------------------------------------------------------------------------------------- */
+
   const safeUrl = (value) => {
     const text = typeof value === 'string' ? value.trim() : '';
     if (!text) return '';
@@ -901,232 +1184,89 @@
       return '';
     }
   };
-  // The hosted Ori product is only linked where config.js names it (the Ori server's own /pitch/). The
-  // standalone static export sets appUrl to '' and then nothing on the page points to a product:
-  // no "Open Ori" link, and Setup offers no product address either.
-  const productLinked = Boolean(safeUrl(config.appUrl));
-  const LINKS_KEY = 'ori-pitch-links-v1';
-  const readSaved = () => {
-    try {
-      const value = JSON.parse(localStorage.getItem(LINKS_KEY) || '{}');
-      return value && typeof value === 'object' ? value : {};
-    } catch {
-      return {};
-    }
-  };
-  const saved = readSaved();
-  const links = {
-    appUrl: productLinked ? safeUrl(typeof saved.appUrl === 'string' ? saved.appUrl : config.appUrl) : '',
-    githubUrl: safeUrl(typeof saved.githubUrl === 'string' ? saved.githubUrl : config.githubUrl),
-  };
-  if (!productLinked) {
-    const row = $('#app-url-row');
-    if (row) row.remove();
+  const setupLinks = $('#setup-links');
+  if (setupLinks) {
+    const items = [];
+    if (safeUrl(config.productUrl)) items.push(sourceLink(safeUrl(config.productUrl), 'The live product'));
+    if (safeUrl(config.githubUrl)) items.push(sourceLink(safeUrl(config.githubUrl), 'Source code on GitHub'));
+    setupLinks.replaceChildren(...items.flatMap((item, i) => [i ? ' · ' : null, item]));
   }
-  function renderLinks() {
-    const holder = $('#closing-links');
-    if (holder) {
-      holder.replaceChildren();
-      // Unavailable destinations are not shown at all.
-      for (const [key, label] of [['appUrl', 'Open Ori'], ['githubUrl', 'View the code on GitHub']]) {
-        if (!links[key]) continue;
-        holder.append(h('a', { href: links[key], target: '_blank', rel: 'noopener noreferrer' }, label, h('span', { 'aria-hidden': 'true' }, ' ↗'), sr(' (opens a new tab)')));
-      }
-    }
-    if ($('#app-url')) $('#app-url').value = links.appUrl;
-    $('#github-url').value = links.githubUrl;
-  }
-  renderLinks();
-  $('#settings-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const appRaw = $('#app-url') ? $('#app-url').value : '';
-    const githubRaw = $('#github-url').value;
-    const app = safeUrl(appRaw);
-    const github = safeUrl(githubRaw);
-    if ((appRaw.trim() && !app) || (githubRaw.trim() && !github)) {
-      $('#save-status').textContent = 'Use a complete http:// or https:// address.';
-      return;
-    }
-    if (productLinked) links.appUrl = app;
-    links.githubUrl = github;
-    let persistent = true;
-    try {
-      localStorage.setItem(LINKS_KEY, JSON.stringify(links));
-    } catch {
-      persistent = false;
-    }
-    renderLinks();
-    $('#save-status').textContent = persistent ? 'Saved in this browser only.' : 'Set for this tab; browser storage is unavailable.';
-  });
-
-  /* ---------------------------------------------------------------------------------------- */
-  /* Demo recordings                                                                            */
-  /* ---------------------------------------------------------------------------------------- */
-
-  // [what it is, the qualifier]; the label reads "<what> · <qualifier>".
-  const MEDIA_LABEL = {
-    none: ['Concept reference', 'Recording not added. A generated design, not the product.'],
-    published: ['Recorded product demo', 'Sample mode: scripted responses, not live AI'],
-    local: ['Local preview', 'This tab only. Not published.'],
-    failed: ['Recording could not load', 'Concept reference: a generated design, not the product.'],
-  };
-  const VIDEO_TYPES = { mp4: 'video/mp4', m4v: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', ogv: 'video/ogg' };
-  const videoType = (src) => {
-    const m = /\.([a-z0-9]+)(?:[?#].*)?$/i.exec(src);
-    return m ? VIDEO_TYPES[m[1].toLowerCase()] || '' : '';
-  };
-
-  function playableUrl(value) {
-    const text = typeof value === 'string' ? value.trim() : '';
-    if (!text) return '';
-    try {
-      const url = new URL(text, location.href);
-      return ['http:', 'https:', 'file:', 'blob:'].includes(url.protocol) ? text : '';
-    } catch {
-      return '';
-    }
-  }
-  // A clip in config.js is one path or a list of paths in order of preference (MP4 for Safari and
-  // iPhones first, then WebM); each becomes a <source>.
-  const configuredSources = (key) => {
-    const value = config.clips && config.clips[key];
-    return (Array.isArray(value) ? value : [value]).map(playableUrl).filter(Boolean).map((src) => ({ src, type: videoType(src) }));
-  };
-
-  const slots = new Map($$('.demo-grid[data-clip]').map((grid) => [grid.dataset.clip, {
-    key: grid.dataset.clip,
-    grid,
-    video: $('video', grid),
-    image: $('.media-fallback', grid),
-    frame: $('.media-frame', grid),
-    generation: 0,
-  }]));
   const localClips = new Map();
-
-  function setMediaState(slot, state) {
-    const [what, qualifier] = MEDIA_LABEL[state];
-    slot.grid.dataset.state = state;
-    $('.media-label', slot.grid).replaceChildren(h('b', { class: 'label-main' }, what), sr(' · '), h('span', { class: 'label-rest' }, qualifier));
-    $('.media-frame-label', slot.grid).textContent = `${what} · ${qualifier}`;
-    const showVideo = state === 'published' || state === 'local';
-    slot.video.hidden = !showVideo;
-    slot.image.hidden = showVideo;
+  const setupMedia = $('#setup-media');
+  const fileName = (src) => String(src).split('/').pop();
+  function describeSlot(key) {
+    const spec = slotSpec(key);
+    if (localClips.has(key)) return 'Previewing a local file in this tab only';
+    if (spec.sources.length) return `Recording: ${spec.sources.map((s) => fileName(s.src)).join(', ')}`;
+    if (spec.still) return `No recording yet. Screenshot: ${fileName(spec.still)}`;
+    return 'No recording or screenshot yet';
   }
-
-  function failSlot(slot) {
-    if (slot.grid.dataset.state === 'failed') return;
-    slot.video.pause();
-    setMediaState(slot, 'failed');
-    if (slides[current] && slides[current].contains(slot.grid)) {
-      notify('That recording could not load here, so the slot shows a concept reference image instead.');
+  function setLocalClip(key, source) {
+    for (const record of slotRecords.filter((r) => r.key === key)) {
+      record.local = source;
+      resetSlot(record);
+      if (record.slideIndex === current || record.slideIndex === current + 1 || source) prepareSlot(record, record.slideIndex === current || Boolean(source));
+    }
+    const row = setupMedia && $(`[data-slot-row="${key}"]`, setupMedia);
+    if (row) {
+      $('.slot-status', row).textContent = describeSlot(key);
+      $('.remove-clip', row).hidden = !localClips.has(key);
     }
   }
-
-  function setClip(key, sources, mode, fileName) {
-    const slot = slots.get(key);
-    if (!slot) return;
-    const video = slot.video;
-    video.pause();
-    for (const old of $$('source', video)) old.remove();
-    video.removeAttribute('src');
-    video.removeAttribute('poster');
-    slot.generation += 1;
-    const generation = slot.generation;
-    if (sources.length) {
-      setMediaState(slot, mode);
-      const poster = mode === 'published' ? playableUrl(config.posters && config.posters[key]) : '';
-      if (poster) video.poster = poster;
-      let failures = 0;
-      for (const { src, type } of sources) {
-        const source = h('source', { src, type: type || null });
-        // A source the browser cannot play fires 'error' on the <source>, not on the video; the next
-        // source is tried. Only when every source has failed does the slot fall back.
-        source.addEventListener('error', () => {
-          if (generation !== slot.generation) return;
-          failures += 1;
-          if (failures >= sources.length) failSlot(slot);
-        });
-        video.append(source);
-      }
-    } else {
-      setMediaState(slot, 'none');
-    }
-    video.load();
-    const remove = $(`[data-remove="${key}"]`);
-    if (remove) remove.hidden = mode !== 'local';
-    const input = $(`[data-upload="${key}"]`);
-    const row = input && input.closest('.upload-row');
-    const caption = row && $('span', row);
-    if (caption) {
-      if (!caption.dataset.defaultText) caption.dataset.defaultText = caption.textContent;
-      caption.textContent = mode === 'local' ? `Previewing ${fileName} in this tab only` : caption.dataset.defaultText;
-    }
-  }
-
-  // The scene's own recording (and the next one) buffer fully once the presenter arrives.
-  function warmClips(index) {
-    for (const i of [index, index + 1]) {
-      const grid = slides[i] && $('.demo-grid[data-clip]', slides[i]);
-      const slot = grid && slots.get(grid.dataset.clip);
-      if (slot && slot.grid.dataset.state === 'published' && slot.video.preload !== 'auto') slot.video.preload = 'auto';
-    }
-  }
-
-  for (const [key, slot] of slots) {
-    // A recording that was selected but cannot be decoded fails on the video element itself.
-    slot.video.addEventListener('error', () => {
-      if (slot.video.error && slot.grid.dataset.state !== 'none') failSlot(slot);
-    });
-    const expand = $('.media-expand', slot.grid);
-    expand.addEventListener('click', () => {
-      const wasExpanded = slot.frame.classList.contains('expanded');
-      collapseMedia();
-      if (!wasExpanded) {
-        slot.frame.classList.add('expanded');
-        document.body.classList.add('media-expanded');
-        expand.textContent = 'Close ✕';
-        expand.setAttribute('aria-expanded', 'true');
-      }
-    });
-    const sources = configuredSources(key);
-    if (sources.length) setClip(key, sources, 'published');
-    else setMediaState(slot, 'none');
-  }
-
-  for (const input of $$('[data-upload]')) {
-    input.addEventListener('change', () => {
-      const file = input.files && input.files[0];
-      if (!file) return;
-      if (!file.type.startsWith('video/') && !/\.(mp4|webm|mov|m4v)$/i.test(file.name)) {
-        notify('Choose a video file (H.264 MP4 or WebM).');
+  if (setupMedia) {
+    for (const key of Object.keys(MEDIA)) {
+      const spec = slotSpec(key);
+      const input = h('input', { type: 'file', accept: 'video/*', 'data-upload': key });
+      const remove = h('button', { class: 'remove-clip', type: 'button', 'data-remove': key, 'aria-label': `Remove the local preview for ${spec.title}`, hidden: true }, '×');
+      setupMedia.append(h('div', { class: 'upload-row', 'data-slot-row': key },
+        h('div', null, h('b', null, `${spec.title} · slide ${MEDIA[key].slide || '?'}`), h('span', { class: 'slot-status' }, describeSlot(key))),
+        h('label', { class: 'upload-button' }, 'Preview a video', input),
+        remove));
+      input.addEventListener('change', () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        if (!file.type.startsWith('video/') && !/\.(mp4|webm|mov|m4v)$/i.test(file.name)) {
+          notify('Choose a video file (H.264 MP4 or WebM).');
+          input.value = '';
+          return;
+        }
+        if (localClips.has(key)) URL.revokeObjectURL(localClips.get(key));
+        const url = URL.createObjectURL(file);
+        localClips.set(key, url);
+        setLocalClip(key, { src: url, type: file.type || videoType(file.name) });
+        notify('Previewing this clip in this tab only. Nothing was uploaded or published.');
+      });
+      remove.addEventListener('click', () => {
+        if (localClips.has(key)) {
+          URL.revokeObjectURL(localClips.get(key));
+          localClips.delete(key);
+        }
         input.value = '';
-        return;
-      }
-      const key = input.dataset.upload;
-      if (localClips.has(key)) URL.revokeObjectURL(localClips.get(key));
-      const url = URL.createObjectURL(file);
-      localClips.set(key, url);
-      setClip(key, [{ src: url, type: file.type || videoType(file.name) }], 'local', file.name);
-      notify('Previewing this clip in this tab only. Nothing was uploaded or published.');
-    });
-  }
-  for (const button of $$('[data-remove]')) {
-    button.addEventListener('click', () => {
-      const key = button.dataset.remove;
-      if (localClips.has(key)) {
-        URL.revokeObjectURL(localClips.get(key));
-        localClips.delete(key);
-      }
-      $(`[data-upload="${key}"]`).value = '';
-      const sources = configuredSources(key);
-      setClip(key, sources, sources.length ? 'published' : undefined);
-    });
+        setLocalClip(key, null);
+      });
+    }
   }
   window.addEventListener('pagehide', () => pauseVideos());
 
   /* ---------------------------------------------------------------------------------------- */
-  /* Full screen                                                                                */
+  /* Presentation mode: full screen (or a fallback layout); the bars hide until the pointer moves */
   /* ---------------------------------------------------------------------------------------- */
+
+  let peekTimer = 0;
+  function hideChrome() {
+    clearTimeout(peekTimer);
+    document.body.classList.remove('chrome-peek');
+  }
+  function peekChrome() {
+    if (!document.body.classList.contains('in-presentation')) return;
+    document.body.classList.add('chrome-peek');
+    clearTimeout(peekTimer);
+    peekTimer = setTimeout(() => document.body.classList.remove('chrome-peek'), 2200);
+  }
+  document.addEventListener('pointermove', (e) => {
+    if (e.movementX || e.movementY || e.pointerType !== 'mouse') peekChrome();
+  }, { passive: true });
+  document.addEventListener('pointerdown', peekChrome, { passive: true });
 
   function updatePresentLabel() {
     const on = document.body.classList.contains('in-presentation');
@@ -1135,7 +1275,9 @@
   }
   function setPresentationLayout(on) {
     document.body.classList.toggle('in-presentation', on);
+    if (!on) hideChrome();
     updatePresentLabel();
+    fit();
   }
   async function present() {
     if (document.fullscreenElement) {
@@ -1158,25 +1300,44 @@
     setPresentationLayout(on);
     notify(on ? 'Full screen is unavailable here, so the presentation layout is on. Press Esc to leave it.' : 'Presentation layout closed.');
   }
-  $('#present-btn').addEventListener('click', present);
-  document.addEventListener('fullscreenchange', () => setPresentationLayout(Boolean(document.fullscreenElement)));
+  $('#present-btn').addEventListener('click', (e) => { deckAfterPointer(e); present(); });
+  // The browser keeps Esc in full screen: leaving it also closes an expanded clip, so no lightbox is left behind.
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) collapseMedia();
+    setPresentationLayout(Boolean(document.fullscreenElement));
+  });
+
+  if ('ResizeObserver' in window) new ResizeObserver(() => fit()).observe(deck);
+  else window.addEventListener('resize', fit);
+  const onFlowChange = () => {
+    collapseMedia();
+    fit();
+  };
+  if (flowMedia.addEventListener) flowMedia.addEventListener('change', onFlowChange);
+  else if (flowMedia.addListener) flowMedia.addListener(onFlowChange);
 
   /* ---------------------------------------------------------------------------------------- */
   /* Buttons and keyboard                                                                       */
   /* ---------------------------------------------------------------------------------------- */
 
-  $('#next-btn').addEventListener('click', next);
-  $('#prev-btn').addEventListener('click', previous);
-  $('[data-go]').addEventListener('click', () => go(0));
+  $('#next-btn').addEventListener('click', (e) => { next(); deckAfterPointer(e); });
+  $('#prev-btn').addEventListener('click', (e) => { previous(); deckAfterPointer(e); });
+  $('[data-go]').addEventListener('click', (e) => { go(0); deckAfterPointer(e); });
 
   // Keys never act while someone types, uses media controls or works in a dialog.
-  const ownsKeys = (target) => target instanceof Element && (target.isContentEditable || Boolean(target.closest('input, textarea, select, video, audio, [contenteditable="true"]')));
+  const ownsKeys = (target) => target instanceof Element && (target.isContentEditable || Boolean(target.closest('input, textarea, select, video[controls], audio, [contenteditable="true"]')));
   // A dialog opened with its shortcut (O, N, A) returns focus to where the presenter was, usually the deck,
   // not to the toolbar button: otherwise the next Space would press that button and reopen the dialog
   // instead of playing a clip or moving on.
   const keyOpener = () => {
     const el = document.activeElement;
     return el instanceof HTMLElement && el !== document.body && el.isConnected ? el : deck;
+  };
+  // Space reaches the clip that is playing, else the first that has not finished. Once every clip on the scene has
+  // ended (each holds its last frame), Space moves on instead of rewinding the clip in front of the room.
+  const currentRecording = () => {
+    const here = slotRecords.filter((r) => r.slideIndex === current && (r.state === 'video' || r.state === 'local') && !r.video.hidden);
+    return here.find((r) => !r.video.paused && !r.video.ended) || here.find((r) => !r.video.ended) || null;
   };
 
   document.addEventListener('keydown', (e) => {
@@ -1185,6 +1346,9 @@
     if (ownsKeys(e.target)) return;
     const key = e.key;
     if ((key === ' ' || key === 'Enter') && e.target instanceof Element && e.target.closest('button, a, summary, label')) return;
+    // A bar control that kept focus would turn :focus-visible on the next clicker key and pin its bar over every
+    // scene, the closing QR scene included: navigation keys hand focus back to the deck.
+    if (document.body.classList.contains('in-presentation') && ['ArrowRight', 'ArrowLeft', 'PageDown', 'PageUp', 'Home', 'End'].includes(key) && e.target instanceof Element && e.target.closest('.topbar, .controls')) deck.focus({ preventScroll: true });
     if (key === 'Escape') {
       if (collapseMedia()) {
         e.preventDefault();
@@ -1196,9 +1360,11 @@
     const lower = key.length === 1 ? key.toLowerCase() : key;
     if (key === 'ArrowRight' || key === 'PageDown') {
       e.preventDefault();
+      hideChrome();
       next();
     } else if (key === 'ArrowLeft' || key === 'PageUp') {
       e.preventDefault();
+      hideChrome();
       previous();
     } else if (key === 'Home') {
       e.preventDefault();
@@ -1208,11 +1374,12 @@
       go(slides.length - 1);
     } else if (key === ' ') {
       e.preventDefault();
-      const video = slides[current] && $('video:not([hidden])', slides[current]);
-      if (video) {
-        if (video.paused) video.play().catch(() => notify('Use the video’s play button to start this clip.'));
-        else video.pause();
-      } else next();
+      const record = currentRecording();
+      if (record) toggleRecord(record);
+      else {
+        hideChrome();
+        next();
+      }
     } else if (lower === 'o') {
       e.preventDefault();
       openDialog(dialogs.overview, keyOpener());
@@ -1229,8 +1396,11 @@
   });
 
   /* ---------------------------------------------------------------------------------------- */
-  /* Hash: #1 to #15, a scene id (#roadmap), #appendix and #appendix-<section>                  */
+  /* Hash: #1 to #15, a scene id or alias (#velocity), #appendix and #appendix-<section>         */
   /* ---------------------------------------------------------------------------------------- */
+
+  // Scenes that moved into the appendix: their old hashes open the appendix panel instead.
+  const RETIRED_SCENES = Object.freeze({ evidence: 'research', research: 'research', 'scene-evidence': 'research' });
 
   function parseHash(hash) {
     let raw = '';
@@ -1246,7 +1416,8 @@
       const n = Number(raw);
       return n >= 1 && n <= scenes.length ? { index: n - 1 } : null;
     }
-    const byId = scenes.findIndex((scene) => scene.id === raw || `scene-${scene.id}` === raw);
+    const byId = scenes.findIndex((scene) => scene.id === raw || `scene-${scene.id}` === raw || (scene.aliases || []).includes(raw));
+    if (byId < 0 && Object.prototype.hasOwnProperty.call(RETIRED_SCENES, raw)) return { appendix: true, section: RETIRED_SCENES[raw] };
     return byId >= 0 ? { index: byId } : null;
   }
 
@@ -1266,6 +1437,26 @@
     if (initial) go(0, { updateHash: false });
   }
   window.addEventListener('hashchange', () => applyHash(false));
+
+  // For rehearsal and check tooling (1-based scene numbers).
+  window.ORI_DECK = Object.freeze({
+    go: (n) => go(Number(n) - 1),
+    next,
+    previous,
+    get current() {
+      return current + 1;
+    },
+    get step() {
+      return current >= 0 ? slideState[current].step : 0;
+    },
+    get steps() {
+      return current >= 0 ? slideState[current].steps : 0;
+    },
+    get scale() {
+      return stageScale;
+    },
+  });
+
   document.documentElement.classList.add('js');
   applyHash(true);
 })();

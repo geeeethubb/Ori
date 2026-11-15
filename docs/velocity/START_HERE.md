@@ -19,6 +19,8 @@ This package contains actual outputs from the Kearney Velocity workspace, plus a
 
 ## Live workspace
 
+These links open the founder's Kearney Velocity workspace and may require workspace access.
+
 - [Personal AI Playground concept](https://kearney-perlab.growthsignals.com/concept/32c37b9f-e0b8-4c35-a1c2-1a45bfe7c1a4)
 - [Four-round research thread](https://kearney-perlab.growthsignals.com/research/id-1794674829478-0.d43a12a7b3c1c)
 - [Hackathon Decision & Demo Canvas](https://kearney-perlab.growthsignals.com/concept/32c37b9f-e0b8-4c35-a1c2-1a45bfe7c1a4/canvas/2800237e-d388-4420-a883-d1b204347149)

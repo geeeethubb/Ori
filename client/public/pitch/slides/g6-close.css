@@ -1,0 +1,150 @@
+/* Group 6 · the layouts "velocity" (brief slide 14) and "ask" (brief slide 15). Stage px on the 1600 x 900
+   design; phone rules under .is-flow. Every rule is scoped to its layout. The arrival motion (a question
+   resolving into its decision; fifty dots filling in) runs once when the slide is shown; the global
+   reduced-motion rule removes it and every element's resting state is the finished composition. */
+
+/* ============================================================================================== */
+/* Slide 14 · velocity: four question → decision stories                                           */
+/* ============================================================================================== */
+
+.layout-velocity .vl-body { padding-top: 26px; }
+.layout-velocity .vl-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 26px 36px; }
+.layout-velocity .vl-story { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 28px; align-items: center; min-width: 0; }
+.layout-velocity .vl-art { width: 360px; height: 292px; border-radius: 28px; background: #fff; border: 1.5px solid var(--line); box-shadow: 0 1px 0 rgba(22, 32, 57, 0.04), 0 12px 32px -22px rgba(22, 32, 57, 0.28); }
+.layout-velocity .vl-svg { display: block; width: 100%; height: 100%; }
+.layout-velocity .vl-text { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0; }
+.layout-velocity .vl-q { display: flex; align-items: center; gap: 8px; margin: 0; font-family: var(--font-body); font-weight: 600; font-size: 24px; line-height: 1.2; color: var(--fg-muted); white-space: nowrap; }
+.layout-velocity .vl-q .kit-icon { width: 24px; height: 24px; }
+.layout-velocity .vl-q-icon { color: var(--fg-muted); }
+.layout-velocity .vl-resolve { display: inline-flex; color: var(--accent); transform: rotate(90deg); margin-left: 1px; }
+.layout-velocity .vl-d { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 36px; line-height: 1.08; letter-spacing: -0.035em; color: var(--fg); text-wrap: balance; }
+
+/* The attribution line: what Velocity did, what it became, what is still to test. */
+.layout-velocity .vl-chain { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 16px; margin: 26px 0 0; }
+.layout-velocity .vl-chain .flow-arrow { color: var(--accent); }
+.layout-velocity .vl-chain .flow-arrow .kit-icon { width: 24px; height: 24px; }
+.layout-velocity .vl-link { display: inline-flex; align-items: baseline; gap: 10px; }
+.layout-velocity .vl-link b { font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -0.02em; color: var(--fg); }
+.layout-velocity .vl-link small { font-size: 18px; font-weight: 600; color: var(--fg-muted); border: 1.5px solid var(--line-2); border-radius: 99px; padding: 2px 12px; }
+
+/* The drawings: ink lines, white surfaces, one blue accent each. */
+.layout-velocity .vl-node { fill: var(--canvas); stroke: var(--ink); stroke-width: 3; }
+.layout-velocity .vl-glyph { color: var(--ink); }
+.layout-velocity .vl-glyph-on-accent { color: #fff; }
+.layout-velocity .vl-line, .layout-velocity .vl-head { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.layout-velocity .vl-branch { fill: none; stroke: var(--muted); stroke-width: 2.5; stroke-linecap: round; }
+.layout-velocity .vl-chip { fill: #fff; stroke: var(--line-2); stroke-width: 2; }
+.layout-velocity .vl-accent-fill { fill: var(--blue); }
+.layout-velocity .vl-accent-stroke, .layout-velocity .vl-accent-head { fill: none; stroke: var(--blue); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.layout-velocity .vl-screen { fill: #fff; stroke: var(--ink); stroke-width: 3; }
+.layout-velocity .vl-bar { fill: var(--ink); }
+.layout-velocity .vl-bar-soft { fill: var(--line); }
+.layout-velocity .vl-field { fill: none; stroke: var(--line-2); stroke-width: 2; }
+.layout-velocity .vl-field-new { fill: none; stroke: var(--muted); stroke-width: 2; stroke-dasharray: 5 5; }
+.layout-velocity .vl-ripple { fill: none; stroke: var(--blue); stroke-width: 2.5; opacity: 0.4; }
+.layout-velocity .vl-pointer { fill: #fff; stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; }
+.layout-velocity .vl-record { fill: var(--blue); }
+.layout-velocity .vl-thumb { fill: #fff; }
+.layout-velocity .vl-thumb-line { fill: none; stroke: var(--blue); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.layout-velocity .vl-ink-bar { fill: #fff; opacity: 0.9; }
+
+/* Arrival: each story draws its decision, staggered by card (--c), once. */
+.layout-velocity .vl-draw { stroke-dasharray: 1; stroke-dashoffset: 0; animation: vl-draw 0.6s cubic-bezier(.3, .7, .3, 1) both; animation-delay: calc(var(--c, 0) * 0.22s + var(--i, 0) * 0.06s + 0.15s); }
+.layout-velocity .vl-pop { transform-box: fill-box; transform-origin: center; animation: vl-pop 0.35s cubic-bezier(.3, 1.4, .5, 1) both; animation-delay: calc(var(--c, 0) * 0.22s + 0.6s); }
+.layout-velocity .vl-end { animation: vl-fade 0.3s ease-out both; animation-delay: calc(var(--c, 0) * 0.22s + var(--i, 0) * 0.06s + 0.45s); }
+.layout-velocity .vl-carry { animation: vl-carry 0.6s cubic-bezier(.3, .7, .3, 1) both; animation-delay: calc(var(--c, 0) * 0.22s + 0.3s); }
+.layout-velocity .vl-cursor { animation: vl-cursor 0.55s cubic-bezier(.3, .7, .3, 1) both; animation-delay: calc(var(--c, 0) * 0.22s + 0.15s); }
+.layout-velocity .vl-press { transform-box: fill-box; transform-origin: center; animation: vl-press 0.3s ease-out both; animation-delay: calc(var(--c, 0) * 0.22s + 0.62s); }
+.layout-velocity .vl-q { animation: vl-fade 0.3s ease-out both; animation-delay: calc(var(--c, 0) * 0.22s); }
+.layout-velocity .vl-resolve, .layout-velocity .vl-d { animation: vl-resolve 0.4s ease-out both; animation-delay: calc(var(--c, 0) * 0.22s + 0.55s); }
+@keyframes vl-draw { from { stroke-dashoffset: 1; } }
+@keyframes vl-pop { from { opacity: 0; transform: scale(0.5); } }
+@keyframes vl-fade { from { opacity: 0; } }
+@keyframes vl-carry { from { opacity: 0; transform: translateX(-176px); } 30% { opacity: 1; } to { opacity: 1; transform: translateX(0); } }
+@keyframes vl-cursor { from { transform: translate(262px, 250px); } to { transform: translate(176px, 206px); } }
+@keyframes vl-press { 0% { transform: scale(1); } 50% { transform: scale(0.94); } 100% { transform: scale(1); } }
+@keyframes vl-resolve { from { opacity: 0; transform: translateY(-8px); } }
+.layout-velocity .vl-resolve { animation-name: vl-resolve-arrow; }
+@keyframes vl-resolve-arrow { from { opacity: 0; transform: rotate(90deg) translateX(-8px); } to { opacity: 1; transform: rotate(90deg); } }
+
+/* ============================================================================================== */
+/* Slide 15 · ask (ink)                                                                             */
+/* ============================================================================================== */
+
+.layout-ask .ak-body { padding-top: 0; }
+.layout-ask .ak-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 40px; }
+.layout-ask .ak-hero { font-size: 136px; line-height: 0.95; letter-spacing: -0.055em; color: var(--fg); text-wrap: nowrap; }
+.layout-ask .ak-amount, .layout-ask .ak-equity { display: block; }
+.layout-ask .ak-equity { color: var(--lime); }
+.layout-ask .ak-punchline { margin: 18px 0 0; font-family: var(--font-display); font-weight: 700; font-size: 44px; letter-spacing: -0.03em; color: var(--fg); }
+.layout-ask .ak-ori { margin-top: 6px; margin-right: 36px; animation: ak-rise 0.6s cubic-bezier(.3, .7, .3, 1) both 0.2s; }
+
+.layout-ask .ak-uses { margin-top: 30px; }
+.layout-ask .ak-weeks { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 22px; margin-bottom: 14px; }
+.layout-ask .ak-weeks-label { font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -0.02em; color: var(--lime); white-space: nowrap; }
+.layout-ask .ak-weeks-line { display: block; width: 100%; height: auto; }
+.layout-ask .ak-weeks-path { fill: none; stroke: var(--on-ink-muted); stroke-width: 2.5; stroke-dasharray: 1; stroke-dashoffset: 0; animation: ak-draw 0.9s cubic-bezier(.3, .7, .3, 1) both 0.25s; }
+.layout-ask .ak-tick { fill: var(--on-ink-muted); }
+.layout-ask .ak-tick-end { fill: var(--lime); }
+.layout-ask .ak-use-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px; }
+.layout-ask .ak-use { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.layout-ask .ak-panel { height: 170px; border-radius: 24px; background: var(--ink-2); border: 1.5px solid var(--on-ink-line); }
+.layout-ask .ak-svg { display: block; width: 100%; height: 100%; }
+.layout-ask .ak-use-label { font-family: var(--font-display); font-weight: 750; font-size: 32px; letter-spacing: -0.03em; color: var(--fg); }
+.layout-ask .ak-bottom { margin: 32px 0 0; padding-top: 24px; border-top: 2px solid var(--on-ink-line); font-family: var(--font-display); font-weight: 800; font-size: 72px; line-height: 1.05; letter-spacing: -0.045em; color: var(--fg); white-space: nowrap; }
+.layout-ask .ak-bottom-accent { color: var(--lime); }
+
+.layout-ask .ak-stroke { fill: none; stroke: var(--on-ink); stroke-width: 3; stroke-linejoin: round; }
+.layout-ask .ak-soft-fill { fill: rgba(255, 255, 255, 0.2); }
+.layout-ask .ak-soft-bar { fill: rgba(255, 255, 255, 0.35); }
+.layout-ask .ak-soft-stroke { fill: none; stroke: var(--on-ink-muted); stroke-width: 2.5; stroke-linecap: round; }
+.layout-ask .ak-lime-fill { fill: var(--lime); }
+.layout-ask .ak-on-lime { fill: none; stroke: var(--ink); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.layout-ask .ak-dot { fill: var(--lime); transform-box: fill-box; transform-origin: center; animation: ak-dot 0.3s ease-out both; animation-delay: calc(var(--d, 0) * 12ms + 0.45s); }
+.layout-ask .ak-dash, .layout-ask .ak-dash-head { fill: none; stroke: var(--on-ink-muted); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.layout-ask .ak-dash { stroke-dasharray: 6 9; }
+.layout-ask .ak-pop { transform-box: fill-box; transform-origin: center; animation: ak-pop 0.35s cubic-bezier(.3, 1.4, .5, 1) both 0.55s; }
+.layout-ask .ak-grow { transform-box: fill-box; transform-origin: 50% 100%; animation: ak-grow 0.5s cubic-bezier(.3, .7, .3, 1) both 0.6s; }
+@keyframes ak-rise { from { opacity: 0; transform: translateY(14px); } }
+@keyframes ak-draw { from { stroke-dashoffset: 1; } }
+@keyframes ak-dot { from { opacity: 0; transform: scale(0.3); } }
+@keyframes ak-pop { from { opacity: 0; transform: scale(0.5); } }
+@keyframes ak-grow { from { transform: scaleY(0.2); } }
+
+/* ============================================================================================== */
+/* Phones and narrow windows (flow mode: no scaling, the scene scrolls)                            */
+/* ============================================================================================== */
+
+.is-flow .layout-velocity .vl-body { padding-top: 16px; }
+.is-flow .layout-velocity .vl-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.is-flow .layout-velocity .vl-story { grid-template-columns: 112px minmax(0, 1fr); gap: 14px; }
+.is-flow .layout-velocity .vl-art { width: 112px; height: 95px; border-radius: 16px; }
+.is-flow .layout-velocity .vl-text { gap: 4px; }
+.is-flow .layout-velocity .vl-q { font-size: 14px; gap: 6px; white-space: normal; }
+.is-flow .layout-velocity .vl-q .kit-icon { width: 16px; height: 16px; }
+.is-flow .layout-velocity .vl-resolve .kit-icon { width: 16px; height: 16px; }
+.is-flow .layout-velocity .vl-d { font-size: 20px; }
+.is-flow .layout-velocity .vl-chain { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 2px; margin-top: 18px; }
+.is-flow .layout-velocity .vl-chain .flow-arrow { transform: rotate(90deg); margin-left: 4px; }
+.is-flow .layout-velocity .vl-link { gap: 6px; }
+.is-flow .layout-velocity .vl-link b { font-size: 15px; }
+.is-flow .layout-velocity .vl-link small { font-size: 13px; padding: 1px 8px; }
+.is-flow .layout-velocity .vl-chain .flow-arrow .kit-icon { width: 15px; height: 15px; }
+
+.is-flow .layout-ask .ak-top { align-items: flex-start; gap: 12px; }
+.is-flow .layout-ask .ak-hero { font-size: clamp(40px, 12vw, 56px); }
+.is-flow .layout-ask .ak-punchline { font-size: 20px; margin-top: 10px; }
+.is-flow .layout-ask .ak-ori { margin-right: 0; }
+.is-flow .layout-ask .ak-uses { margin-top: 22px; }
+.is-flow .layout-ask .ak-weeks { gap: 10px; margin-bottom: 10px; }
+.is-flow .layout-ask .ak-weeks-label { font-size: 15px; }
+.is-flow .layout-ask .ak-use-list { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.is-flow .layout-ask .ak-use { flex-direction: row; align-items: center; gap: 12px; }
+.is-flow .layout-ask .ak-panel { flex: none; width: 132px; height: 48px; border-radius: 12px; }
+.is-flow .layout-ask .ak-use-label { font-size: 17px; }
+.is-flow .layout-ask .ak-bottom { font-size: 26px; margin-top: 22px; padding-top: 14px; white-space: normal; text-wrap: balance; }
+
+/* Print shows the finished compositions (every slide is laid out at once, so arrival motion must not run). */
+@media print {
+  .layout-velocity *, .layout-ask * { animation: none !important; }
+}
