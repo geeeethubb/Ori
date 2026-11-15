@@ -146,7 +146,7 @@ export const DOMAINS: Domain[] = [
       title: 'A twenty-minute light walk',
       icon: { symbol: 'sun', color: 'lilac' },
       description: 'A short walk with one rule, two frames of the same thing, one keeper and one sentence about what the light was doing.',
-      because: 'A short walk with one rule is the fastest way to practise seeing light, and it needs no app.',
+      because: 'A short walk with one rule is the fastest way to practice seeing light, and it needs no app.',
       steps: ({ words, minutes, source }) => {
         const ref = source ? 'the picture that inspired you' : 'the last photo you liked';
         return [
@@ -220,7 +220,7 @@ export const DOMAINS: Domain[] = [
       title: 'One object, drawn twice',
       icon: { symbol: 'pen', color: 'lilac' },
       description: 'A timer, a pencil and the nearest object: draw it once slowly and once fast, then write what got easier. No app needed.',
-      because: 'Drawing one object twice is the quickest way to practise seeing, and it needs no app.',
+      because: 'Drawing one object twice is the quickest way to practice seeing, and it needs no app.',
       steps: ({ words, minutes }) => [
         `Set a timer for ${minutesCount(minutes ?? 10)} and draw the nearest object without erasing.`,
         'Draw it again from another side, in half the time.',

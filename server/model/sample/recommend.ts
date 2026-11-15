@@ -285,7 +285,7 @@ function useCards(scoredAll: Scored[], existing: RecommendInput['existingApps'])
     out.push(RecommendationDraftSchema.parse({
       conceptId: d.conceptId,
       kind: 'use_app',
-      title: clip(d.id === 'music' ? `Practise in ${app.name}` : d.id === 'photo' ? `Take your camera out with ${app.name}` : d.id === 'sketch' ? `Sketch in ${app.name}` : `Catch up in ${app.name}`, 50),
+      title: clip(d.id === 'music' ? `Practice in ${app.name}` : d.id === 'photo' ? `Take your camera out with ${app.name}` : d.id === 'sketch' ? `Sketch in ${app.name}` : `Catch up in ${app.name}`, 50),
       purpose: app.purpose === 'work' ? 'work' : 'explore',
       pattern: (PATTERNS as readonly string[]).includes(app.pattern) ? app.pattern : s.concept.pattern,
       icon: displayIcon(app.name, app.icon ?? s.concept.icon),

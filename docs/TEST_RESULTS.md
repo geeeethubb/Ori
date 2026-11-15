@@ -1,6 +1,6 @@
 # Test results (redesign, Velocity integration, Ori)
 
-Updated: 2026-11-14 20:30 (section 7 added: Velocity integration and its review; the Ori pass gets its own section when it is verified). Status values: ✅ passed · ❌ failed · ⏳ not run yet · ⚠️ partial. Every row names the environment it ran in. A check that did not run is listed as not run, never as passed. Session-1 totals are history; this file only reports what ran after the redesign started.
+Updated: 2026-11-15 (section 8 added: the Ori pass, its live checks on the deployed service, and the pitch). Status values: ✅ passed · ❌ failed · ⏳ not run yet · ⚠️ partial. Every row names the environment it ran in. A check that did not run is listed as not run, never as passed. Session-1 totals are history; this file only reports what ran after the redesign started.
 
 Machine: Windows 11, Node 24.14.1, Playwright Chromium 1255, Android emulator `Pixel_9_Pro` (Android 17 / API 37).
 
@@ -108,3 +108,26 @@ All 36 were fixed at 14:03 and pinned by the 16 tests above where a test could h
 | Composer and contrast | A retried share reuses the uploaded screenshot; Send waits for the thread to load; `--ink-3` darkened to `#646C88` (about 5:1 on the paper background for small muted text). |
 
 Known and not fixed (see `BUILD_STATUS.md`): live-mode retry chains can exceed the client timeout on slow responses; the seed matches the demo apps by name; sample-mode filler proposals can cite loosely related facts; renaming a select option does not remap `where.value` in summary metrics; the live journey was not re-run after these fixes (Sample-mode browser run only, to avoid spending on the model).
+
+
+## 8. Ori (session 3): product, live service, Android, pitch
+
+Commits `eb2f82c` (brand foundation), `e27782b` (Ori surfaces), `809eed0` (deployment settings, keep card, live check), then the pitch, demo-seeding and documentation commit of 2026-11-15. "Phone" sizes below are browser viewports (390 × 844, 320 × 568), not physical phones.
+
+| Check | Status | Count | Environment / evidence |
+| --- | --- | --- | --- |
+| Typecheck, whole repo | ✅ | 0 errors | `npx tsc -p tsconfig.json --noEmit`, 2026-11-15 00:37 and again after the seeding change (00:45) |
+| Unit/API suite | ✅ | **840 passed, 39 files** | `npx vitest run`, working tree at 00:51: 831 product tests, 5 for the `/pitch` route, 4 for the opt-in demo seeding (`tests/unit/seed-on-start.test.ts`) |
+| Browser suite (Playwright, production build, Sample mode, throwaway DB) | ✅ | **30 passed, 6 skipped by design** | `npx playwright test`, 2026-11-15 00:39–00:41; phone, phone-small and desktop projects: the Light journey (share a photo → Preview Light → Make mine → Ready → a photo that persists → Edit with Ori → undo keeps every entry), launcher, People, Agent, landing "Try an example", screens at 320/390/768/1440 without clipping, 44 px tap targets |
+| Live model, local (`server/scripts/ori-live-smoke.ts`, `claude-opus-5-5`, 3 calls) | ⚠️ 10/11 | | 2026-11-14 23:48; `docs/ori/evidence/live-smoke-2026-11-15.txt`. The miss ("offers to keep it") was fixed after the run: Ori now always adds a Keep card when it proposes an app or an exploration. The first live reply to a shared photo took 103 s on this machine |
+| **Live model on the deployed service** (Render, `https://ori-fjrx.onrender.com`, 4 calls) | ✅ | 4/4 live, 0 fallbacks | 2026-11-15 00:47–00:49, deployed commit `809eed0`; each step's own record says `generatedBy: anthropic` with no fallback reason: Agent reply 10.5 s, app design 16.5 s, revision 3.1 s, a shared photo 17.3 s (read status "read"; it offered to add the photo to the app made a minute earlier, a light walk, and "Just keep it", so the Keep fix is confirmed live). `docs/ori/evidence/render-live-check-2026-11-15.txt` |
+| **Journey on the deployed service** (`scripts/verify-deploy.mjs --phase before --expect-live yes`) | ✅ | **19/19** | same run: sign up, log out, log in, share → reply → design → Make mine, photo upload, an observation with the photo, the photo refused to another account (404), revision previewed and applied with the observation unchanged (fields 8 → 11), the app reopened at its own link. One throwaway account and one app were created on the live database; nothing else was touched |
+| Records and photos after a service restart (deployed) | ⏳ pending | | `--phase after` once the next deploy has restarted the service |
+| Pitch on the deployed service | ⏳ pending | | `/pitch` → `/pitch/`, the deck, the three recordings, `node scripts/check-pitch.mjs --base https://ori-fjrx.onrender.com/pitch/` |
+| Demo account on the deployed service | ⏳ pending | | needs `SEED_DEMO_PASSWORD` and `SEED_DEMO_ON_START=true` in the service's environment (only the founder can set them); then the demo login and its apps are checked |
+| Deployment stand-in, local (`npm start` with production settings, Sample mode, throwaway DB, seeding on, one restart) | ✅ | 18/18, then 10/10 | 2026-11-15 00:46; `docs/DEPLOY.md` → Verified locally |
+| Opt-in demo seeding at boot | ✅ | 2 boots | first boot created the demo account with Riff, Light, People and 4 example photos; the second kept everything and added nothing; the password appears in no log |
+| Visual review against the ten references | see doc | | `docs/ori/VISUAL_REVIEW.md`; screenshots `docs/ori/screens/` (390 and 1440) and `docs/ori/screens/states/` (empty, error, offline, reduced motion) |
+| Accessibility | ⚠️ partial | | named controls, focus trapped in dialogs and returned, 44 px targets, a 3 px focus ring, AA-checked text pairs, reduced motion; automated checks only, no screen-reader or text-enlargement pass |
+| Android emulator (`Pixel_9_Pro`, Android 17) | ✅ | | label "Ori"; install and cold start; sign-in inside the shell; the shortcut intent opens Light directly, warm and cold (`docs/ANDROID.md`, `docs/ori/evidence/android/`). Pinning a new shortcut through the launcher dialog was not re-run this session |
+| Physical phones (iPhone home screen, Android device) | ⏳ not run | | no device was available; nothing here is a physical-phone result |

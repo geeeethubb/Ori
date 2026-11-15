@@ -13,7 +13,7 @@ describe('playgroundIdeas', () => {
       idea('Made earlier', { status: 'built' }),
       idea('Light'),
       idea('Just keep it', { kind: 'keep' }),
-      idea('Practise in Riff tonight', { kind: 'use_app', captureId: 'cap1' }),
+      idea('Practice in Riff tonight', { kind: 'use_app', captureId: 'cap1' }),
       idea('light'),
       idea('A twenty-minute light walk', { kind: 'explore' }),
     ]);

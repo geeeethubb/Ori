@@ -1,56 +1,41 @@
-# Three-minute demo — "Your interests have somewhere to go"
+# Ori demo: inspiration → personal app → home-screen entry → safe revision
 
-The product name is undecided; the UI shows the temporary label from `shared/brand.ts` ("Your Playground").
-Everything seeded is labelled **Example** in the product. The demo account is fictional.
+Ori is an AI-native phone experience on the phone you already own: your AI companion turns a spark into a personal app you can open from your home screen and keep changing by asking. This script follows **one** real Light journey. Everything example-like in the product is labelled **Example**; the demo account is fictional.
 
-## Before you start (5 minutes)
+There are two ways to show it:
+
+- **In the pitch (`/pitch/`)**: scenes 6–8 play three real recordings of the same Light app and the same saved photo. They were recorded in **Sample mode (scripted responses, not live AI)** and say so on screen. Scene 8 reopens the app by its own link in a fresh browser session; it is not a home-screen launch.
+- **Live in the product** (below), in Sample mode for timing, or Live AI if you want real model replies and can wait.
+
+## Before you start
 
 ```bash
 npm install
-npm run build && npm run seed && npm start
+npm run build
+npm start            # http://localhost:8787 with your configured .env (never copy .env.example over it)
 ```
 
-Open http://localhost:8787 on the laptop. For the phone part the server must be reachable from the phone:
-set `PUBLIC_ORIGIN=http://<laptop-lan-ip>:8787` in your existing `.env` (same Wi-Fi) or use an HTTPS tunnel, then open that URL in Safari on the iPhone and sign in once.
+- Demo account: `demo@aiappstore.local`, password = `SEED_DEMO_PASSWORD` from your `.env` (default `demo-pass-2026`). For a clean creation journey, sign up a fresh account instead: an account that already has Light is offered "Open Light" rather than a new app (by design).
+- **Sample mode** (`MODEL_PROVIDER=sample`): deterministic scripted responses, no model calls, about one second per step. **Live AI** (`MODEL_PROVIDER=auto` with a key): real model replies; the first reply to a shared photo took about 100 s in our checks, later ones 5–20 s. Say which mode you are showing; the UI shows a Sample mode badge.
+- Phone: a phone cannot open `localhost`. Use the hosted URL (see `docs/DEPLOY.md`). Adding to the home screen has not yet been verified on a physical phone; the Android shell opens an app directly from its launcher shortcut on the emulator.
 
-Demo sign-in: `demo@aiappstore.local` / `demo-pass-2026` (or `SEED_DEMO_PASSWORD`). `npm run seed` is additive: it adds whatever example content is missing and never touches your own apps. `npm run seed -- --reset` recreates only the demo account.
+## The live script (about three minutes)
 
-Mode badge: **Live AI** (key configured) or **Sample mode** (deterministic catalog). Say which one you are showing. In Live AI mode names vary run to run; the agent takes 10 to 30 seconds per reply and 15 to 40 seconds to design an app, so narrate while it thinks.
-
-## The script
-
-| Time | Screen | Say / do |
+| Time | Screen | Do / say |
 | --- | --- | --- |
-| 0:00 | Landing | "Your interests have somewhere to go." Point at the phone composition: one agent, one playground, two apps that look nothing alike. **Make it yours** (or sign in). |
-| 0:15 | **Agent** | Type (or use the labelled example): *"I like this sound and have 15 minutes to practice."* Paste a reel link. **Share**. |
-| 0:35 | Agent reply | Read the first line aloud: it says it saved the link but did **not** read the reel, and works from the note. Three directions appear: a 15-minute exploration, a practice app, or just keep it. |
-| 0:55 | **Make mine** | Open the app proposal. The only choices: 15 minutes (preselected) and the look. **Preview**: the real app renders with example content and a yellow "example" banner. **Make mine**. |
-| 1:20 | **Riff** at `/apps/{id}/` | Dark room, big timer. Pick 15, **Start**, let it run a few seconds, **Pause**, **Save session**: minutes, tempo and date are prefilled; add what you worked on. Reload: the session is there. |
-| 1:45 | **Light** (My apps) | Open the photography app next to it: a contact sheet of real photos, "Add photo" as the primary action, a weekly light exercise. Say: "Same engine, different app: layout, content, typography, primary action." |
-| 2:05 | **People** | A queue of who, what you promised and by when, grouped by what needs attention today. Complete one. The draft is copied, never sent. |
-| 2:20 | Phone | Safari → Share → **Add to Home Screen** on Riff. Leave the browser, tap the icon: Riff opens directly with the saved session. |
-| 2:35 | Riff → Settings → **Make this more me** | *"Add a field for which song I practised."* Preview the change list, **Accept**. Back in the app: the session is intact, the new field appears. Show **Undo**. |
-| 2:50 | **Playground** | "A few things you might be into": one featured possibility, an exploration that needs no app, one everyday need. Close on the vision and say plainly what is pending (Velocity, physical device checks). |
+| 0:00 | Landing `/` | "Your interests have somewhere to go." Point at the home-screen strip: Ori, Light, Riff, People, each its own app. **Make it yours** (sign up, or sign in). |
+| 0:15 | **Agent** | Attach a street photo and type: *"I keep stopping for long shadows on brick walls in the late afternoon. I want to get better at noticing light on my walks."* **Send**. |
+| 0:30 | Agent reply | Read it: it says what it read (the note; Sample mode cannot read the photo) and offers **Light: a photo journal shaped around you**, a one-off light walk, or **Keep inspiration**. Open **Why this?** for a second. **Preview Light**. |
+| 0:50 | **Make Light yours** | The real app with labelled example photos. Type the focus *"Focus on shadows and reflections"* → **Update preview**: it becomes this week's prompt. **Make mine** → "Making Light yours…" → **Light is yours**: Open Light, Add to home screen, Copy app link. |
+| 1:15 | **Light** at `/apps/{id}/` | Its own URL, its own icon, no Ori navigation. Your photo is already the first entry. Open it, write what you noticed ("Low sun turns the brick wall gold"), **Save**. Reload: still there. |
+| 1:40 | **Add to home screen** | From the "…" menu: the steps for this phone's browser and Copy app link. Say plainly: "On a phone you add it from Safari's Share menu; it then opens Light directly." (Device check pending.) |
+| 1:55 | **Edit with Ori** | Ask: *"Add camera settings to my photo notes."* **Preview change**: the review lists Camera, Shutter and Aperture, says your photos and notes stay, and shows the change on your own photo. **Apply change** → "Updated. Existing photos and notes kept." with **Undo**. |
+| 2:20 | The same photo | Open it: the same photo and note, now with Camera. Type "Fuji X100V", save. |
+| 2:35 | Other apps (optional) | My apps: Riff (a timer that keeps planned and measured time apart) and People (a queue with Today and Upcoming; drafts are copied, never sent). |
+| 2:50 | Close | "Tell Ori what caught your eye. It makes the app, and you keep making it yours." |
 
-## What to say about limits
+## If something goes wrong
 
-- "Make mine" produces a validated app definition rendered by our runtime (gallery, practice timer, saved sources, next-action queue, journal, board, list, summary, rules). We do not run generated code; the model chooses and composes real capabilities and a design.
-- Links are saved, not read. Only public titles from YouTube, Vimeo, SoundCloud and Spotify are looked up. Instagram and TikTok posts are kept as links; the agent works from your note or screenshot. In Live AI mode screenshots are read; in Sample mode they are not, and the reply says so.
-- No social accounts or other AI chats are read. Context comes from what the person shares here.
-- Android: one shared shell APK with pinned shortcuts per app (`docs/ANDROID.md`), not one APK per app.
-
-## Reset between runs
-
-```bash
-npm run seed -- --reset      # recreates only the demo account and its example apps
-```
-
-Apps made during a demo can be deleted from each app's settings.
-
-## Observed first-use session (for the five user trials)
-
-1. Ask the person to share one real inspiration (a note, a link, a screenshot). Watch what they expect the agent to have read.
-2. Ask: "Which direction would you take, and why?" Note whether the reason felt personal.
-3. Let them customize one thing and make the app. Note the first real action they take inside it.
-4. Ask them to add the app to their home screen and open it from there.
-5. Ask for one change with "Make this more me". Watch the preview; note whether they trust that their entries are safe.
+- A live reply is slow: say what is happening, or switch the server to Sample mode (restart with `MODEL_PROVIDER=sample`) and say so.
+- Undo is in the app's "…" menu → History and undo: it keeps every entry and the camera value typed since.
+- Never present the pitch's concept images or the Sample-mode recordings as live AI output.

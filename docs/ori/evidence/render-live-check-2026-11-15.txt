@@ -1,0 +1,37 @@
+Render live check, 2026-11-15 00:47:38–00:48:10 CST, deployed commit 809eed0 (before the pitch push).
+Command: node scripts/verify-deploy.mjs --base https://ori-fjrx.onrender.com --phase before --state <local file outside Git> --pitch no --expect-live yes
+A throwaway account (deploy-check-…@example.test, random password kept only in the local state file) and one app were created; 3 live model calls.
+
+deploy check · before · https://ori-fjrx.onrender.com
+  PASS  health (model mode anthropic)
+  INFO  pitch: skipped (--pitch no)
+  INFO  demo account: not checked (no --demo-password-file)
+  PASS  sign up (201)
+  PASS  log out (200)
+  PASS  log in (200)
+  PASS  signed in as the account
+  PASS  agent reply came from the live model (anthropic, 10.5 s)
+  INFO  agent reply text: A contact sheet for your street photos, each with a note on the light. Want to make it yours?
+  PASS  share gets a reply with an app idea (Street light contact sheet)
+  PASS  app design came from the live model (anthropic, 16.5 s)
+  PASS  the idea is designed (200 "Street Light Contact Sheet")
+  PASS  Make mine creates the app (201 Street Light Contact Sheet)
+  PASS  photo upload (201)
+  PASS  observation with the photo saved (201 "")
+  PASS  photo served to its owner (200 image/jpeg)
+  PASS  photo refused to another account (404)
+  PASS  app revision came from the live model (anthropic, 3.1 s)
+  PASS  the change is previewed (200 Each photo will get Camera, Shutter and Aperture fields under the caption.)
+  PASS  the change is applied (200; fields 8 → 11)
+  PASS  the observation and its photo are unchanged after the revision (1 entries)
+  PASS  the app reopens at its own link (200 https://ori-fjrx.onrender.com/apps/N8WMA9ZbwIqt7r_n/)
+SUMMARY: 19/19 passed
+
+Photo share (the demo's first step), 00:48:30–00:48:48 CST, same throwaway account, 1 live model call:
+login 200
+photo upload 201
+photo share 201 in 17.3 s
+  generatedBy: anthropic
+  read status: read
+  reply: Your Street Light Contact Sheet already holds shots like this one. Add it there, then try a short light-noticing walk today?
+  proposals: use_app "Add this shadow shot to your sheet" | explore "A walk for noticing light" | keep "Just keep it"

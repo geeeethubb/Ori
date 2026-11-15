@@ -1,5 +1,7 @@
 # Deploying Ori: one Node web service with a persistent disk
 
+**Live on Render:** the product at https://ori-fjrx.onrender.com/ and the pitch at https://ori-fjrx.onrender.com/pitch/ (health: `/api/health`). What was checked on the live service, and when, is under [Verified on the live service](#verified-on-the-live-service).
+
 One Node process serves everything: the API, the built web app (`dist/client`), each personal app's own URL and install metadata (`/apps/<id>/`, manifest, icons), and the pitch at `/pitch/` with its three recordings. Data lives in one SQLite file (Node's built-in `node:sqlite`, WAL mode) plus uploaded photos as files, both on a persistent disk. Schema migrations are additive and run automatically when the server starts. The database architecture is unchanged for deployment.
 
 ## Exact settings
@@ -34,7 +36,8 @@ Server-only means it is read by the Node process at run time and never reaches t
 | `MAX_IMAGE_BYTES` | `6291456` | yes | 6 MB upload limit |
 | `LINK_METADATA` | `on` | yes | allowlisted oEmbed titles only; no page is ever fetched |
 | `CORS_ORIGINS` | leave empty | yes | only for extra origins; the Android shell's own origins are built in |
-| `SEED_DEMO_PASSWORD` | a strong value, only if you run `npm run seed` | **yes, secret** | the seed creates the demo account `demo@aiappstore.local`; skip seeding on a public host if you do not need it |
+| `SEED_DEMO_PASSWORD` | a dedicated value of at least 12 characters (never the documented development default) | **yes, secret** | used only when the seed creates the demo account `demo@aiappstore.local`; changing it later does not change an existing account's password |
+| `SEED_DEMO_ON_START` | `true` to seed the demo account when the server starts; otherwise unset | yes | for hosts without a shell: runs the same additive seed as `npm run seed` before serving; refuses to run without a dedicated `SEED_DEMO_PASSWORD`; never logs it |
 | `VITE_API_BASE_URL` | **unset** for the web build | build-time, public | only the Android shell build sets it (`scripts/build-apk.mjs --api-base`) |
 
 `render.yaml` in the repository is a Render Blueprint with exactly these settings; `PUBLIC_ORIGIN` and `ANTHROPIC_API_KEY` are left for the dashboard (`sync: false`).
@@ -55,9 +58,25 @@ Server-only means it is read by the Node process at run time and never reaches t
    It creates one throwaway account and one app ("Deploy check …"); delete them afterwards if you like.
 7. On a phone: open an app's own link (`https://<url>/apps/<id>/`) in Safari → Share → Add to Home Screen, and launch it from the icon. This has not been verified on a device yet.
 
+## The demo account on a hosted service
+
+The demo account `demo@aiappstore.local` is clearly labelled sample data: Riff, Light and People with example entries and four CC0 example photos, two example Agent conversations and Playground ideas, all made without model calls. To create it on the host:
+
+1. In the service's environment set `SEED_DEMO_PASSWORD` to a dedicated value (at least 12 characters; keep it in a password manager, never in Git or the pitch) and `SEED_DEMO_ON_START=true`. Saving the environment redeploys the service.
+2. At the next start the server logs `[seed] demo account created; Riff added, Light added, People added; 4 example photos copied` (on later starts: `kept`). It only ever adds what is missing to the demo account; it never resets the database, never touches other accounts and never changes an existing demo password.
+3. Leave the flag on (it is idempotent) or remove it. With a shell (Render's Shell tab on paid instances), `npm run seed` does the same; never pass `--reset` on a host.
+
+## Verified on the live service
+
+_Filled in after the final deployment; see the handoff in `BUILD_STATUS.md`._
+
 ## Verified locally (stand-in for the service)
 
-_Filled in after the final run; see below._
+`npm start` with production settings, Sample mode, a throwaway database and media folder, `SEED_DEMO_ON_START=true` with a test password, restarted once (2026-11-15 00:46):
+
+- `node scripts/verify-deploy.mjs --phase before --pitch no --demo-password-file …`: **18/18** (demo account signs in and has Riff, Light and People; sign up, log out, log in; share → reply → design → Make mine; photo upload; an observation with the photo; the photo refused to another account; revision preview and apply with the observation unchanged; the app's own link).
+- After the restart, `--phase after`: **10/10** (the old session still works, log in, the app with its revision, the observation and the photo are all there).
+- Two boots with seeding on: first `demo account created; Riff added, Light added, People added; 4 example photos copied`, then `kept … 0 example photos copied`; the password appears in neither log.
 
 ## Notes and limits
 

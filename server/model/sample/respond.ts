@@ -245,7 +245,7 @@ function useDraft(app: ExistingAppSummary, domain: Domain, concept: Concept, cap
     lines.push('Your photo', 'What you noticed', `Kept in ${name}`);
   } else {
     const timed = domain.id === 'music' || domain.id === 'sketch';
-    title = domain.id === 'music' ? `Practise in ${name} tonight` : domain.id === 'sketch' ? `Sketch in ${name} today` : `Open ${name}`;
+    title = domain.id === 'music' ? `Practice in ${name} tonight` : domain.id === 'sketch' ? `Sketch in ${name} today` : `Open ${name}`;
     // Only a timer app offers "minutes on the timer"; "already does this" only when nothing asked for is in doubt.
     tagline = minutes && timed ? `${minutesCount(minutes)} on the timer you already have` : confirmed ? 'It already does this' : 'Open it when you are ready';
     firstAction = timed ? `Open ${name}, pick ${minutes ? minutesCount(minutes) : 'your minutes'} and press Start.` : `Open ${name}.`;
@@ -675,7 +675,7 @@ export function respondToCapture(input: RespondInput): RespondResult {
   let question: string | undefined;
   if (!note && hasImage(c)) question = 'What does the screenshot show, in a line?';
   else if (!note && hasLink(c)) question = 'What is the link about, in a line?';
-  else if (domain?.id === 'music' && !minutes && !fullFit) question = 'How many minutes do you usually have to practise?';
+  else if (domain?.id === 'music' && !minutes && !fullFit) question = 'How many minutes do you usually have to practice?';
   else if (domain?.id === 'sketch' && !minutes && !fullFit) question = 'How many minutes do you usually have to sketch?';
 
   return {

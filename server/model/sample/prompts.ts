@@ -18,7 +18,7 @@ export const CONCEPT_PROMPTS: Record<string, string[]> = {
   'music-practice-companion': [
     'Play your hardest passage at half speed, ten times clean',
     'Learn eight bars of a new song by ear',
-    'Practise one chord change with a metronome for five minutes',
+    'Practice one chord change with a metronome for five minutes',
     'Record yourself once and listen back before the next session',
     'Play the whole song through without stopping, mistakes and all',
     'Spend a session only on rhythm: mute the strings or clap the part',

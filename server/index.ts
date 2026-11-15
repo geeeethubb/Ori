@@ -15,6 +15,7 @@ import { bootForApp, installRoutes, loadIndexHtml, renderIndex } from './install
 import { APP_ID_PATTERN } from '../shared/ids.ts';
 import { BRAND } from '../shared/brand.ts';
 import { mountExtraRoutes } from './routes/register.ts';
+import { seedOnStart } from './seedOnStart.ts';
 
 export function createServer(): Hono {
   openDatabase();
@@ -62,6 +63,20 @@ export function createServer(): Hono {
   app.use('/favicon.svg', serveStatic({ root: relDist }));
   app.use('/robots.txt', serveStatic({ root: relDist }));
 
+  // The pitch deck: a standalone static page (client/public/pitch, copied into the built client),
+  // public like the rest of the static site and outside the app shell. /pitch redirects to /pitch/ so
+  // its relative assets resolve; a missing /pitch/* file is a 404, never the SPA.
+  app.get('/pitch', (c) => c.redirect(`/pitch/${new URL(c.req.url).search}`, 301));
+  app.use('/pitch/*', async (c, next) => {
+    await next();
+    if (c.res.status !== 200 && c.res.status !== 206) return;
+    const p = c.req.path;
+    const page = p.endsWith('/') || p.endsWith('.html') || p.endsWith('/config.js');
+    c.header('Cache-Control', page ? 'no-store' : 'public, max-age=300');
+  });
+  app.use('/pitch/*', serveStatic({ root: relDist }));
+  app.all('/pitch/*', (c) => c.text('Not found', 404));
+
   app.get('*', (c) => {
     const html = loadIndexHtml();
     if (!html) {
@@ -81,6 +96,8 @@ export function createServer(): Hono {
 const isMain = Boolean(process.argv[1]) && path.resolve(process.argv[1] as string) === path.resolve(fileURLToPath(import.meta.url));
 if (isMain || process.env.AAS_SERVE === '1') {
   const app = createServer();
+  // Off unless SEED_DEMO_ON_START=true: additive demo seeding for a hosted demo, finished before the first request.
+  await seedOnStart();
   serve({ fetch: app.fetch, port: config.port, hostname: config.host }, (info) => {
     console.log(`[server] ${BRAND.name} listening on http://localhost:${info.port} (model mode: ${resolveModelMode()}, db: ${config.databasePath})`);
   });

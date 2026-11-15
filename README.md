@@ -1,8 +1,8 @@
-# Personal AI playground — prototype setup
+# Ori — your AI companion. Your world, in your pocket.
 
-**Your interests have somewhere to go.** A personal AI that turns your interests and everyday needs into a playground of apps made just for you. Share a thought, a link or a screenshot; the agent says what it actually read and offers a direction (explore it, make an app, add to an app you have, or just keep it); the app you make lives at its own URL on your phone and changes with you without losing your data.
+**Your interests have somewhere to go.** Ori is your AI companion for turning your interests and everyday needs into personal apps that live on your home screen. Share a thought, a photo or a link; Ori says what it actually read and offers a next step (explore it, make an app, add an entry to an app you have, change an app, or just keep it). The app you make lives at its own URL with its own icon, opens directly from your home screen, and changes when you ask, without losing what you saved.
 
-The product name is undecided. The UI shows the temporary label in [`shared/brand.ts`](shared/brand.ts) ("Your Playground"); internal ids keep their original values. The product and design requirements live in [`redesign/`](redesign/); the implementation contract is [`docs/redesign-contract.md`](docs/redesign-contract.md); progress and verification: [`BUILD_STATUS.md`](BUILD_STATUS.md), [`docs/TEST_RESULTS.md`](docs/TEST_RESULTS.md); the demo script: [`docs/DEMO.md`](docs/DEMO.md).
+The name is decided: **Ori** (`shared/brand.ts`; internal ids keep their original values). Design direction: [`docs/ori/ORI_DESIGN_SPEC.md`](docs/ori/ORI_DESIGN_SPEC.md) and its reference images; visual review: [`docs/ori/VISUAL_REVIEW.md`](docs/ori/VISUAL_REVIEW.md). Contracts: [`docs/redesign-contract.md`](docs/redesign-contract.md), [`docs/api-contract.md`](docs/api-contract.md). Progress and evidence: [`BUILD_STATUS.md`](BUILD_STATUS.md), [`docs/TEST_RESULTS.md`](docs/TEST_RESULTS.md). Demo: [`docs/DEMO.md`](docs/DEMO.md). Live: https://ori-fjrx.onrender.com/ (pitch: https://ori-fjrx.onrender.com/pitch/); deployment settings in [`docs/DEPLOY.md`](docs/DEPLOY.md). Pitch: `/pitch/` on any running server (source in `client/public/pitch/`, inputs in [`docs/ori-pitch-kit/`](docs/ori-pitch-kit/), judge's-view check: `node scripts/check-pitch.mjs --base <url>/pitch/`). Velocity: [`docs/velocity-contribution.md`](docs/velocity-contribution.md).
 
 ## Stack
 
@@ -16,8 +16,8 @@ The product name is undecided. The UI shows the temporary label in [`shared/bran
 
 - **Agent** (`/agent`): capture a note, a link or a screenshot. A saved URL is not read content: the capture carries an honest read status (`read`, `metadata_only` for public titles from YouTube/Vimeo/SoundCloud/Spotify, `not_read`, `unavailable`). No page is ever fetched server-side; nothing is read from your accounts or other AI chats. The reply is short and grounded, with up to four proposals: explore (steps, no app), make a new app, update an existing app, or keep the source.
 - **Playground** (`/playground`): a varied set of possibilities grounded in what you shared, with real previews and a one-sentence reason; "Why this?" shows the facts and captures it cites.
-- **Make mine** (`/make/:id`): one or two choices (time budget, look), a preview rendered by the real runtime with example content, then the app at `/apps/{id}/`.
-- **Apps** (`/apps/{id}/`): the runtime renders validated definitions only (gallery with real photo uploads, practice timer with tempo helper and saved sources, next-action queue, journal, board, list, summary, due-soon and rotating-prompt rules). Every app has its own URL, title, icon, manifest and look. "Make this more me" previews a change, keeps every record, and can be undone. No generated code runs anywhere.
+- **Make mine** (`/make/:id`): the real preview first with labelled example content, one or two choices (a focus, the practice length, a layout), then "Making <App> yours…" and Ready: Open, Add to home screen, Copy app link. One intent makes one app.
+- **Apps** (`/apps/{id}/`): the runtime renders validated definitions only (gallery with real photo uploads, practice timer with tempo helper and saved sources, next-action queue, journal, board, list, summary, due-soon and rotating-prompt rules). Every app has its own URL, title, icon, manifest and look. "Edit with Ori" previews a change on your own entry, keeps every record, and can be undone. No generated code runs anywhere.
 - **What you've shared** (`/settings/memory`): editable facts (confirmed vs inferred, conflicts), sources and captures; forgetting stops something from informing suggestions and never deletes an app's records.
 - Business model shown, not faked: 14 days free, then $7.50/month for two months, then $15/month; a disclosed AI generation allowance; no payment is collected in the prototype.
 
@@ -33,7 +33,7 @@ The product name is undecided. The UI shows the temporary label in [`shared/bran
 npm install
 # First time only: create .env from .env.example and set ANTHROPIC_API_KEY for live AI (optional).
 # Never copy .env.example over an existing .env.
-npm run seed              # adds the example demo account and apps (idempotent): demo@aiappstore.local / demo-pass-2026
+npm run seed              # adds the example demo account and apps (idempotent): demo@aiappstore.local / SEED_DEMO_PASSWORD (default demo-pass-2026)
 npm run dev               # API on http://localhost:8787, UI on http://localhost:5173
 ```
 

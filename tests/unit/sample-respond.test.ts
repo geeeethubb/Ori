@@ -180,7 +180,7 @@ describe('an app the person has: use it, and change it only when they ask for so
     expect(r.proposals.map((p) => p.kind)).toEqual(['use_app', 'explore', 'keep']);
     const use = r.proposals[0]!;
     expect(use.targetAppId).toBe('app-riff-0001');
-    expect(use.title).toBe('Practise in Riff tonight');
+    expect(use.title).toBe('Practice in Riff tonight');
     expect(use.updateRequest).toBeUndefined();
     expect(use.recordDraft).toEqual({ kind: 'source', url: REEL, title: 'Instagram link', note: GUITAR_NOTE });
     expect(use.description).toMatch(/nothing about the app changes/i);

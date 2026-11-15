@@ -1,6 +1,6 @@
 # Android: one shared shell APK with per-app pinned shortcuts
 
-**Precisely:** there is ONE Android package (`com.aiappstore.runtime`, launcher label "Your Playground", a temporary name) that contains the web runtime. Each personal app is reached through a pinned launcher shortcut carrying that app's id. There is no APK per generated app.
+**Precisely:** there is ONE Android package (`com.aiappstore.runtime`, launcher label "Ori") that contains the web runtime. Each personal app is reached through a pinned launcher shortcut carrying that app's id. There is no APK per generated app.
 
 **Design (weekend scope):** one APK packages the same web runtime. From inside any personal app, the user taps **Add shortcut**; the launcher asks them to confirm a pinned shortcut whose intent carries that app's ID. Tapping the icon opens the shell directly in `/apps/{id}/`. Separate APKs per generated app and Play Store distribution are later work.
 
@@ -92,4 +92,20 @@ Same environment (headless `Pixel_9_Pro`, Android 17, Google Play image without 
 | Cold launch by **tapping** the icon | ⚠️ unchanged | still intercepted by Play Protect on this account-less image (see above); verify on a physical phone |
 | Example photographs and the landing's phone mock inside the shell | ✅ after fix | the shell's page origin is the local bundle, so `/examples/*.jpg` had to be resolved against the API base (`client/src/pages/parts/MiniPreview.tsx`, `client/src/runtime/media.ts`); rebuilt APK after the fix |
 | Launcher label | changed | `android/app/src/main/res/values/strings.xml` and `capacitor.config.ts` now use the temporary brand label; the package id is unchanged so existing installs and shortcuts keep working |
+| Physical Android device | ⏳ not run | none connected |
+
+
+## Ori re-verification (session 3, 2026-11-15 00:05–00:10)
+
+Headless `Pixel_9_Pro` (Android 17, Google Play image without an account). APK built from the Ori tree with `node scripts/build-apk.mjs --api-base http://10.0.2.2:8851` (9.6 MB) against a throwaway host server on :8851 (Sample mode, its own database), seeded with one account and a Light app holding one photo entry. Screenshots: `docs/ori/evidence/android/`.
+
+| Check | Status | Notes |
+| --- | --- | --- |
+| Launcher label and package | ✅ | `aapt dump badging`: `application-label:'Ori'`, launchable activity label `Ori`, package unchanged (`com.aiappstore.runtime`) |
+| Install and cold start | ✅ | `adb install -r` → Success; the shell opens the Ori landing (`01-cold-start-landing.jpg`) |
+| Sign-in inside the shell | ✅ | `02-sign-in.jpg` → the Playground loads with example photos from the API server (`03-signed-in-playground.jpg`) |
+| Open an app directly via its shortcut intent, warm | ✅ | intent delivered to the running shell |
+| Open an app directly via its shortcut intent, cold (after `am force-stop`) | ✅ | Light opens with its saved photo and caption, no Ori navigation, signed in with the stored token (`04-shortcut-intent-cold-light.jpg`) |
+| Pinning a new shortcut through the launcher's dialog | ⏳ not re-run | verified in session 2 with the earlier bundle; the tap-to-cold-launch Play Protect caveat above still applies |
+| New launcher icon and splash on a device | ⏳ not checked visually | the APK carries the regenerated Ori mipmaps and splash; Android 12+ shows the adaptive icon on its system splash |
 | Physical Android device | ⏳ not run | none connected |
